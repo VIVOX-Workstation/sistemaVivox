@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS COMPARTILHADOS ---
+
+enum StatusCliente {
+  ATIVO
+  PAUSADO
+  ENCERRADO
+  PROSPECT
+}
+
+enum TipoServico {
+  GERENCIAMENTO_REDES
+  FOLDER
+  REVISTA
+  LANDING_PAGE
+  APP
+  FOTOGRAFIA
+  VIDEO
+  TRAFEGO_PAGO
+  IDENTIDADE_VISUAL
+}
+
+enum StatusServico {
+  ATIVO
+  CONCLUIDO
+  PAUSADO
+  CANCELADO
+}
+
+enum TipoProducao {
+  POST
+  VIDEO
+  FOLDER
+  REVISTA
+  LANDING_PAGE
+  APP
+  FOTO
+}
+
+enum StatusProducao {
+  EM_PRODUCAO
+  EM_REVISAO
+  APROVADO
+  PUBLICADO
+}
+
+enum OrigemDado {
+  REPORTEI
+  MANUAL
+}
+
+enum TipoPublicacao {
+  POST
+  REELS
+  CARROSSEL
+  STORY
+  VIDEO
+}
+
+enum StatusOportunidade {
+  ABERTA
+  APRESENTADA
+  ACEITA
+  RECUSADA
+}
+
+enum StatusReuniao {
+  AGENDADA
+  REALIZADA
+  CANCELADA
+}
+
+// --- MODELOS ---
+
+model User {
+  id             String             @id @default(uuid())
+  nome           String
+  email          String             @unique
+  senha          String
+  
+  // Relações
+  clientes       Cliente[]          @relation("ResponsavelInterno")
+  producoes      Producao[]         @relation("ProdutorResponsavel")
+  historicoAcoes ServicoHistorico[]
+  reunioes       Reuniao[]          @relation("ReuniaoParticipantes")
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+// ============================================
+// MÓDULO: VIVOX CLIENTES
+// ============================================
+
+model Cliente {
+  id                  String              @id @default(uuid())
+  nomeFantasia        String
+  razaoSocial         String?
+  cnpjCpf             String
+  segmento            String
+  responsavelId       String?
+  responsavel         User?               @relation("ResponsavelInterno", fields: [responsavelId], references: [id])
+  contatos            Json                // [{ nome, cargo, telefone, email, whatsapp }]
+  status              StatusCliente
+  dataInicioContrato  DateTime?
+  dataFimContrato     DateTime?
+  logoUrl             String?
+  observacoes         String?
+
+  // Relações Clientes
+  servicosContratados ServicoContratado[]
+  producoes           Producao[]
+  midias              MidiaCliente[]
+
+  // Relações Analytics
+  analyticsSnapshots  AnalyticsSnapshot[]
+  publicacoes         Publicacao[]
+  avaliacoesGmb       AvaliacaoGmb[]
+  oportunidades       Oportunidade[]
+  reunioes            Reuniao[]
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+}
+
+model ServicoContratado {
+  id              String             @id @default(uuid())
+  clienteId       String
+  cliente         Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipoServico     TipoServico
+  status          StatusServico
+  dataContratacao DateTime
+  dataEntrega     DateTime?
+  valor           Decimal?
+  descricaoEscopo String?
+  historico       ServicoHistorico[]
+  producoes       Producao[]
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model ServicoHistorico {
+  id              String            @id @default(uuid())
+  servicoId       String
+  servico         ServicoContratado @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  usuarioId       String
+  usuario         User              @relation(fields: [usuarioId], references: [id])
+  acao            String
+  
+  createdAt       DateTime          @default(now())
+}
+
+model Producao {
+  id              String             @id @default(uuid())
+  clienteId       String
+  cliente         Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servicoId       String?
+  servico         ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+  tipo            TipoProducao
+  arquivoUrl      String?
+  dataProducao    DateTime?
+  responsavelId   String?
+  responsavel     User?              @relation("ProdutorResponsavel", fields: [responsavelId], references: [id])
+  status          StatusProducao
+  
+  // Analytics linkage
+  publicacoes     Publicacao[]
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model MidiaCliente {
+  id              String     @id @default(uuid())
+  clienteId       String
+  cliente         Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  url             String
+  tags            String[]
+  dataUpload      DateTime   @default(now())
+}
+
+// ============================================
+// MÓDULO: VIVOX ANALYTICS
+// ============================================
+
+model AnalyticsSnapshot {
+  id                   String     @id @default(uuid())
+  clienteId            String
+  cliente              Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  periodoInicio        DateTime
+  periodoFim           DateTime
+  origem               OrigemDado
+  alcanceTotal         Int?
+  engajamentoTotal     Int?
+  notaGmb              Float?
+  avaliacoesGmbPeriodo Int?
+
+  createdAt            DateTime   @default(now())
+}
+
+model Publicacao {
+  id                String         @id @default(uuid())
+  clienteId         String
+  cliente           Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producaoId        String?
+  producao          Producao?      @relation(fields: [producaoId], references: [id], onDelete: SetNull)
+  tipo              TipoPublicacao
+  dataPublicacao    DateTime
+  alcance           Int?
+  curtidas          Int?
+  comentarios       Int?
+  compartilhamentos Int?
+  origemDado        OrigemDado
+
+  createdAt         DateTime       @default(now())
+}
+
+model AvaliacaoGmb {
+  id              String     @id @default(uuid())
+  clienteId       String
+  cliente         Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  nota            Int
+  comentario      String?
+  data            DateTime
+  respondida      Boolean    @default(false)
+  dataResposta    DateTime?
+
+  createdAt       DateTime   @default(now())
+}
+
+model Oportunidade {
+  id              String             @id @default(uuid())
+  clienteId       String
+  cliente         Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servicoSugerido TipoServico
+  justificativa   String?
+  status          StatusOportunidade @default(ABERTA)
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Reuniao {
+  id              String        @id @default(uuid())
+  clienteId       String
+  cliente         Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  dataHora        DateTime
+  
+  // Participantes vinculados ao User
+  participantes   User[]        @relation("ReuniaoParticipantes")
+  
+  resumo          String?
+  status          StatusReuniao @default(AGENDADA)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}

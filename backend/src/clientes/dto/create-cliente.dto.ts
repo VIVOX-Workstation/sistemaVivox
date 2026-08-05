@@ -1,0 +1,43 @@
+import { IsString, IsOptional, IsEnum, IsArray, IsDateString } from 'class-validator';
+import { StatusCliente } from '@prisma/client';
+
+export class CreateClienteDto {
+  @IsString()
+  nomeFantasia: string;
+
+  @IsString()
+  @IsOptional()
+  razaoSocial?: string;
+
+  @IsString()
+  cnpjCpf: string;
+
+  @IsString()
+  segmento: string;
+
+  @IsString()
+  @IsOptional()
+  responsavelId?: string;
+
+  @IsArray()
+  contatos: any;
+
+  @IsEnum(StatusCliente)
+  status: StatusCliente;
+
+  @IsDateString()
+  @IsOptional()
+  dataInicioContrato?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dataFimContrato?: string;
+
+  @IsString()
+  @IsOptional()
+  logoUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  observacoes?: string;
+}

@@ -1,0 +1,87 @@
+import { CreateClienteDto } from './dto/create-cliente.dto';
+import { UpdateClienteDto } from './dto/update-cliente.dto';
+import { PrismaService } from '../prisma/prisma.service';
+export declare class ClientesService {
+    private prisma;
+    constructor(prisma: PrismaService);
+    create(createClienteDto: CreateClienteDto): import(".prisma/client").Prisma.Prisma__ClienteClient<{
+        nomeFantasia: string;
+        razaoSocial: string | null;
+        cnpjCpf: string;
+        segmento: string;
+        responsavelId: string | null;
+        contatos: import("@prisma/client/runtime/library").JsonValue;
+        status: import(".prisma/client").$Enums.StatusCliente;
+        dataInicioContrato: Date | null;
+        dataFimContrato: Date | null;
+        logoUrl: string | null;
+        observacoes: string | null;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+    findAll(): import(".prisma/client").Prisma.PrismaPromise<{
+        nomeFantasia: string;
+        razaoSocial: string | null;
+        cnpjCpf: string;
+        segmento: string;
+        responsavelId: string | null;
+        contatos: import("@prisma/client/runtime/library").JsonValue;
+        status: import(".prisma/client").$Enums.StatusCliente;
+        dataInicioContrato: Date | null;
+        dataFimContrato: Date | null;
+        logoUrl: string | null;
+        observacoes: string | null;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    findOne(id: string): import(".prisma/client").Prisma.Prisma__ClienteClient<{
+        nomeFantasia: string;
+        razaoSocial: string | null;
+        cnpjCpf: string;
+        segmento: string;
+        responsavelId: string | null;
+        contatos: import("@prisma/client/runtime/library").JsonValue;
+        status: import(".prisma/client").$Enums.StatusCliente;
+        dataInicioContrato: Date | null;
+        dataFimContrato: Date | null;
+        logoUrl: string | null;
+        observacoes: string | null;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    } | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
+    update(id: string, updateClienteDto: UpdateClienteDto): import(".prisma/client").Prisma.Prisma__ClienteClient<{
+        nomeFantasia: string;
+        razaoSocial: string | null;
+        cnpjCpf: string;
+        segmento: string;
+        responsavelId: string | null;
+        contatos: import("@prisma/client/runtime/library").JsonValue;
+        status: import(".prisma/client").$Enums.StatusCliente;
+        dataInicioContrato: Date | null;
+        dataFimContrato: Date | null;
+        logoUrl: string | null;
+        observacoes: string | null;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+    remove(id: string): import(".prisma/client").Prisma.Prisma__ClienteClient<{
+        nomeFantasia: string;
+        razaoSocial: string | null;
+        cnpjCpf: string;
+        segmento: string;
+        responsavelId: string | null;
+        contatos: import("@prisma/client/runtime/library").JsonValue;
+        status: import(".prisma/client").$Enums.StatusCliente;
+        dataInicioContrato: Date | null;
+        dataFimContrato: Date | null;
+        logoUrl: string | null;
+        observacoes: string | null;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+}
