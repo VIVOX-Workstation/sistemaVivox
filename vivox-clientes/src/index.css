@@ -12,3 +12,68 @@ body {
   margin: 0;
   min-height: 100vh;
 }
+
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #94a3b8;
+  pointer-events: none;
+  height: 0;
+}
+/* --- React Flow Custom Handles ------------------- */
+.flow-handle {
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid white !important;
+  border-radius: 50% !important;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease, width 0.15s ease, height 0.15s ease !important;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Mostrar handles ao passar o mouse sobre o nó */
+.react-flow__node:hover .flow-handle,
+.react-flow__node.selected .flow-handle {
+  opacity: 1;
+}
+
+/* Handles maiores quando o nó está selecionado */
+.react-flow__node.selected .flow-handle {
+  width: 14px !important;
+  height: 14px !important;
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.8), 0 0 0 5px currentColor;
+}
+
+/* Ficam ainda maiores ao passar o mouse sobre o handle */
+.flow-handle:hover {
+  width: 16px !important;
+  height: 16px !important;
+  opacity: 1 !important;
+  transform: translate(-50%, -50%) scale(1.4) !important;
+}
+
+/* Cores dos handles */
+.flow-handle-indigo { background: #6366f1 !important; }
+.flow-handle-green  { background: #10b981 !important; }
+.flow-handle-red    { background: #ef4444 !important; }
+.flow-handle-amber  { background: #f59e0b !important; }
+.flow-handle-slate  { background: #64748b !important; }
+
+/* Edge selecionada - highlight */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #6366f1 !important;
+  stroke-width: 3px !important;
+}
+
+/* Edge hover */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #6366f1 !important;
+  stroke-width: 3px !important;
+  cursor: pointer;
+}
+
+/* Edge reconectável - endpoints ficam visíveis */
+.react-flow__edgeupdater {
+  cursor: grab !important;
+}

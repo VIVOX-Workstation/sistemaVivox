@@ -1,31 +1,11 @@
 import React, { useState } from 'react';
 import Tree from 'react-d3-tree';
 import { ChevronRight, ChevronDown } from 'lucide-react';
+import type { FonteContexto } from '../types';
 
-const initialData = {
-  name: 'Protocolo Lapidar',
-  attributes: {},
-  children: [
-    {
-      name: 'Conceito e Missão',
-      children: [
-        { name: 'Protocolo individualizado' },
-        { name: 'Visão estética e funcional' },
-        { name: 'Refinar sem mudar a essência' },
-        { name: 'Paciência e precisão técnica' }
-      ]
-    },
-    {
-      name: 'Indicações e Sintomas'
-    },
-    {
-      name: 'Diferenciais do Procedimento'
-    },
-    {
-      name: 'Resultados e Transformação'
-    }
-  ]
-};
+interface Props {
+  fontes: FonteContexto[];
+}
 
 // Componente customizado para o Nó
 const renderCustomNode = ({ nodeDatum, toggleNode }: any) => {
@@ -43,7 +23,7 @@ const renderCustomNode = ({ nodeDatum, toggleNode }: any) => {
 
   return (
     <g>
-      <foreignObject x="-75" y="-20" width="220" height="80" style={{ overflow: 'visible' }}>
+      <foreignObject x="-75" y="-20" width="220" height="150" style={{ overflow: 'visible' }}>
         <div className="flex items-center gap-2">
           {/* O Card do Nó */}
           <div 
@@ -68,21 +48,39 @@ const renderCustomNode = ({ nodeDatum, toggleNode }: any) => {
   );
 };
 
-export function StrategyMindMap() {
+export function StrategyMindMap({ fontes }: Props) {
   const [translate, setTranslate] = useState({ x: 200, y: 300 });
+
+  // Constrói os dados do mapa mental baseado nas fontes
+  const getTreeData = () => {
+    if (!fontes || fontes.length === 0) {
+      return {
+        name: 'Planejamento Estratégico',
+        attributes: {},
+        children: [{ name: 'Sem fontes. Adicione ao lado.' }]
+      };
+    }
+
+    return {
+      name: 'Planejamento Estratégico',
+      attributes: {},
+      children: fontes.map(fonte => ({
+        name: fonte.titulo,
+        children: fonte.descricao ? [{ name: fonte.descricao.substring(0, 50) + (fonte.descricao.length > 50 ? '...' : '') }] : []
+      }))
+    };
+  };
+
+  const treeData = getTreeData();
 
   return (
     <div className="w-full h-full bg-slate-50 relative" ref={(containerElem) => {
       if (containerElem) {
-        // Centraliza inicialmente o mapa
-        const { width, height } = containerElem.getBoundingClientRect();
-        // Não atualizamos o estado aqui toda hora pra não dar loop infinito,
-        // apenas usamos um valor fixo bom (200, 300) que já definimos no useState,
-        // ou você pode implementar uma lógica de resize observer se necessário.
+        // Inicializa o translate (ex: para centralizar melhor ao abrir)
       }
     }}>
       <Tree
-        data={initialData}
+        data={treeData}
         orientation="horizontal"
         pathFunc="curve"
         translate={translate}

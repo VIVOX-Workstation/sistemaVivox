@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Cliente, ServicoContratado, StatusServico, TipoServico } from '../../types';
 import { api } from '../../api/client';
 import { Button } from '../Button';
@@ -26,6 +27,7 @@ const TODOS_SERVICOS: { tipo: TipoServico; nome: string; descricao: string; imag
 ];
 
 export function ServicesTab({ cliente }: Props) {
+  const navigate = useNavigate();
   const [servicos, setServicos] = useState<ServicoContratado[]>([]);
   const [isNewModalOpen, setNewModalOpen] = useState(false);
   const [isHistoryModalOpen, setHistoryModalOpen] = useState(false);
@@ -88,10 +90,8 @@ export function ServicesTab({ cliente }: Props) {
     }
   };
 
-  const openHistory = (s: ServicoContratado) => {
-    setSelectedServico(s);
-    setActionLog({ acao: '', observacao: '', status: s.status });
-    setHistoryModalOpen(true);
+  const openPlanejamento = (s: ServicoContratado) => {
+    navigate(`/cliente/${cliente.id}/servicos/${s.id}/planejamento`);
   };
 
   const handleOpenNewModal = (tipo?: TipoServico) => {
@@ -125,7 +125,7 @@ export function ServicesTab({ cliente }: Props) {
               <div 
                 key={servicoInfo.tipo} 
                 className="relative rounded-xl overflow-hidden group cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                onClick={() => openHistory(contratado)}
+                onClick={() => openPlanejamento(contratado)}
                 style={{ minHeight: '220px' }}
               >
                 {/* Background Image */}
@@ -158,7 +158,7 @@ export function ServicesTab({ cliente }: Props) {
                     <div className="pt-3 border-t border-white/20 flex justify-between items-center text-xs text-slate-300">
                       <span>Início: {new Date(contratado.dataContratacao).toLocaleDateString('pt-BR')}</span>
                       <span className="flex items-center text-white font-medium group-hover:underline">
-                        Ver Histórico <ChevronRight className="w-3 h-3 ml-1" />
+                        Planejamento <ChevronRight className="w-3 h-3 ml-1" />
                       </span>
                     </div>
                   </div>

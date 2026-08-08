@@ -8,10 +8,15 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() req) {
-    const user = await this.authService.validateUser(req.email, req.senha);
-    if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas');
+    try {
+      const user = await this.authService.validateUser(req.email, req.senha);
+      if (!user) {
+        throw new UnauthorizedException('Credenciais inválidas');
+      }
+      return this.authService.login(user);
+    } catch (e) {
+      console.error('AUTH LOGIN ERROR STACK:', e);
+      throw e;
     }
-    return this.authService.login(user);
   }
 }

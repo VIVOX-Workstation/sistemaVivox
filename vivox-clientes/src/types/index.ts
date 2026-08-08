@@ -9,6 +9,14 @@ export interface Contato {
   whatsapp: string;
 }
 
+export interface FonteContexto {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  tipo: string;
+  createdAt: string;
+}
+
 export interface Cliente {
   id: string;
   nomeFantasia: string;
@@ -23,6 +31,7 @@ export interface Cliente {
   logoUrl?: string;
   observacoes?: string;
   responsavel?: { nome: string }; // Incluído caso o Prisma dê include
+  fontesContexto?: FonteContexto[];
 }
 
 export type TipoServico = 

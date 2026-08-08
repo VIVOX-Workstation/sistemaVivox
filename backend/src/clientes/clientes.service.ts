@@ -20,6 +20,11 @@ export class ClientesService {
   findOne(id: string) {
     return this.prisma.cliente.findUnique({
       where: { id },
+      include: {
+        fontesContexto: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
     });
   }
 
@@ -33,6 +38,29 @@ export class ClientesService {
   remove(id: string) {
     return this.prisma.cliente.delete({
       where: { id },
+    });
+  }
+
+  // --- FONTES & CONTEXTO ---
+  addFonte(clienteId: string, data: any) {
+    return this.prisma.fonteContexto.create({
+      data: {
+        ...data,
+        clienteId
+      }
+    });
+  }
+
+  updateFonte(fonteId: string, data: any) {
+    return this.prisma.fonteContexto.update({
+      where: { id: fonteId },
+      data
+    });
+  }
+
+  removeFonte(fonteId: string) {
+    return this.prisma.fonteContexto.delete({
+      where: { id: fonteId }
     });
   }
 }

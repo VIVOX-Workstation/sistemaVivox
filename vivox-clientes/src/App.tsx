@@ -5,6 +5,7 @@ import { ClientForm } from './pages/ClientForm';
 import { ClientProfile } from './pages/ClientProfile';
 import { AnalyticsIndex } from './pages/AnalyticsIndex';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
+import { PlanejamentoServico } from './pages/PlanejamentoServico';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -25,6 +26,7 @@ function App() {
               <Route index element={<ClientList />} />
               <Route path="cliente/novo" element={<ClientForm />} />
               <Route path="cliente/:id" element={<ClientProfile />} />
+              <Route path="cliente/:id/servicos/:servicoId/planejamento" element={<PlanejamentoServico />} />
               
               <Route path="analytics" element={<AnalyticsIndex />} />
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />

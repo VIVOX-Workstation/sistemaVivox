@@ -15,8 +15,13 @@ export class ClientesController {
   }
 
   @Get()
-  findAll() {
-    return this.clientesService.findAll();
+  async findAll() {
+    try {
+      return await this.clientesService.findAll();
+    } catch (e) {
+      console.error('CLIENTES FINDALL ERROR STACK:', e);
+      throw e;
+    }
   }
 
   @Get(':id')
@@ -32,5 +37,21 @@ export class ClientesController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.clientesService.remove(id);
+  }
+
+  // --- FONTES & CONTEXTO ---
+  @Post(':id/fontes')
+  addFonte(@Param('id') id: string, @Body() data: any) {
+    return this.clientesService.addFonte(id, data);
+  }
+
+  @Patch('fontes/:fonteId')
+  updateFonte(@Param('fonteId') fonteId: string, @Body() data: any) {
+    return this.clientesService.updateFonte(fonteId, data);
+  }
+
+  @Delete('fontes/:fonteId')
+  removeFonte(@Param('fonteId') fonteId: string) {
+    return this.clientesService.removeFonte(fonteId);
   }
 }

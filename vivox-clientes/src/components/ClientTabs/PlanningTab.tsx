@@ -1,14 +1,89 @@
-import React, { useState } from 'react';
-import type { Cliente } from '../../types';
-import { BookOpen, FileText, Link as LinkIcon, Plus, Lightbulb, MessageSquare, Target } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import type { Cliente, FonteContexto } from '../../types';
+import { BookOpen, FileText, Link as LinkIcon, Plus, Lightbulb, Target, Trash2, Edit2, X } from 'lucide-react';
 import { Button } from '../Button';
+import { Input } from '../Input';
+import { Textarea } from '../Textarea';
 import { StrategyMindMap } from '../StrategyMindMap';
+import { api } from '../../api/client';
+import { Modal } from '../Modal';
 
 interface Props {
   cliente: Cliente;
 }
 
 export function PlanningTab({ cliente }: Props) {
+  const [fontes, setFontes] = useState<FonteContexto[]>(cliente.fontesContexto || []);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Form state
+  const [titulo, setTitulo] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [tipo, setTipo] = useState('TEXTO'); // LINK, ARQUIVO, TEXTO
+
+  useEffect(() => {
+    setFontes(cliente.fontesContexto || []);
+  }, [cliente.fontesContexto]);
+
+  const loadFontes = async () => {
+    try {
+      const res = await api.get(`/clientes/${cliente.id}`);
+      setFontes(res.data.fontesContexto || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const openModal = (fonte?: FonteContexto) => {
+    if (fonte) {
+      setEditingId(fonte.id);
+      setTitulo(fonte.titulo);
+      setDescricao(fonte.descricao || '');
+      setTipo(fonte.tipo);
+    } else {
+      setEditingId(null);
+      setTitulo('');
+      setDescricao('');
+      setTipo('TEXTO');
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const data = { titulo, descricao, tipo };
+      if (editingId) {
+        await api.patch(`/clientes/fontes/${editingId}`, data);
+      } else {
+        await api.post(`/clientes/${cliente.id}/fontes`, data);
+      }
+      setIsModalOpen(false);
+      loadFontes();
+    } catch (error) {
+      alert('Erro ao salvar fonte');
+    }
+  };
+
+  const handleDelete = async (fonteId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta fonte?')) return;
+    try {
+      await api.delete(`/clientes/fontes/${fonteId}`);
+      loadFontes();
+    } catch (error) {
+      alert('Erro ao excluir');
+    }
+  };
+
+  const getIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'LINK': return <LinkIcon className="w-4 h-4" />;
+      case 'ARQUIVO': return <FileText className="w-4 h-4" />;
+      default: return <BookOpen className="w-4 h-4" />;
+    }
+  };
+
   return (
     <div className="h-full flex gap-6">
       
@@ -19,37 +94,42 @@ export function PlanningTab({ cliente }: Props) {
             <BookOpen className="w-4 h-4" />
             Fontes & Contexto
           </h3>
-          <button className="text-indigo-600 hover:bg-indigo-50 p-1 rounded transition-colors">
+          <button 
+            onClick={() => openModal()}
+            className="text-indigo-600 hover:bg-indigo-50 p-1 rounded transition-colors"
+          >
             <Plus className="w-4 h-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3">
-          
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors group">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-800 mb-1">
-              <FileText className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
-              Briefing Inicial
+          {fontes.length === 0 ? (
+            <div className="text-sm text-slate-400 text-center py-8">
+              Nenhuma fonte ou contexto cadastrado. Clique no "+" para adicionar.
             </div>
-            <p className="text-xs text-slate-500 line-clamp-2">Reunião de kickoff realizada em 10/05 detalhando o público alvo AB.</p>
-          </div>
-
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors group">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-800 mb-1">
-              <LinkIcon className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
-              Concorrentes mapeados
-            </div>
-            <p className="text-xs text-slate-500 line-clamp-2">Lista de 3 concorrentes locais com forte presença no TikTok.</p>
-          </div>
-
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors group">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-800 mb-1">
-              <MessageSquare className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
-              Feedback da Reunião Q2
-            </div>
-            <p className="text-xs text-slate-500 line-clamp-2">Cliente quer mudar o tom de voz para algo mais bem humorado.</p>
-          </div>
-
+          ) : (
+            fontes.map(fonte => (
+              <div key={fonte.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 hover:border-indigo-300 transition-colors group relative">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-800 mb-1 pr-12">
+                  <span className="text-slate-400 group-hover:text-indigo-500">{getIcon(fonte.tipo)}</span>
+                  {fonte.titulo}
+                </div>
+                {fonte.descricao && (
+                  <p className="text-xs text-slate-500 line-clamp-3">{fonte.descricao}</p>
+                )}
+                
+                {/* Botões de Ação (Aparecem no hover) */}
+                <div className="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition-opacity bg-slate-50 rounded shadow-sm border border-slate-200">
+                  <button onClick={() => openModal(fonte)} className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleDelete(fonte.id)} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -67,9 +147,52 @@ export function PlanningTab({ cliente }: Props) {
         </div>
 
         <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-inner relative overflow-hidden">
-          <StrategyMindMap />
+          <StrategyMindMap fontes={fontes} />
         </div>
       </div>
+
+      {/* MODAL DE FONTE */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Editar Fonte' : 'Nova Fonte/Contexto'}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Título</label>
+            <Input 
+              value={titulo} 
+              onChange={(e) => setTitulo(e.target.value)} 
+              required 
+              placeholder="Ex: Briefing Inicial"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+            <select 
+              className="w-full rounded-md border-slate-300 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+            >
+              <option value="TEXTO">Texto / Anotação</option>
+              <option value="LINK">Link / URL</option>
+              <option value="ARQUIVO">Documento / Arquivo</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Conteúdo (Texto ou Link)</label>
+            <Textarea 
+              value={descricao} 
+              onChange={(e) => setDescricao(e.target.value)} 
+              placeholder="Descreva o contexto ou cole o link..."
+              rows={4}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+            <Button type="submit">Salvar Fonte</Button>
+          </div>
+        </form>
+      </Modal>
 
     </div>
   );
