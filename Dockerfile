@@ -23,4 +23,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Inicia o app: Primeiro envia as tabelas pro banco (db push) e depois liga o sistema de produção
-CMD ["/bin/sh", "-c", "npx prisma db push && npm run start:prod"]
+CMD ["/bin/sh", "-c", "npx prisma db push && node dist/src/main"]
