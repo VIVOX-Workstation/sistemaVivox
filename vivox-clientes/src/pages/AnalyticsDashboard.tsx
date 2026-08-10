@@ -39,7 +39,7 @@ export function AnalyticsDashboard() {
   if (!cliente) return null;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')} className="px-2">
           <ArrowLeft className="w-5 h-5" />

@@ -18,7 +18,7 @@ services:
     command: npm run start:dev
 
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: vivox-postgres
     restart: unless-stopped
     ports:

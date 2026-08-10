@@ -249,7 +249,7 @@ export function PlanejamentoServico() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 pb-12 w-full">
       {/* HEADER */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">

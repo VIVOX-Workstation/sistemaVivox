@@ -8,8 +8,10 @@ import { Badge } from '../components/Badge';
 
 import { OverviewTab } from '../components/ClientTabs/OverviewTab';
 import { NotesTab } from '../components/ClientTabs/NotesTab';
+import { MarketTab } from '../components/ClientTabs/MarketTab';
+import { FloatingAssistant } from '../components/FloatingAssistant';
 
-type Tab = 'overview' | 'productions' | 'media' | 'notes';
+type Tab = 'overview' | 'productions' | 'media' | 'notes' | 'market';
 
 export function ClientProfile() {
   const { id } = useParams<{ id: string }>();
@@ -38,13 +40,14 @@ export function ClientProfile() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: 'Visão Geral' },
+    { id: 'market', label: 'Mercado (IA)' },
     { id: 'productions', label: 'Produções' },
     { id: 'media', label: 'Mídias' },
-    { id: 'notes', label: 'Observações' },
+    { id: 'notes', label: 'Anotações' },
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 w-full">
       <div className="flex items-start gap-4 bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="px-2 shrink-0 mt-1">
           <ArrowLeft className="w-5 h-5" />
@@ -91,11 +94,14 @@ export function ClientProfile() {
         </div>
         <div className="p-6">
           {activeTab === 'overview' && <OverviewTab cliente={cliente} onChange={loadCliente} />}
+          {activeTab === 'market' && <MarketTab clienteId={cliente.id} />}
           {activeTab === 'notes' && <NotesTab cliente={cliente} onChange={loadCliente} />}
           {activeTab === 'productions' && <div className="py-8 text-center text-slate-500">Módulo de produções em desenvolvimento.</div>}
           {activeTab === 'media' && <div className="py-8 text-center text-slate-500">Módulo de mídias em desenvolvimento.</div>}
         </div>
       </div>
+
+      <FloatingAssistant clienteId={cliente.id} />
     </div>
   );
 }

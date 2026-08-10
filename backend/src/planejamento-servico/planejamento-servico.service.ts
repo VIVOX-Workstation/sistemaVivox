@@ -114,6 +114,8 @@ export class PlanejamentoServicoService {
         ideiaBriefing: dto.ideiaBriefing,
         statusGeral: dto.statusGeral,
         prazoEntrega: dto.prazoEntrega ? new Date(dto.prazoEntrega) : undefined,
+        flowNodes: dto.flowNodes !== undefined ? dto.flowNodes : undefined,
+        flowEdges: dto.flowEdges !== undefined ? dto.flowEdges : undefined,
         responsaveis: dto.responsaveisIds
           ? { set: dto.responsaveisIds.map((rid) => ({ id: rid })) }
           : undefined,

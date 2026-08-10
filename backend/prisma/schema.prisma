@@ -1,11 +1,13 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x", "windows"]
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 // --- ENUMS COMPARTILHADOS ---
@@ -169,6 +171,8 @@ model Cliente {
   oportunidades      Oportunidade[]
   reunioes           Reuniao[]
   fontesContexto     FonteContexto[]
+  documentosVetoriais DocumentoVetorial[]
+  inteligenciasMercado InteligenciaMercado[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,6 +187,30 @@ model FonteContexto {
   tipo      String   @default("TEXTO") // LINK, ARQUIVO, TEXTO
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DocumentoVetorial {
+  id        String   @id @default(uuid())
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  conteudo  String   @db.Text
+  tipo      String   @default("TEXTO") // TEXTO, LINK, ARQUIVO, TENDENCIA_SEMANA
+  titulo    String?
+  vetor     Unsupported("vector(1536)")?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clienteId]) // B-Tree index para isolamento de tenant
+}
+
+model InteligenciaMercado {
+  id         String   @id @default(uuid())
+  clienteId  String
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  resumo     String   @db.Text
+  tendencias Json     // Array de tendências estruturadas: { titulo, descricao, impacto }
+  fontes     Json     // URLs usadas como base pela Tavily: [{ title, url }]
+  data       DateTime @default(now())
 }
 
 model ServicoContratado {

@@ -21,10 +21,8 @@ import {
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import {
-  Save, Trash2, Search, ChevronDown, MousePointer2,
-  Maximize, Type, LayoutTemplate, Layers
-} from 'lucide-react';
+import { Brain, Search, Save, MousePointer2, Maximize, Trash2, Type, LayoutTemplate, Layers, ChevronDown } from 'lucide-react';
+import { api } from '../api/client';
 import { Button } from './Button';
 
 let nodeIdCounter = 1;
@@ -155,7 +153,7 @@ function convertToReactFlow(initialNodes: any[], initialEdges: any[]) {
 interface InspectorState { fill: string; stroke: string; strokeWidth: number; strokeDash: string; text: string; fontSize: number; fontColor: string; }
 const defaultInspector: InspectorState = { fill: '#ffffff', stroke: '#6366f1', strokeWidth: 2, strokeDash: '0', text: '', fontSize: 13, fontColor: '#1e293b' };
 
-function InnerFlow({ initialNodes, initialEdges, onSave }: { initialNodes?: any; initialEdges?: any; onSave: (n: any, e: any) => Promise<void> }) {
+function InnerFlow({ planejamentoId, initialNodes, initialEdges, onSave }: { planejamentoId: string; initialNodes?: any; initialEdges?: any; onSave: (n: any, e: any) => Promise<void> }) {
   const { fitView, screenToFlowPosition } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -197,9 +195,9 @@ function InnerFlow({ initialNodes, initialEdges, onSave }: { initialNodes?: any;
     const pos = position ?? { x: 200, y: 200 };
     const id = newNodeId();
     const defaults: Record<string, { label: string; fill: string; stroke: string }> = {
-      start: { label: 'In�cio', fill: '#ecfdf5', stroke: '#10b981' },
+      start: { label: 'Início', fill: '#ecfdf5', stroke: '#10b981' },
       end: { label: 'Fim', fill: '#fef2f2', stroke: '#ef4444' },
-      decision: { label: 'Decis�o?', fill: '#fef3c7', stroke: '#f59e0b' },
+      decision: { label: 'Decisão?', fill: '#fef3c7', stroke: '#f59e0b' },
       database: { label: 'Banco de Dados', fill: '#f1f5f9', stroke: '#64748b' },
       process: { label: 'Processo', fill: '#ffffff', stroke: '#6366f1' },
     };
@@ -223,12 +221,12 @@ function InnerFlow({ initialNodes, initialEdges, onSave }: { initialNodes?: any;
     edgeReconnectSuccessful.current = false;
   }, []);
 
-  const onReconnect = useCallback((oldEdge, newConnection) => {
+  const onReconnect = useCallback((oldEdge: any, newConnection: any) => {
     edgeReconnectSuccessful.current = true;
     setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
   }, [setEdges]);
 
-  const onReconnectEnd = useCallback((_, edge) => {
+  const onReconnectEnd = useCallback((_: any, edge: any) => {
     if (!edgeReconnectSuccessful.current) {
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     }
@@ -244,9 +242,9 @@ function InnerFlow({ initialNodes, initialEdges, onSave }: { initialNodes?: any;
   }, [screenToFlowPosition, addNode]);
 
   const stencilItems = [
-    { type: 'start', label: 'In�cio', preview: <div className="w-12 h-6 border-2 border-emerald-500 bg-emerald-50 rounded-full" /> },
+    { type: 'start', label: 'Início', preview: <div className="w-12 h-6 border-2 border-emerald-500 bg-emerald-50 rounded-full" /> },
     { type: 'process', label: 'Processo', preview: <div className="w-12 h-8 border-2 border-indigo-500 bg-indigo-50 rounded-md" /> },
-    { type: 'decision', label: 'Decis�o', preview: <div className="w-10 h-10 border-2 border-amber-500 bg-amber-50 rotate-45 scale-75" /> },
+    { type: 'decision', label: 'Decisão', preview: <div className="w-10 h-10 border-2 border-amber-500 bg-amber-50 rotate-45 scale-75" /> },
     { type: 'database', label: 'Banco DB', preview: <div className="w-10 h-10 border-2 border-slate-500 bg-slate-50 rounded-[50%/15%]" /> },
     { type: 'end', label: 'Fim', preview: <div className="w-12 h-6 border-2 border-red-500 bg-red-50 rounded-full" /> },
   ];
@@ -266,10 +264,10 @@ function InnerFlow({ initialNodes, initialEdges, onSave }: { initialNodes?: any;
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => addNode('process')} className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-md border border-indigo-200 flex items-center gap-1.5 transition-colors shadow-sm">
-            + Adicionar Processo
+          <button onClick={() => addNode('process')} className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-md border border-slate-200 flex items-center gap-1.5 transition-colors shadow-sm">
+            + Forma
           </button>
-          <Button onClick={() => onSave(nodes, edges)} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+          <Button onClick={() => onSave(nodes, edges)} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm ml-1">
             <Save className="w-4 h-4 mr-2" /> Salvar Diagrama
           </Button>
         </div>
@@ -428,7 +426,7 @@ interface Props { planejamentoId: string; initialNodes?: any; initialEdges?: any
 export function DependencyFlow({ planejamentoId, initialNodes, initialEdges, onSave }: Props) {
   return (
     <ReactFlowProvider>
-      <InnerFlow initialNodes={initialNodes} initialEdges={initialEdges} onSave={onSave} />
+      <InnerFlow planejamentoId={planejamentoId} initialNodes={initialNodes} initialEdges={initialEdges} onSave={onSave} />
     </ReactFlowProvider>
   );
 }

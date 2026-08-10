@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Cliente, FonteContexto } from '../../types';
-import { BookOpen, FileText, Link as LinkIcon, Plus, Lightbulb, Target, Trash2, Edit2, X } from 'lucide-react';
+import { BookOpen, FileText, Link as LinkIcon, Plus, Lightbulb, Target, Trash2, Edit2, X, Brain } from 'lucide-react';
 import { Button } from '../Button';
 import { Input } from '../Input';
 import { Textarea } from '../Textarea';
@@ -16,6 +16,8 @@ export function PlanningTab({ cliente }: Props) {
   const [fontes, setFontes] = useState<FonteContexto[]>(cliente.fontesContexto || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [aiTreeData, setAiTreeData] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Form state
   const [titulo, setTitulo] = useState('');
@@ -84,6 +86,21 @@ export function PlanningTab({ cliente }: Props) {
     }
   };
 
+  const handleGenerateMindmap = async () => {
+    try {
+      setIsGenerating(true);
+      const res = await api.post(`/ia/generate-mindmap/${cliente.id}`);
+      if (res.data) {
+        setAiTreeData(res.data);
+      }
+    } catch (error) {
+      console.error('Erro ao gerar mapa mental:', error);
+      alert('Houve um erro ao gerar o mapa com IA.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="h-full flex gap-6">
       
@@ -140,14 +157,24 @@ export function PlanningTab({ cliente }: Props) {
             <Lightbulb className="w-5 h-5 text-amber-500" />
             Mapa Mental de Estratégia
           </h3>
-          <Button variant="primary" size="sm" className="gap-2">
-            <Target className="w-4 h-4" />
-            Salvar Mapa
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleGenerateMindmap} disabled={isGenerating} size="sm" variant="outline" className="border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+              {isGenerating ? (
+                <div className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin mr-2" />
+              ) : (
+                <Brain className="w-4 h-4 mr-2" />
+              )}
+              Gerar com IA
+            </Button>
+            <Button variant="primary" size="sm" className="gap-2">
+              <Target className="w-4 h-4" />
+              Salvar Mapa
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-inner relative overflow-hidden">
-          <StrategyMindMap fontes={fontes} />
+          <StrategyMindMap fontes={fontes} aiTreeData={aiTreeData} />
         </div>
       </div>
 

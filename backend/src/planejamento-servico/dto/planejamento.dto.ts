@@ -60,9 +60,11 @@ export class UpdatePlanejamentoDto {
   prazoEntrega?: string;
 
   @IsOptional()
+  @IsArray()
   flowNodes?: any;
 
   @IsOptional()
+  @IsArray()
   flowEdges?: any;
 
   @IsArray()

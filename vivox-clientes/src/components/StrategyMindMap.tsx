@@ -5,6 +5,7 @@ import type { FonteContexto } from '../types';
 
 interface Props {
   fontes: FonteContexto[];
+  aiTreeData?: any;
 }
 
 // Componente customizado para o Nó
@@ -48,16 +49,20 @@ const renderCustomNode = ({ nodeDatum, toggleNode }: any) => {
   );
 };
 
-export function StrategyMindMap({ fontes }: Props) {
+export function StrategyMindMap({ fontes, aiTreeData }: Props) {
   const [translate, setTranslate] = useState({ x: 200, y: 300 });
 
   // Constrói os dados do mapa mental baseado nas fontes
   const getTreeData = () => {
+    if (aiTreeData) {
+      return aiTreeData;
+    }
+
     if (!fontes || fontes.length === 0) {
       return {
         name: 'Planejamento Estratégico',
         attributes: {},
-        children: [{ name: 'Sem fontes. Adicione ao lado.' }]
+        children: [{ name: 'Sem fontes. Adicione ao lado ou gere com IA.' }]
       };
     }
 
