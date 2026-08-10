@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: vivox-backend
     ports:
       - "3000:3000"
     depends_on:
@@ -12,7 +11,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: vivox-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -21,7 +19,6 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: vivox-minio
     restart: unless-stopped
     ports:
       - "9000:9000"   
@@ -35,7 +32,6 @@ services:
 
   minio-init:
     image: minio/mc:latest
-    container_name: vivox-minio-init
     depends_on:
       - minio
     entrypoint: >
