@@ -346,7 +346,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
   return (
     <div className="space-y-6 w-full">
       {/* CABEÇALHO DO INSTAGRAM DASHBOARD (STICKY) */}
-      <div className="sticky top-2 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14120E]/95 backdrop-blur-md text-[#F6F0E7] p-5 rounded-[11px] border border-[#2B261F] shadow-lg">
+      <div className="sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14120E]/95 backdrop-blur-md text-[#F6F0E7] p-4 sm:p-5 rounded-[11px] border border-[#2B261F] shadow-lg">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C7A15F] animate-pulse"></span>
@@ -619,28 +619,41 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
               {/* 53 Colunas de Semanas */}
               <div className="flex gap-[3px] flex-1">
                 {yearHeatmap.weeks.map((week, wIdx) => (
-                  <div key={wIdx} className="flex flex-col gap-[3px]">
+                  <div key={wIdx} className="flex flex-col gap-[3px] hover:z-50">
                     {week.map((day, dIdx) => {
                       if (!day) return null;
+
+                      // Posicionamento inteligente: se estiver no topo (Dom, Seg, Ter), abre para baixo. Se estiver embaixo, abre para cima.
+                      const isTopRow = dIdx <= 2;
+                      const isFirstCols = wIdx <= 2;
+                      const isLastCols = wIdx >= 50;
+
+                      let horizontalPos = 'left-1/2 -translate-x-1/2';
+                      if (isFirstCols) horizontalPos = 'left-0 translate-x-0';
+                      if (isLastCols) horizontalPos = 'right-0 translate-x-0';
 
                       return (
                         <div
                           key={dIdx}
                           onClick={() => setSelectedDay(day)}
-                          className={`w-[10px] h-[10px] rounded-[2px] border transition-transform cursor-pointer relative group ${getVivoxLevelColor(
+                          className={`w-[10px] h-[10px] rounded-[2px] border transition-transform cursor-pointer relative group hover:z-50 ${getVivoxLevelColor(
                             day.level,
                             day.isFuture
                           )} ${
                             selectedDay?.dataStr === day.dataStr
-                              ? 'ring-2 ring-[#B89455] scale-125 z-10'
+                              ? 'ring-2 ring-[#B89455] scale-125 z-20'
                               : 'hover:scale-125'
                           }`}
                         >
-                          {/* Tooltip Hover no estilo Vivox */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 pointer-events-none">
-                            <div className="bg-[#14120E] text-[#FAF7F2] text-[10px] py-1 px-2 rounded-md shadow-2xl whitespace-nowrap border border-[#2B261F]">
+                          {/* Tooltip Hover no estilo Vivox com flip automático inteligente */}
+                          <div
+                            className={`absolute ${
+                              isTopRow ? 'top-full mt-2' : 'bottom-full mb-2'
+                            } ${horizontalPos} hidden group-hover:flex flex-col z-[100] pointer-events-none drop-shadow-2xl`}
+                          >
+                            <div className="bg-[#14120E] text-[#FAF7F2] text-[10px] py-1.5 px-2.5 rounded-md shadow-2xl whitespace-nowrap border border-[#2B261F]">
                               <strong className="text-[#C7A15F] block">{day.dataLabel}</strong>
-                              <span>{day.detalhes}</span>
+                              <span className="text-[#FAF7F2]">{day.detalhes}</span>
                             </div>
                           </div>
                         </div>

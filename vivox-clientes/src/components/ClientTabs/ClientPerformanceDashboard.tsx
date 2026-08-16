@@ -102,7 +102,7 @@ export function ClientPerformanceDashboard({ cliente }: Props) {
   return (
     <div className="space-y-6 w-full">
       {/* CABEÇALHO DO RELATÓRIO DE ACESSOS AO SITE/LP (STICKY) */}
-      <div className="sticky top-2 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14120E]/95 backdrop-blur-md text-[#F6F0E7] p-5 rounded-[11px] border border-[#2B261F] shadow-lg">
+      <div className="sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14120E]/95 backdrop-blur-md text-[#F6F0E7] p-4 sm:p-5 rounded-[11px] border border-[#2B261F] shadow-lg">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C7A15F] animate-pulse"></span>
