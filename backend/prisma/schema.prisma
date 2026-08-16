@@ -55,6 +55,22 @@ enum StatusProducao {
   PUBLICADO
 }
 
+enum StatusHospedagem {
+  ATIVO
+  PENDENTE_RENOVACAO
+  MANUTENCAO
+  EXPIRADO
+  CANCELADO
+}
+
+enum CicloRenovacao {
+  MENSAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+  BIENAL
+}
+
 enum OrigemDado {
   REPORTEI
   MANUAL
@@ -158,11 +174,14 @@ model Cliente {
   dataFimContrato    DateTime?
   logoUrl            String?
   observacoes        String?
+  ga4PropertyId      String?
+  gscSiteUrl         String?
 
   // Relações Clientes
   servicosContratados ServicoContratado[]
   producoes           Producao[]
   midias              MidiaCliente[]
+  ativosHospedagem    AtivoHospedagem[]
 
   // Relações Analytics
   analyticsSnapshots AnalyticsSnapshot[]
@@ -427,3 +446,41 @@ model HistoricoServico {
   valorAnterior         String?             @db.Text
   valorNovo             String?             @db.Text
 }
+
+// ============================================
+// MÓDULO: ATIVOS DIGITAIS & HOSPEDAGEM (VPS / LPs / SITES)
+// ============================================
+
+model AtivoHospedagem {
+  id                   String           @id @default(uuid())
+  clienteId            String
+  cliente              Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  
+  titulo               String           // ex: "LP Implante Capilar", "Site Institucional"
+  url                  String           // ex: "https://drcliente.com.br/capilar"
+  
+  // Dados de Servidor / VPS
+  provedorVps          String?          // ex: "VPS Vivox Hetzner #1", "Hostinger", "Coolify"
+  ipServidor           String?          // ex: "179.198.120.113"
+  dataRenovacaoVps     DateTime?        // Próximo vencimento da VPS/Hospedagem
+  cicloVps             CicloRenovacao   @default(ANUAL)
+  custoVps             Decimal?         // Custo que a Vivox paga (opcional)
+  valorCobrado         Decimal?         // Valor que a Vivox cobra do cliente
+  
+  // Dados de Domínio & DNS
+  dominio              String?          // ex: "drcliente.com.br"
+  registradorDominio   String?          // ex: "Registro.br", "GoDaddy", "Cloudflare"
+  dataExpiracaoDominio DateTime?        // Data que expira o domínio no registrador
+  dnsProvedor          String?          // ex: "Cloudflare", "Registro.br"
+  
+  // Status & Notas
+  status               StatusHospedagem @default(ATIVO)
+  sslAtivo             Boolean          @default(true)
+  observacoes          String?          @db.Text
+  
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([clienteId])
+}
+

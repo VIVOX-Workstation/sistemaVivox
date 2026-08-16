@@ -77,27 +77,127 @@ export class RagService {
    * Garante isolamento estrito de tenant (clienteId).
    */
   async searchContext(clienteId: string, query: string, limit: number = 5) {
-    // 1. Gerar o vetor da pergunta
-    const { embedding } = await embed({
-      model: openai.embedding('text-embedding-3-small'),
-      value: query,
-    });
+    // 1. Tenta busca vetorial se houver chave OpenAI configurada
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const { embedding } = await embed({
+          model: openai.embedding('text-embedding-3-small'),
+          value: query,
+        });
 
-    const embeddingStr = JSON.stringify(embedding);
+        const embeddingStr = JSON.stringify(embedding);
 
-    // 2. Busca por Similaridade (Cosine Similarity <=>)
-    // Aplica filtro rigoroso por clienteId para isolamento (Tenant)
-    // OBS FUTURA: Para chunks do tipo 'TENDENCIA_SEMANA', aplicar filtro de recência se necessário.
-    const matches = await this.prisma.$queryRaw<
-      Array<{ id: string; conteudo: string; tipo: string; titulo: string | null }>
-    >`
-      SELECT "id", "conteudo", "tipo", "titulo" 
-      FROM "DocumentoVetorial"
-      WHERE "clienteId" = ${clienteId}
-      ORDER BY vetor <=> ${embeddingStr}::vector
-      LIMIT ${limit};
-    `;
+        const matches = await this.prisma.$queryRaw<
+          Array<{ id: string; conteudo: string; tipo: string; titulo: string | null }>
+        >`
+          SELECT "id", "conteudo", "tipo", "titulo" 
+          FROM "DocumentoVetorial"
+          WHERE "clienteId" = ${clienteId}
+          ORDER BY vetor <=> ${embeddingStr}::vector
+          LIMIT ${limit};
+        `;
 
-    return matches;
+        if (matches && matches.length > 0) {
+          return matches;
+        }
+      } catch (err) {
+        this.logger.warn('Busca vetorial falhou, utilizando fallback textual direto.');
+      }
+    }
+
+    // 2. Fallback Seguro: Busca os documentos e inteligências mais recentes do cliente diretamente
+    try {
+      const directDocs = await this.prisma.documentoVetorial.findMany({
+        where: { clienteId },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: { id: true, conteudo: true, tipo: true, titulo: true },
+      });
+      return directDocs;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Consolida TODO o cérebro e inteligência do cliente (Fontes, Mapa Mental, Briefing, Mercado, Perfil)
+   */
+  async getFullClientContext(clienteId: string): Promise<string> {
+    try {
+      const cliente = await this.prisma.cliente.findUnique({
+        where: { id: clienteId },
+        include: {
+          fontesContexto: true,
+          inteligenciasMercado: {
+            orderBy: { data: 'desc' },
+            take: 3,
+          },
+          servicosContratados: {
+            include: {
+              planejamento: {
+                include: {
+                  escopoItens: true,
+                  marcos: true,
+                  referencias: true,
+                },
+              },
+            },
+          },
+          documentosVetoriais: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
+        },
+      });
+
+      if (!cliente) return '';
+
+      let contextStr = `=== PERFIL DO CLIENTE ===\n`;
+      contextStr += `Nome Fantasia / Marca: ${cliente.nomeFantasia}\n`;
+      if (cliente.razaoSocial) contextStr += `Razão Social: ${cliente.razaoSocial}\n`;
+      contextStr += `Segmento de Atuação: ${cliente.segmento}\n`;
+      if (cliente.observacoes) contextStr += `Observações e Detalhes do Cliente: ${cliente.observacoes}\n`;
+
+      if (cliente.fontesContexto && cliente.fontesContexto.length > 0) {
+        contextStr += `\n=== FONTES & CONTEXTO DO SEGUNDO CÉREBRO (MAPA MENTAL DE ESTRATÉGIA) ===\n`;
+        cliente.fontesContexto.forEach((f, idx) => {
+          contextStr += `${idx + 1}. [${f.tipo}] ${f.titulo}\n   Detalhes / Conteúdo: ${f.descricao || '(Sem descrição detalhada)'}\n`;
+        });
+      }
+
+      if (cliente.inteligenciasMercado && cliente.inteligenciasMercado.length > 0) {
+        contextStr += `\n=== INTELIGÊNCIA DE MERCADO, TENDÊNCIAS E PESQUISAS ===\n`;
+        cliente.inteligenciasMercado.forEach((i, idx) => {
+          contextStr += `Pesquisa ${idx + 1} (${new Date(i.data).toLocaleDateString()}):\nResumo: ${i.resumo}\n`;
+          if (i.tendencias) {
+            contextStr += `Tendências Mapeadas: ${JSON.stringify(i.tendencias)}\n`;
+          }
+        });
+      }
+
+      if (cliente.servicosContratados && cliente.servicosContratados.length > 0) {
+        contextStr += `\n=== SERVIÇOS CONTRATADOS & PLANEJAMENTOS ===\n`;
+        cliente.servicosContratados.forEach((s) => {
+          contextStr += `• Serviço: ${s.tipoServico} (Status: ${s.status})\n`;
+          if (s.descricaoEscopo) contextStr += `  Escopo Geral: ${s.descricaoEscopo}\n`;
+          if (s.planejamento) {
+            if (s.planejamento.ideiaBriefing) {
+              contextStr += `  Briefing / Direcionamento: ${s.planejamento.ideiaBriefing}\n`;
+            }
+            if (s.planejamento.escopoItens && s.planejamento.escopoItens.length > 0) {
+              contextStr += `  Entregáveis Planejados:\n`;
+              s.planejamento.escopoItens.forEach((item) => {
+                contextStr += `    - ${item.titulo} (${item.status}) ${item.descricao ? `: ${item.descricao}` : ''}\n`;
+              });
+            }
+          }
+        });
+      }
+
+      return contextStr;
+    } catch (err) {
+      this.logger.error('Erro ao consolidar contexto do cliente', err);
+      return '';
+    }
   }
 }

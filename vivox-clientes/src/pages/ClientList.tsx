@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Plus, Building2 } from 'lucide-react';
 import { api } from '../api/client';
@@ -46,21 +46,21 @@ export function ClientList() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Clientes</h1>
-          <p className="text-sm text-slate-500">Gerencie a carteira de clientes da agência.</p>
+          <h1 className="text-2xl font-bold text-[#1E1A16] tracking-tight">Clientes</h1>
+          <p className="text-xs text-[#625746] mt-0.5">Gerencie a carteira de clientes e métricas da agência.</p>
         </div>
-        <Button onClick={() => navigate('/cliente/novo')} className="shrink-0 gap-2">
+        <Button onClick={() => navigate('/cliente/novo')} className="shrink-0 gap-2 font-bold">
           <Plus className="w-4 h-4" />
           Novo Cliente
         </Button>
       </div>
 
-      <Card className="p-4 flex flex-col sm:flex-row gap-4">
+      <Card className="p-4 flex flex-col sm:flex-row gap-4 bg-[#FFFDF8] border-[#D8CBB8]">
         <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-[#847663]" />
           <Input 
             placeholder="Buscar por nome..." 
             className="pl-9"
@@ -85,30 +85,30 @@ export function ClientList() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredClientes.map((cliente) => (
           <Link key={cliente.id} to={`/cliente/${cliente.id}`} className="block group">
-            <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-indigo-200 cursor-pointer flex flex-col">
+            <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-[#B89455] cursor-pointer flex flex-col bg-[#FFFDF8] border-[#D8CBB8]">
               <div className="p-5 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-[11px] bg-[#FAF2E4] border border-[#E8D4B4] text-[#8A6828] flex items-center justify-center shrink-0">
                     {cliente.logoUrl ? (
-                      <img src={cliente.logoUrl} alt={cliente.nomeFantasia} className="w-full h-full object-cover rounded-lg" />
+                      <img src={cliente.logoUrl} alt={cliente.nomeFantasia} className="w-full h-full object-cover rounded-[11px]" />
                     ) : (
                       <Building2 className="w-6 h-6" />
                     )}
                   </div>
-                  <Badge variant={getStatusBadgeVariant(cliente.status)} className="capitalize">
+                  <Badge variant={getStatusBadgeVariant(cliente.status)} className="capitalize text-[11px]">
                     {cliente.status.toLowerCase()}
                   </Badge>
                 </div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                <h3 className="font-bold text-[#1E1A16] group-hover:text-[#8A6828] transition-colors line-clamp-1">
                   {cliente.nomeFantasia}
                 </h3>
-                <p className="text-sm text-slate-500 mb-4 line-clamp-1">
+                <p className="text-xs text-[#625746] mb-4 line-clamp-1">
                   {cliente.segmento}
                 </p>
                 
-                <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Responsável:</span>
-                  <span className="font-medium text-slate-700">{cliente.responsavel?.nome || 'Nenhum'}</span>
+                <div className="mt-auto pt-4 border-t border-[#EEE7DC] flex justify-between items-center text-xs">
+                  <span className="text-[#847663]">Responsável:</span>
+                  <span className="font-medium text-[#1E1A16]">{cliente.responsavel?.nome || 'Nenhum'}</span>
                 </div>
               </div>
             </Card>
@@ -116,7 +116,7 @@ export function ClientList() {
         ))}
 
         {filteredClientes.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-200 border-dashed">
+          <div className="col-span-full py-12 text-center text-[#847663] bg-[#FFFDF8] rounded-[11px] border border-[#D8CBB8] border-dashed">
             Nenhum cliente encontrado.
           </div>
         )}

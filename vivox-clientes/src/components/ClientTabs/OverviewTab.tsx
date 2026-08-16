@@ -110,6 +110,42 @@ export function OverviewTab({ cliente, onChange }: Props) {
         </div>
       </div>
 
+      {/* INTEGRAÇÕES GOOGLE (GA4 & SEARCH CONSOLE) */}
+      <div className="pt-6 border-t border-slate-200">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Integrações Google (Métricas & SEO)</h3>
+            <p className="text-xs text-slate-500 mt-0.5">IDs vinculados para busca automática de tráfego e palavras-chave ranqueadas</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 block">Google Analytics 4 (GA4)</span>
+              <p className="font-mono text-sm font-bold text-slate-900 mt-0.5">
+                {cliente.ga4PropertyId ? `Propriedade #${cliente.ga4PropertyId}` : 'Não configurado'}
+              </p>
+            </div>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${cliente.ga4PropertyId ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+              {cliente.ga4PropertyId ? 'Configurado' : 'Pendente'}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 block">Google Search Console (GSC)</span>
+              <p className="font-mono text-xs font-bold text-slate-900 mt-0.5 truncate max-w-[220px]">
+                {cliente.gscSiteUrl || 'Não configurado'}
+              </p>
+            </div>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${cliente.gscSiteUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+              {cliente.gscSiteUrl ? 'Configurado' : 'Pendente'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <Modal 
         isOpen={isContatoModalOpen} 
         onClose={() => setContatoModalOpen(false)}

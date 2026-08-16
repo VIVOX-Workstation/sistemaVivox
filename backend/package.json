@@ -21,8 +21,10 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.36",
+    "@ai-sdk/groq": "^4.0.26",
     "@ai-sdk/openai": "^4.0.36",
     "@aws-sdk/client-s3": "^3.1103.0",
+    "@google-analytics/data": "^7.0.0",
     "@langchain/textsplitters": "^1.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
@@ -37,6 +39,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cron": "^4.4.0",
+    "googleapis": "^174.0.1",
     "multer": "^2.2.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

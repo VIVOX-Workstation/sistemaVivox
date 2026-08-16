@@ -40,4 +40,12 @@ export class CreateClienteDto {
   @IsString()
   @IsOptional()
   observacoes?: string;
+
+  @IsString()
+  @IsOptional()
+  ga4PropertyId?: string;
+
+  @IsString()
+  @IsOptional()
+  gscSiteUrl?: string;
 }

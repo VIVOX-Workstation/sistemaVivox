@@ -117,7 +117,7 @@ export function GanttChart({ tasks, onAddTask, onUpdateTask, onEditTask, onDelet
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startAutoScroll = (direction: 'left' | 'right') => {
     if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);

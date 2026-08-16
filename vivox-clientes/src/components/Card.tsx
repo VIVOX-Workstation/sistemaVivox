@@ -3,7 +3,7 @@ import { cn } from '../utils/cn';
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn('rounded-lg border border-slate-200 bg-white shadow-sm', className)}>
+    <div className={cn('vivox-card', className)}>
       {children}
     </div>
   );
@@ -11,7 +11,7 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function CardHeader({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn('flex flex-col space-y-1.5 p-6', className)}>
+    <div className={cn('flex flex-col', className)}>
       {children}
     </div>
   );
@@ -19,7 +19,7 @@ export function CardHeader({ className, children }: { className?: string; childr
 
 export function CardTitle({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <h3 className={cn('text-lg font-semibold leading-none tracking-tight text-slate-900', className)}>
+    <h3 className={cn('text-[12px] font-[650] leading-[1.3] text-[var(--vivox-text)] tracking-tight', className)}>
       {children}
     </h3>
   );
@@ -27,7 +27,7 @@ export function CardTitle({ className, children }: { className?: string; childre
 
 export function CardContent({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn('p-6 pt-0', className)}>
+    <div className={cn('', className)}>
       {children}
     </div>
   );
@@ -35,7 +35,7 @@ export function CardContent({ className, children }: { className?: string; child
 
 export function CardFooter({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn('flex items-center p-6 pt-0', className)}>
+    <div className={cn('flex items-center pt-2', className)}>
       {children}
     </div>
   );

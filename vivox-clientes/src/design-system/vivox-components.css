@@ -1,0 +1,108 @@
+/* Componentes Base - Design System VIVOX */
+
+.vivox-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--vivox-text-muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.vivox-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--vivox-border);
+}
+
+.vivox-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vivox-space-3);
+  padding: 14px;
+  border: 1px solid var(--vivox-border);
+  border-radius: var(--vivox-radius-md);
+  background: var(--vivox-surface);
+  box-shadow: var(--vivox-shadow-panel);
+}
+
+.vivox-image {
+  outline: 1px solid oklch(0 0 0 / 0.1);
+  outline-offset: -1px;
+}
+
+[data-theme="dark"] .vivox-image {
+  outline-color: oklch(1 0 0 / 0.1);
+}
+
+.vivox-button-primary {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(126, 94, 45, 0.28);
+  border-radius: var(--vivox-radius-md);
+  background: var(--vivox-brand);
+  color: var(--vivox-on-brand);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--vivox-motion-fast) var(--vivox-ease-out), background-color var(--vivox-motion-ui) var(--vivox-ease-out);
+}
+
+.vivox-button-primary:hover {
+  background: var(--vivox-brand-hover);
+}
+
+.vivox-button-primary:active {
+  transform: scale(0.96);
+}
+
+.vivox-button-secondary {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--vivox-border);
+  border-radius: var(--vivox-radius-md);
+  background: var(--vivox-surface-raised);
+  color: var(--vivox-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--vivox-motion-fast) var(--vivox-ease-out), border-color var(--vivox-motion-ui) var(--vivox-ease-out), color var(--vivox-motion-ui) var(--vivox-ease-out);
+}
+
+.vivox-button-secondary:hover {
+  border-color: rgba(184, 148, 85, 0.50);
+  color: var(--vivox-text);
+}
+
+.vivox-button-secondary:active {
+  transform: scale(0.96);
+}
+
+.vivox-field {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--vivox-border);
+  border-radius: var(--vivox-radius-sm);
+  outline: none;
+  background: var(--vivox-surface-raised);
+  color: var(--vivox-text);
+  font: inherit;
+  font-size: 12px;
+  transition: border-color var(--vivox-motion-ui) var(--vivox-ease-out), box-shadow var(--vivox-motion-ui) var(--vivox-ease-out);
+}
+
+.vivox-field:focus {
+  border-color: rgba(184, 148, 85, 0.50);
+  box-shadow: 0 0 0 2px rgba(184, 148, 85, 0.12);
+}

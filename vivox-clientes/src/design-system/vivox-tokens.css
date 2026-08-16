@@ -1,0 +1,93 @@
+/* VIVOX Studio Design Tokens
+   Camada portátil extraída da interface consolidada do plugin. */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Brand */
+  --vivox-brand: #c7a15f;
+  --vivox-brand-hover: #d1b174;
+  --vivox-brand-soft: rgba(199, 161, 95, 0.14);
+  --vivox-brand-subtle: rgba(199, 161, 95, 0.08);
+  --vivox-on-brand: #1d160b;
+
+  /* Surfaces */
+  --vivox-background: #11100e;
+  --vivox-surface: #181612;
+  --vivox-surface-raised: #221f1a;
+  --vivox-surface-strong: #2b261f;
+  --vivox-border: #373126;
+  --vivox-border-strong: #4a4032;
+
+  /* Content */
+  --vivox-text: #f6f0e7;
+  --vivox-text-muted: #b9aea0;
+  --vivox-text-subtle: #8f8271;
+
+  /* Feedback */
+  --vivox-success: #5fc48b;
+  --vivox-danger: #f06a63;
+
+  /* Geometry */
+  --vivox-radius-sm: 8px;
+  --vivox-radius-md: 11px;
+  --vivox-radius-pill: 999px;
+  --vivox-space-1: 4px;
+  --vivox-space-2: 8px;
+  --vivox-space-3: 12px;
+  --vivox-space-4: 16px;
+  --vivox-space-5: 20px;
+  --vivox-space-6: 24px;
+
+  /* Depth */
+  --vivox-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --vivox-shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.035) inset;
+  --vivox-ring-subtle: 0 0 0 1px rgba(184, 148, 85, 0.14);
+  --vivox-ring-hover: 0 0 0 1px rgba(184, 148, 85, 0.26);
+
+  /* Motion */
+  --vivox-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --vivox-ease-inout: cubic-bezier(0.77, 0, 0.175, 1);
+  --vivox-motion-fast: 140ms;
+  --vivox-motion-ui: 190ms;
+  --vivox-motion-panel: 240ms;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --vivox-brand: #b89455;
+  --vivox-brand-hover: #9e7a3f;
+  --vivox-brand-soft: rgba(184, 148, 85, 0.14);
+  --vivox-brand-subtle: rgba(184, 148, 85, 0.08);
+  --vivox-on-brand: #1d160b;
+
+  --vivox-background: #f6f0e7;
+  --vivox-surface: #fffdf8;
+  --vivox-surface-raised: #eee7dc;
+  --vivox-surface-strong: #e5d9c8;
+  --vivox-border: #d8cbb8;
+  --vivox-border-strong: #c5b59d;
+
+  --vivox-text: #1e1a16;
+  --vivox-text-muted: #625746;
+  --vivox-text-subtle: #847663;
+
+  --vivox-success: #247a4a;
+  --vivox-danger: #b83b32;
+
+  --vivox-shadow-soft: 0 1px 2px rgba(72, 52, 28, 0.07);
+  --vivox-shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

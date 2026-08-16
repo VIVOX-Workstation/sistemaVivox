@@ -1,14 +1,12 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-}
+@import "./design-system/vivox-tokens.css";
+@import "./design-system/vivox-components.css";
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: var(--vivox-background);
+  color: var(--vivox-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
   margin: 0;
   min-height: 100vh;
 }
@@ -31,13 +29,13 @@ body {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Mostrar handles ao passar o mouse sobre o nÛ */
+/* Mostrar handles ao passar o mouse sobre o n√≥ */
 .react-flow__node:hover .flow-handle,
 .react-flow__node.selected .flow-handle {
   opacity: 1;
 }
 
-/* Handles maiores quando o nÛ est· selecionado */
+/* Handles maiores quando o n√≥ est√° selecionado */
 .react-flow__node.selected .flow-handle {
   width: 14px !important;
   height: 14px !important;
@@ -73,7 +71,7 @@ body {
   cursor: pointer;
 }
 
-/* Edge reconect·vel - endpoints ficam visÌveis */
+/* Edge reconect√°vel - endpoints ficam vis√≠veis */
 .react-flow__edgeupdater {
   cursor: grab !important;
 }

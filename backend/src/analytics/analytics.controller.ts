@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { CreateMetricaDto } from './dto/create-analytics.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,8 +13,54 @@ export class AnalyticsController {
     return this.analyticsService.saveSnapshot(dto);
   }
 
+  @Get('dashboard-executivo')
+  getDashboardExecutivo() {
+    return this.analyticsService.getDashboardExecutivo();
+  }
+
   @Get('resultados/:clienteId')
   getResultados(@Param('clienteId') clienteId: string) {
     return this.analyticsService.getResultados(clienteId);
+  }
+
+  /**
+   * Retorna o status e o e-mail da Service Account configurada
+   */
+  @Get('google/service-account')
+  getServiceAccountInfo() {
+    return this.analyticsService.getServiceAccountInfo();
+  }
+
+  /**
+   * Retorna as métricas de GA4 e Google Search Console consolidadas para um cliente
+   */
+  @Get('google/:clienteId')
+  getGoogleDashboard(
+    @Param('clienteId') clienteId: string,
+    @Query('days') days?: string,
+    @Query('refresh') refresh?: string,
+  ) {
+    const daysNumber = days ? parseInt(days, 10) : 30;
+    const forceRefresh = refresh === 'true' || refresh === '1';
+    return this.analyticsService.getGoogleDashboard(clienteId, daysNumber, forceRefresh);
+  }
+
+  /**
+   * Salva as configurações de IDs de GA4 e Search Console do cliente
+   */
+  @Patch('google/:clienteId')
+  updateGoogleConfig(
+    @Param('clienteId') clienteId: string,
+    @Body() dto: { ga4PropertyId?: string; gscSiteUrl?: string },
+  ) {
+    return this.analyticsService.updateClienteGoogleConfig(clienteId, dto);
+  }
+
+  /**
+   * Testa a conexão e permissões para um propertyId ou siteUrl avulso
+   */
+  @Post('google/test-connection')
+  testConnection(@Body() dto: { propertyId?: string; siteUrl?: string; days?: number }) {
+    return this.analyticsService.testGoogleConnection(dto);
   }
 }

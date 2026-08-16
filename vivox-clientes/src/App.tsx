@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { MainDashboard } from './pages/MainDashboard';
 import { ClientList } from './pages/ClientList';
 import { ClientForm } from './pages/ClientForm';
 import { ClientProfile } from './pages/ClientProfile';
@@ -23,7 +24,8 @@ function App() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/" element={<Layout />}>
-              <Route index element={<ClientList />} />
+              <Route index element={<MainDashboard />} />
+              <Route path="clientes" element={<ClientList />} />
               <Route path="cliente/novo" element={<ClientForm />} />
               <Route path="cliente/:id" element={<ClientProfile />} />
               <Route path="cliente/:id/servicos/:servicoId/planejamento" element={<PlanejamentoServico />} />

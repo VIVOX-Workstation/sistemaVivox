@@ -1,0 +1,8 @@
+node_modules
+*/node_modules
+vivox-clientes
+dist
+.git
+.agents
+.claude
+.windsurf

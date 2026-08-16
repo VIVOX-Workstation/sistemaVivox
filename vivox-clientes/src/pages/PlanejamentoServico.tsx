@@ -8,6 +8,7 @@ import { Textarea } from '../components/Textarea';
 import { GanttChart } from '../components/GanttChart';
 import type { GanttTask } from '../components/GanttChart';
 import { DependencyFlow } from '../components/DependencyFlow';
+import { FloatingAssistant } from '../components/FloatingAssistant';
 
 // Types
 type StatusPlanejamento = 'BRIEFING' | 'PLANEJAMENTO' | 'EM_PRODUCAO' | 'EM_REVISAO' | 'CONCLUIDO';
@@ -522,6 +523,9 @@ export function PlanejamentoServico() {
           </div>
         </div>
       )}
+
+      {/* BOTÃO DA IA FLUTUANTE (Carrega os dados do cliente) */}
+      <FloatingAssistant clienteId={id!} />
 
     </div>
   );

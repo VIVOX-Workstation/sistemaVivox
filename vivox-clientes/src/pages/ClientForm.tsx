@@ -24,6 +24,8 @@ export function ClientForm() {
     dataInicioContrato: new Date().toISOString().split('T')[0],
     contatos: [],
     observacoes: '',
+    ga4PropertyId: '',
+    gscSiteUrl: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +39,8 @@ export function ClientForm() {
         status: (formData.status as string).toUpperCase() as StatusCliente,
         cnpjCpf: formData.cnpjCpf || '00000000000',
         dataInicioContrato: formData.dataInicioContrato ? new Date(formData.dataInicioContrato).toISOString() : new Date().toISOString(),
+        ga4PropertyId: formData.ga4PropertyId?.trim() || undefined,
+        gscSiteUrl: formData.gscSiteUrl?.trim() || undefined,
         contatos: [],
       };
 
@@ -139,6 +143,37 @@ export function ClientForm() {
               onChange={handleChange}
               required
             />
+          </div>
+        </Card>
+
+        <Card className="p-6 space-y-6">
+          <div className="border-b border-slate-100 pb-2">
+            <h2 className="text-lg font-semibold text-slate-900">Integrações Google (Métricas & SEO)</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Opcional. Preencha para sincronizar automaticamente métricas de acessos e buscas orgânicas.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Input 
+                label="ID da Propriedade GA4" 
+                name="ga4PropertyId"
+                placeholder="Ex: 481928472"
+                value={formData.ga4PropertyId || ''}
+                onChange={handleChange}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">ID numérico exibido no painel de Administrador do Google Analytics 4.</p>
+            </div>
+            
+            <div>
+              <Input 
+                label="Site URL no Search Console" 
+                name="gscSiteUrl"
+                placeholder="Ex: https://www.cliente.com.br/"
+                value={formData.gscSiteUrl || ''}
+                onChange={handleChange}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">URL completa com barra final ou domínio (ex: sc-domain:cliente.com.br).</p>
+            </div>
           </div>
         </Card>
 
