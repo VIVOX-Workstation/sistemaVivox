@@ -31,6 +31,26 @@ export class UsersService {
     return this.create(createUserDto);
   }
 
+  async seedAdmin(email = 'kelson@vivox.com.br', pass = '123456') {
+    const hashedPassword = await bcrypt.hash(pass, 10);
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      await this.prisma.user.update({
+        where: { email },
+        data: { senha: hashedPassword },
+      });
+      return { message: `Senha do usuário ${email} atualizada com sucesso para "${pass}"!`, email };
+    }
+    const created = await this.prisma.user.create({
+      data: {
+        nome: 'Kelson Cosme',
+        email,
+        senha: hashedPassword,
+      },
+    });
+    return { message: `Usuário ${email} criado com sucesso com a senha "${pass}"!`, email: created.email };
+  }
+
   findAll() {
     return this.prisma.user.findMany({ select: { id: true, nome: true, email: true } });
   }
