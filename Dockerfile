@@ -18,6 +18,7 @@ COPY backend/ .
 RUN npx prisma generate
 
 # Faz o build de produção do NestJS (Gera a pasta dist)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 EXPOSE 3000
