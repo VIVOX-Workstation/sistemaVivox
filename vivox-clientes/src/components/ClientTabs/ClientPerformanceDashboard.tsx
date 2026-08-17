@@ -345,20 +345,20 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
       </div>
 
       {/* 🟢 CARD RADAR: DADOS EM TEMPO REAL (REALTIME - IDÊNTICO AO GOOGLE ANALYTICS) */}
-      <div className="bg-[#201E19] border border-[#3A362D] text-[#FAF7F2] p-5 sm:p-6 rounded-[11px] shadow-md space-y-5">
+      <div className="bg-[#FFFDF8] border border-[#D8CBB8] text-[#1E1A16] p-5 sm:p-6 rounded-[11px] shadow-xs space-y-5">
         {/* Topo com indicador ao vivo e auto-sync */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333026] pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EEE7DC] pb-3">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-3 w-3">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${(realtime?.activeUsersNow || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#C7A15F]'} opacity-75`}></span>
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${(realtime?.activeUsersNow || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#C7A15F]'}`}></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${(realtime?.activeUsersNow || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#B89455]'} opacity-75`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${(realtime?.activeUsersNow || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#B89455]'}`}></span>
             </span>
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#FAF7F2] flex items-center gap-1.5">
-                <Radio className={`w-3.5 h-3.5 ${(realtime?.activeUsersNow || 0) > 0 ? 'text-[#22C55E]' : 'text-[#C7A15F]'}`} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E1A16] flex items-center gap-1.5">
+                <Radio className={`w-3.5 h-3.5 ${(realtime?.activeUsersNow || 0) > 0 ? 'text-[#22C55E]' : 'text-[#8A6828]'}`} />
                 Visão Geral em Tempo Real (Google Analytics 4)
               </h3>
-              <span className="text-[10px] text-[#A89880] font-mono">Sincronizado às {lastUpdatedTime}</span>
+              <span className="text-[10px] text-[#847663] font-mono">Sincronizado às {lastUpdatedTime}</span>
             </div>
           </div>
 
@@ -367,8 +367,8 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               onClick={() => setAutoRefreshRealtime(!autoRefreshRealtime)}
               className={`text-[10px] font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer flex items-center gap-1 ${
                 autoRefreshRealtime
-                  ? 'bg-[#22C55E]/15 border-[#22C55E]/40 text-[#4ADE80]'
-                  : 'bg-[#2D2A23] border-[#4A4538] text-[#847663]'
+                  ? 'bg-[#22C55E]/10 border-[#22C55E]/30 text-[#16A34A]'
+                  : 'bg-[#FAF7F2] border-[#D8CBB8] text-[#847663]'
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${autoRefreshRealtime ? 'bg-[#22C55E] animate-pulse' : 'bg-[#847663]'}`} />
@@ -381,45 +381,45 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-1">
           {/* Usuários Ativos nos Últimos 30 Minutos */}
           <div>
-            <span className="text-[11px] font-bold text-[#A89880] uppercase tracking-wider border-b border-dotted border-[#4A4538] pb-0.5 inline-block">
+            <span className="text-[11px] font-bold text-[#847663] uppercase tracking-wider border-b border-dotted border-[#D8CBB8] pb-0.5 inline-block">
               USUÁRIOS ATIVOS NOS ÚLTIMOS 30 MINUTOS
             </span>
-            <div className="text-5xl font-light text-[#FAF7F2] mt-2 font-mono tracking-tight">
+            <div className="text-5xl font-light text-[#1E1A16] mt-2 font-mono tracking-tight">
               {realtime?.activeUsersNow || 0}
             </div>
           </div>
 
           {/* Usuários Ativos nos Últimos 5 Minutos */}
           <div>
-            <span className="text-[11px] font-bold text-[#A89880] uppercase tracking-wider border-b border-dotted border-[#4A4538] pb-0.5 inline-block">
+            <span className="text-[11px] font-bold text-[#847663] uppercase tracking-wider border-b border-dotted border-[#D8CBB8] pb-0.5 inline-block">
               USUÁRIOS ATIVOS NOS ÚLTIMOS 5 MINUTOS
             </span>
-            <div className="text-5xl font-light text-[#FAF7F2] mt-2 font-mono tracking-tight">
+            <div className="text-5xl font-light text-[#1E1A16] mt-2 font-mono tracking-tight">
               {realtime?.activeUsers5Min || 0}
             </div>
           </div>
         </div>
 
         {/* 📈 LINHA 2: GRÁFICO DE USUÁRIOS ATIVOS POR MINUTO (ESTILO OFICIAL GA4) */}
-        <div className="pt-3 border-t border-[#333026]">
+        <div className="pt-3 border-t border-[#EEE7DC]">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-[#A89880] uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#847663] uppercase tracking-wider">
               USUÁRIOS ATIVOS POR MINUTO
             </span>
             <span className="text-[10px] font-mono text-[#847663]">Escala em tempo real</span>
           </div>
 
           {/* Área do Gráfico de 30 Minutos com Linhas de Grade e Eixo Y */}
-          <div className="relative bg-[#1A1814] border border-[#333026] rounded-lg p-3 pt-4">
+          <div className="relative bg-[#FAF7F2] border border-[#EEE7DC] rounded-lg p-3 pt-4">
             {/* Linhas de Grade do Eixo Y */}
-            <div className="absolute inset-x-3 top-3 bottom-8 flex flex-col justify-between pointer-events-none opacity-20">
-              <div className="border-b border-dashed border-[#FAF7F2] w-full flex justify-end pr-1">
-                <span className="text-[9px] font-mono text-[#FAF7F2] -mt-2">1</span>
+            <div className="absolute inset-x-3 top-3 bottom-8 flex flex-col justify-between pointer-events-none opacity-40">
+              <div className="border-b border-dashed border-[#D8CBB8] w-full flex justify-end pr-1">
+                <span className="text-[9px] font-mono text-[#625746] -mt-2">1</span>
               </div>
-              <div className="border-b border-dashed border-[#FAF7F2] w-full flex justify-end pr-1">
-                <span className="text-[9px] font-mono text-[#FAF7F2] -mt-2">0,5</span>
+              <div className="border-b border-dashed border-[#D8CBB8] w-full flex justify-end pr-1">
+                <span className="text-[9px] font-mono text-[#625746] -mt-2">0,5</span>
               </div>
-              <div className="border-b border-[#FAF7F2] w-full" />
+              <div className="border-b border-[#D8CBB8] w-full" />
             </div>
 
             {/* As 30 Barras Verticais de Minuto a Minuto */}
@@ -434,7 +434,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                 return (
                   <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
                     {/* Tooltip ao passar o mouse */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 bg-[#1A1814] border border-[#C7A15F] px-1.5 py-0.5 rounded text-[9px] font-mono text-[#FAF7F2] whitespace-nowrap pointer-events-none z-20 shadow-md">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 bg-[#14120E] border border-[#C7A15F] px-1.5 py-0.5 rounded text-[9px] font-mono text-[#FAF7F2] whitespace-nowrap pointer-events-none z-20 shadow-md">
                       -{pt.minutesAgo} min: {pt.activeUsers} {pt.activeUsers === 1 ? 'usuário' : 'usuários'}
                     </div>
 
@@ -443,8 +443,8 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                       style={{ height: `${heightPercent}%` }}
                       className={`w-full rounded-xs transition-all ${
                         hasUsers
-                          ? 'bg-[#1A73E8] hover:bg-[#4285F4] shadow-sm'
-                          : 'bg-[#2D2A23] hover:bg-[#4A4538]'
+                          ? 'bg-[#1A73E8] hover:bg-[#1557B0] shadow-xs'
+                          : 'bg-[#E5DFD5] hover:bg-[#D8CBB8]'
                       }`}
                     />
                   </div>
@@ -453,7 +453,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             </div>
 
             {/* Rótulos do Eixo X (-30 min a -1 min) */}
-            <div className="flex justify-between text-[9px] text-[#847663] font-mono pt-2 border-t border-[#333026] mt-1">
+            <div className="flex justify-between text-[9px] text-[#847663] font-mono pt-2 border-t border-[#EEE7DC] mt-1">
               <span>-30 min</span>
               <span>-25 min</span>
               <span>-20 min</span>
@@ -466,56 +466,56 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
         </div>
 
         {/* 📱 LINHA 3: DISPOSITIVOS & PÁGINAS ATIVAS AGORA */}
-        <div className="pt-3 border-t border-[#333026] grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div className="pt-3 border-t border-[#EEE7DC] grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           {/* Páginas Sendo Vistas Neste Momento */}
           <div className="md:col-span-2 space-y-1.5">
-            <span className="text-[#A89880] font-semibold text-[11px] block">
+            <span className="text-[#847663] font-semibold text-[11px] block">
               Páginas Sendo Acessadas Agora:
             </span>
             {realtime?.pages && realtime.pages.length > 0 ? (
               <div className="space-y-1.5">
                 {realtime.pages.map((p, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-[#1A1814] px-3 py-1.5 rounded border border-[#333026]">
-                    <span className="text-[11px] text-[#FAF7F2] truncate pr-2" title={p.pageTitle}>
+                  <div key={idx} className="flex items-center justify-between bg-[#FAF7F2] px-3 py-1.5 rounded border border-[#EEE7DC]">
+                    <span className="text-[11px] text-[#1E1A16] font-medium truncate pr-2" title={p.pageTitle}>
                       {p.pageTitle}
                     </span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#1A73E8]/20 text-[#60A5FA] shrink-0 border border-[#1A73E8]/40">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#1A73E8]/10 text-[#1A73E8] shrink-0 border border-[#1A73E8]/30">
                       {p.activeUsers} {p.activeUsers === 1 ? 'usuário' : 'usuários'}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="bg-[#1A1814]/70 px-3 py-2 rounded border border-[#333026] text-center text-[#847663] text-[11px]">
+              <div className="bg-[#FAF7F2] px-3 py-2 rounded border border-[#EEE7DC] text-center text-[#847663] text-[11px]">
                 Nenhum visitante navegando no site neste exato momento (0 usuários ativos nos últimos 30 minutos).
               </div>
             )}
           </div>
 
           {/* Dispositivos & Eventos */}
-          <div className="bg-[#1A1814] p-3 rounded border border-[#333026] flex flex-col justify-between">
-            <span className="text-[#A89880] font-semibold text-[11px]">Dispositivos Ativos</span>
+          <div className="bg-[#FAF7F2] p-3 rounded border border-[#EEE7DC] flex flex-col justify-between">
+            <span className="text-[#847663] font-semibold text-[11px]">Dispositivos Ativos</span>
             <div className="space-y-1.5 my-2">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 text-[#FAF7F2]">
-                  <Monitor className="w-3.5 h-3.5 text-[#C7A15F]" /> Desktop:
+                <span className="flex items-center gap-1 text-[#1E1A16]">
+                  <Monitor className="w-3.5 h-3.5 text-[#8A6828]" /> Desktop:
                 </span>
-                <span className="font-mono font-bold text-[#C7A15F]">
+                <span className="font-mono font-bold text-[#8A6828]">
                   {realtime?.devices?.find((d) => d.device.toLowerCase() === 'desktop')?.activeUsers || 0}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 text-[#FAF7F2]">
-                  <Smartphone className="w-3.5 h-3.5 text-[#22C55E]" /> Mobile:
+                <span className="flex items-center gap-1 text-[#1E1A16]">
+                  <Smartphone className="w-3.5 h-3.5 text-[#247A4A]" /> Mobile:
                 </span>
-                <span className="font-mono font-bold text-[#22C55E]">
+                <span className="font-mono font-bold text-[#247A4A]">
                   {realtime?.devices?.find((d) => d.device.toLowerCase() === 'mobile')?.activeUsers || 0}
                 </span>
               </div>
             </div>
-            <div className="pt-2 border-t border-[#2D2A23] flex items-center justify-between text-[10px] text-[#847663]">
+            <div className="pt-2 border-t border-[#EEE7DC] flex items-center justify-between text-[10px] text-[#847663]">
               <span>Eventos nos 30m:</span>
-              <span className="font-mono font-bold text-[#FAF7F2]">{realtime?.eventCountNow || 0}</span>
+              <span className="font-mono font-bold text-[#1E1A16]">{realtime?.eventCountNow || 0}</span>
             </div>
           </div>
         </div>

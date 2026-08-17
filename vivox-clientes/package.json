@@ -49,5 +49,10 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "^1.2.4",
+    "@rolldown/binding-linux-x64-musl": "^1.2.4",
+    "@rolldown/binding-win32-x64-msvc": "^1.2.4"
   }
 }
