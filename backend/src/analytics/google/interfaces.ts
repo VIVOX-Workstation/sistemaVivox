@@ -35,10 +35,44 @@ export interface GA4CityMetric {
   sessions: number;
 }
 
+export interface GA4PageMetric {
+  pagePath: string;
+  screenPageViews: number;
+  sessions: number;
+  activeUsers: number;
+  bounceRate: number;
+}
+
 export interface GA4EventMetric {
   eventName: string;
   eventCount: number;
   totalUsers: number;
+}
+
+export interface GA4RealtimePage {
+  pageTitle: string;
+  activeUsers: number;
+}
+
+export interface GA4RealtimeDevice {
+  device: string;
+  activeUsers: number;
+  percentage: number;
+}
+
+export interface GA4RealtimeMinutePoint {
+  minutesAgo: number; // 0 a 29
+  activeUsers: number;
+}
+
+export interface GA4RealtimeMetric {
+  activeUsersNow: number; // Últimos 30 min
+  activeUsers5Min: number; // Últimos 5 min
+  screenPageViewsNow: number;
+  eventCountNow: number;
+  perMinuteTimeline: GA4RealtimeMinutePoint[];
+  pages: GA4RealtimePage[];
+  devices: GA4RealtimeDevice[];
 }
 
 export interface GA4MetricsResult {
@@ -48,10 +82,12 @@ export interface GA4MetricsResult {
   error?: string;
   overview?: GA4Overview;
   timeline?: GA4TimelinePoint[];
+  pages?: GA4PageMetric[];
   trafficSources?: GA4TrafficSource[];
   devices?: GA4DeviceDistribution[];
   cities?: GA4CityMetric[];
   events?: GA4EventMetric[];
+  realtime?: GA4RealtimeMetric;
 }
 
 // Google Search Console (GSC)

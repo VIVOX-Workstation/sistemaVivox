@@ -56,12 +56,37 @@ export class GSCService {
    * @param startDate Data de início (ex: "30daysAgo" ou "2026-07-01")
    * @param endDate Data final (ex: "yesterday" ou "2026-07-31")
    */
+  private async resolveSiteUrl(client: any, inputUrl: string): Promise<string> {
+    let raw = inputUrl.trim();
+    if (raw.startsWith('sc-domain:') || raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+
+    // Se o usuário digitou apenas o domínio (ex: dramanuelacordeiropediatra.com.br)
+    try {
+      const sitesList = await client.sites.list();
+      const entries: any[] = sitesList.data.siteEntry || [];
+      
+      // Procura match exato por sc-domain
+      const domainMatch = entries.find(e => e.siteUrl === `sc-domain:${raw}`);
+      if (domainMatch) return domainMatch.siteUrl;
+
+      // Procura match por https
+      const httpsMatch = entries.find(e => e.siteUrl.includes(raw));
+      if (httpsMatch) return httpsMatch.siteUrl;
+    } catch {
+      // fallback
+    }
+
+    return `sc-domain:${raw}`;
+  }
+
   async getSearchConsoleMetrics(
     siteUrl: string,
     startDate: string = '30daysAgo',
     endDate: string = 'yesterday',
   ): Promise<GSCMetricsResult> {
-    const cleanSiteUrl = siteUrl.trim();
+    let cleanSiteUrl = siteUrl.trim();
     if (!cleanSiteUrl) {
       return {
         success: false,
@@ -83,13 +108,13 @@ export class GSCService {
       };
     }
 
+    // Resolve se é sc-domain ou https
+    cleanSiteUrl = await this.resolveSiteUrl(client, cleanSiteUrl);
+
     const parsedStartDate = this.parseRelativeDate(startDate);
     const parsedEndDate = this.parseRelativeDate(endDate);
 
     try {
-      // 1. Consulta timeline por data (e calcula totais)
-      // 2. Consulta top queries (palavras-chave)
-      // 3. Consulta top páginas
       const [timelineRes, queriesRes, pagesRes] = await Promise.all([
         client.searchanalytics.query({
           siteUrl: cleanSiteUrl,

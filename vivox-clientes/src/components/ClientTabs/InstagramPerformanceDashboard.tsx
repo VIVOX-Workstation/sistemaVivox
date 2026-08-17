@@ -524,41 +524,103 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           </div>
         </div>
 
-        {/* DIVISÃO DE FORMATOS (QUAL FORMATO DEU MAIS CERTO?) */}
+        {/* GRÁFICO EM PIZZA / DONUT: DIVISÃO DE ALCANCE POR FORMATO */}
         <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-              Desempenho por Formato
+              Alcance por Formato (Pizza)
             </h3>
-            <span className="text-[10px] text-[#8A6828] font-bold">Taxa Média</span>
+            <span className="text-[10px] text-[#8A6828] font-bold">Distribuição MTD</span>
           </div>
 
-          <div className="space-y-3">
-            {formatosDesempenho.map((f, i) => (
-              <div key={i} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#1E1A16] text-[11px] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.cor }} />
-                    {f.formato}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#847663]">{f.posts} posts</span>
-                    <span className="font-bold text-[#247A4A] text-[11px]">{f.engajamentoMedio}</span>
-                  </div>
-                </div>
+          {/* Gráfico Donut / Pizza em SVG */}
+          <div className="flex items-center justify-center gap-6 py-2">
+            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                {/* Fundo do Donut */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="transparent"
+                  stroke="#EEE7DC"
+                  strokeWidth="14"
+                />
+                {/* Fatia 1: Reels (58.4%) - Dourado Vivox */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="transparent"
+                  stroke="#B89455"
+                  strokeWidth="14"
+                  strokeDasharray="238.76"
+                  strokeDashoffset="99.33" // 238.76 * (1 - 0.584)
+                  className="transition-all hover:opacity-85 cursor-pointer"
+                />
+                {/* Fatia 2: Carrosséis (27.2%) - Âmbar */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="transparent"
+                  stroke="#8A6828"
+                  strokeWidth="14"
+                  strokeDasharray="64.94 173.82"
+                  strokeDashoffset="-139.43"
+                  className="transition-all hover:opacity-85 cursor-pointer"
+                />
+                {/* Fatia 3: Stories (9.8%) - Dourado Suave */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="transparent"
+                  stroke="#D8CBB8"
+                  strokeWidth="14"
+                  strokeDasharray="23.40 215.36"
+                  strokeDashoffset="-204.37"
+                  className="transition-all hover:opacity-85 cursor-pointer"
+                />
+                {/* Fatia 4: Posts Estáticos (4.6%) - Marrom */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="transparent"
+                  stroke="#4A4032"
+                  strokeWidth="14"
+                  strokeDasharray="10.99 227.77"
+                  strokeDashoffset="-227.77"
+                  className="transition-all hover:opacity-85 cursor-pointer"
+                />
+              </svg>
 
-                <div className="w-full bg-[#EEE7DC] h-2 rounded-full overflow-hidden">
-                  <div
-                    style={{ width: `${f.porcentagem}%`, backgroundColor: f.cor }}
-                    className="h-full rounded-full"
-                  />
-                </div>
+              {/* Centro do Donut */}
+              <div className="absolute flex flex-col items-center justify-center text-center">
+                <span className="text-[9px] font-bold text-[#847663] uppercase">Top Formato</span>
+                <span className="text-base font-black text-[#1E1A16] leading-none mt-0.5">58.4%</span>
+                <span className="text-[8px] font-bold text-[#8A6828] mt-0.5">Reels</span>
               </div>
-            ))}
+            </div>
+
+            {/* Legenda de Fatias da Pizza */}
+            <div className="space-y-1.5 flex-1">
+              {formatosDesempenho.map((f, i) => (
+                <div key={i} className="flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: f.cor }} />
+                    <span className="font-semibold text-[#1E1A16] truncate max-w-[95px]">{f.formato.split(' ')[0]}</span>
+                  </div>
+                  <span className="font-bold text-[#1E1A16]">{f.porcentagem}%</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="pt-3 border-t border-[#EEE7DC] text-[11px] text-[#625746] bg-[#FAF6F0] p-2.5 rounded-lg">
-            💡 <strong className="text-[#1E1A16]">Insight:</strong> Reels representam 58% do alcance do mês e geram 3x mais seguidores novos.
+          <div className="pt-2.5 border-t border-[#EEE7DC] text-[11px] text-[#625746] bg-[#FAF6F0] p-2 rounded-lg flex items-center justify-between">
+            <span>Engajamento Médio dos Reels:</span>
+            <strong className="text-[#247A4A] font-bold">6.8%</strong>
           </div>
         </div>
       </div>

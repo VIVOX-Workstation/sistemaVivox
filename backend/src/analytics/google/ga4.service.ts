@@ -9,6 +9,7 @@ import {
   GA4DeviceDistribution,
   GA4CityMetric,
   GA4EventMetric,
+  GA4PageMetric,
 } from './interfaces';
 
 @Injectable()
@@ -81,6 +82,11 @@ export class GA4Service {
         devicesResponse,
         citiesResponse,
         eventsResponse,
+        pagesResponse,
+        realtimeSummaryResponse,
+        realtimePagesResponse,
+        realtimeDevicesResponse,
+        realtimeMinutesResponse,
       ] = await Promise.all([
         // 1. Overview (Resumo Geral)
         client.runReport({
@@ -182,6 +188,55 @@ export class GA4Service {
             },
           ],
         }),
+
+        // 7. Páginas e Landing Pages Mais Acessadas
+        client.runReport({
+          property: propertyName,
+          dateRanges: [{ startDate, endDate }],
+          dimensions: [{ name: 'pagePath' }],
+          metrics: [
+            { name: 'screenPageViews' },
+            { name: 'sessions' },
+            { name: 'activeUsers' },
+            { name: 'bounceRate' },
+          ],
+          limit: 15,
+          orderBys: [
+            {
+              metric: { metricName: 'screenPageViews' },
+              desc: true,
+            },
+          ],
+        }),
+
+        // 8. Realtime Summary (Usuários e Visualizações agora)
+        client.runRealtimeReport({
+          property: propertyName,
+          metrics: [{ name: 'activeUsers' }, { name: 'screenPageViews' }, { name: 'eventCount' }],
+        }).catch(() => [null]),
+
+        // 9. Realtime Pages (Páginas ativas agora)
+        client.runRealtimeReport({
+          property: propertyName,
+          dimensions: [{ name: 'unifiedScreenName' }],
+          metrics: [{ name: 'activeUsers' }],
+          limit: 5,
+        }).catch(() => [null]),
+
+        // 10. Realtime Devices (Dispositivos ativos agora)
+        client.runRealtimeReport({
+          property: propertyName,
+          dimensions: [{ name: 'deviceCategory' }],
+          metrics: [{ name: 'activeUsers' }],
+        }).catch(() => [null]),
+
+        // 11. Realtime Minutes (Minutos atrás 0 a 29)
+        client.runRealtimeReport({
+          property: propertyName,
+          dimensions: [{ name: 'minutesAgo' }],
+          metrics: [{ name: 'activeUsers' }],
+          orderBys: [{ dimension: { dimensionName: 'minutesAgo' }, desc: false }],
+        }).catch(() => [null]),
       ]);
 
       // --- Parser do Overview ---
@@ -266,16 +321,83 @@ export class GA4Service {
         totalUsers: Number(row.metricValues?.[1]?.value || 0),
       }));
 
+      // --- Parser de Páginas ---
+      const pages: GA4PageMetric[] = (pagesResponse[0]?.rows || []).map(row => ({
+        pagePath: row.dimensionValues?.[0]?.value || '/',
+        screenPageViews: Number(row.metricValues?.[0]?.value || 0),
+        sessions: Number(row.metricValues?.[1]?.value || 0),
+        activeUsers: Number(row.metricValues?.[2]?.value || 0),
+        bounceRate: Math.round(Number(row.metricValues?.[3]?.value || 0) * 1000) / 10,
+      }));
+
+      // --- Parser de Realtime ---
+      const rtSumRow = realtimeSummaryResponse?.[0]?.rows?.[0];
+      const activeUsersNow = Number(rtSumRow?.metricValues?.[0]?.value || 0);
+      const screenPageViewsNow = Number(rtSumRow?.metricValues?.[1]?.value || 0);
+      const eventCountNow = Number(rtSumRow?.metricValues?.[2]?.value || 0);
+
+      const rtPages: any[] = (realtimePagesResponse?.[0]?.rows || []).map((r: any) => ({
+        pageTitle: r.dimensionValues?.[0]?.value || 'Página',
+        activeUsers: Number(r.metricValues?.[0]?.value || 0),
+      }));
+
+      const rtDevTotal = (realtimeDevicesResponse?.[0]?.rows || []).reduce(
+        (acc: number, r: any) => acc + Number(r.metricValues?.[0]?.value || 0),
+        0
+      );
+      const rtDevices: any[] = (realtimeDevicesResponse?.[0]?.rows || []).map((r: any) => {
+        const cnt = Number(r.metricValues?.[0]?.value || 0);
+        return {
+          device: r.dimensionValues?.[0]?.value || 'outro',
+          activeUsers: cnt,
+          percentage: rtDevTotal > 0 ? Math.round((cnt / rtDevTotal) * 100) : 0,
+        };
+      });
+
+      // Mapeamento dos minutos (0 a 29)
+      const minuteMap = new Map<number, number>();
+      (realtimeMinutesResponse?.[0]?.rows || []).forEach((r: any) => {
+        const mVal = parseInt(r.dimensionValues?.[0]?.value || '0', 10);
+        const uVal = Number(r.metricValues?.[0]?.value || 0);
+        minuteMap.set(mVal, uVal);
+      });
+
+      let activeUsers5Min = 0;
+      const perMinuteTimeline: any[] = [];
+      // De 29 minutos atrás até 0 minuto atrás (agora)
+      for (let m = 29; m >= 0; m--) {
+        const u = minuteMap.get(m) || 0;
+        perMinuteTimeline.push({
+          minutesAgo: m,
+          activeUsers: u,
+        });
+        if (m < 5) {
+          activeUsers5Min = Math.max(activeUsers5Min, u);
+        }
+      }
+
+      const realtime = {
+        activeUsersNow,
+        activeUsers5Min,
+        screenPageViewsNow,
+        eventCountNow,
+        perMinuteTimeline,
+        pages: rtPages,
+        devices: rtDevices,
+      };
+
       return {
         success: true,
         propertyId: cleanPropertyId,
         configured: true,
         overview,
         timeline,
+        pages,
         trafficSources,
         devices,
         cities,
         events,
+        realtime,
       };
     } catch (error: any) {
       this.logger.error(`Erro ao consultar GA4 para property ${cleanPropertyId}:`, error);

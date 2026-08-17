@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { Cliente } from '../../types';
 import { api } from '../../api/client';
 import { TrendingUp, Star, MessageSquare, BarChart3, Edit3, Calendar, Trophy, Sparkles } from 'lucide-react';
-import { GoogleAnalyticsDashboard } from './GoogleAnalyticsDashboard';
 import { ClientPerformanceDashboard } from './ClientPerformanceDashboard';
 
 interface Props {
@@ -62,13 +61,8 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
 
   return (
     <div className="space-y-8 w-full">
-      {/* DASHBOARD COMPLETO DE PERFORMANCE & INSTAGRAM DO CLIENTE */}
-      <ClientPerformanceDashboard cliente={cliente} />
-
-      {/* GOOGLE ANALYTICS 4 & SEARCH CONSOLE DASHBOARD */}
-      <div className="pt-8 border-t border-[#D8CBB8]/70">
-        <GoogleAnalyticsDashboard cliente={cliente} onClienteUpdated={onClienteUpdated} />
-      </div>
+      {/* DASHBOARD UNIFICADO DE PERFORMANCE, GA4, GSC & TEMPO REAL */}
+      <ClientPerformanceDashboard cliente={cliente} onClienteUpdated={onClienteUpdated} />
 
       {/* RESULTADOS GERAIS (Snapshots de Redes / GMB) */}
       <div className="pt-8 border-t border-[#D8CBB8]/70">
