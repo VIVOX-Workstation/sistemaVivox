@@ -289,3 +289,14 @@ export interface RadarHospedagemResult {
   proximasRenovacoes: AtivoHospedagem[];
 }
 
+export interface Oportunidade {
+  id: string;
+  clienteId: string;
+  servicoSugerido: TipoServico;
+  justificativa?: string;
+  status: 'ABERTA' | 'APRESENTADA' | 'ACEITA' | 'RECUSADA';
+  origem?: 'persistida' | 'calculada';
+  createdAt: string;
+  updatedAt: string;
+}
+

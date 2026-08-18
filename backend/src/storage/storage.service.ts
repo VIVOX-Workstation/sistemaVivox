@@ -1,10 +1,11 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private s3: S3Client;
   private bucket = process.env.S3_BUCKET || 'vivox-media';
 
@@ -33,11 +34,23 @@ export class StorageService {
       );
       
       const endpoint = process.env.S3_ENDPOINT || '';
-      // Retorna uma URL que o frontend local pode acessar (substituindo o nome do container pelo host se for o caso)
-      const publicUrl = `${endpoint.replace('minio', 'localhost')}/${this.bucket}/${fileName}`;
+      
+      let publicUrl = '';
+      if (process.env.S3_PUBLIC_URL) {
+        // Usa a base fornecida explicitamente
+        publicUrl = `${process.env.S3_PUBLIC_URL}/${fileName}`;
+      } else {
+        // Fallback seguro baseado em ambiente
+        if (process.env.NODE_ENV !== 'production' && endpoint.includes('minio')) {
+          publicUrl = `${endpoint.replace('minio', 'localhost')}/${this.bucket}/${fileName}`;
+        } else {
+          publicUrl = `${endpoint}/${this.bucket}/${fileName}`;
+        }
+      }
+      
       return publicUrl;
     } catch (err) {
-      console.error(err);
+      this.logger.error('Erro ao fazer upload para o Storage', err);
       throw new InternalServerErrorException('Erro ao fazer upload para o Storage');
     }
   }

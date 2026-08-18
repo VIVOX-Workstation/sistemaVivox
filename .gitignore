@@ -16,3 +16,6 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Estado local do Maestri (terminais de agentes recrutados)
+.maestri/

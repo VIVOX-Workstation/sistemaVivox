@@ -12,6 +12,7 @@ interface Props {
 export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
   const [loading, setLoading] = useState(true);
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [oportunidades, setOportunidades] = useState<any[]>([]);
   const [mercado, setMercado] = useState<any>(null);
   const [searching, setSearching] = useState(false);
 
@@ -27,6 +28,7 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
         api.get(`/ia/mercado/${cliente.id}`)
       ]);
       setSnapshot(resResultados.data.snapshot);
+      setOportunidades(resResultados.data.oportunidades || []);
       if (resMercado.data && resMercado.data.length > 0) {
         setMercado(resMercado.data[0]);
       }
@@ -211,7 +213,7 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
 
       {/* APRESENTAÇÃO DE RESULTADOS */}
       <div className="pt-8 border-t border-[#D8CBB8]/70">
-        <div className="bg-[#FAF6F0] rounded-[11px] border border-[#E5D9C8] p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="bg-[#FAF6F0] rounded-[11px] border border-[#E5D9C8] p-6 flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-11 h-11 bg-[#B89455] text-[#1D160B] rounded-xl flex items-center justify-center shrink-0 shadow-xs font-bold">
               <Calendar className="w-5 h-5" />
@@ -227,6 +229,45 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
             Agendar Reunião
           </button>
         </div>
+      </div>
+
+      {/* OPORTUNIDADES COMERCIAIS */}
+      <div className="pt-4 border-t border-[#D8CBB8]/70">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-[#B89455]" />
+          <h3 className="text-base font-bold text-[#1E1A16] tracking-tight">Oportunidades de Upsell</h3>
+        </div>
+        
+        {oportunidades.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {oportunidades.map(op => (
+              <div key={op.id} className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-[#1E1A16] text-sm">{op.servicoSugerido.replace(/_/g, ' ')}</span>
+                    {op.origem === 'calculada' ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#1A73E8] border border-[#1A73E8]/30" title="Sugestão gerada automaticamente com base nos serviços faltantes">
+                        Calculada / Sugerida
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F4EA] text-[#137333] border border-[#137333]/30" title="Oportunidade real persistida no banco de dados">
+                        Persistida
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#625746] mb-4">{op.justificativa}</p>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-[#EEE7DC]">
+                  <span className="text-[10px] font-bold text-[#847663] bg-[#FAF2E4] px-2 py-1 rounded">Status: {op.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-[#FAF7F2] rounded-[11px] border border-dashed border-[#D8CBB8] p-6 text-center">
+            <p className="text-[#1E1A16] font-medium text-xs">Nenhuma oportunidade identificada.</p>
+          </div>
+        )}
       </div>
     </div>
   );

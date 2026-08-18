@@ -51,10 +51,10 @@ export class AnalyticsService {
       where: { clienteId },
     });
 
-    let oportunidades = await this.prisma.oportunidade.findMany({
+    let oportunidades: any[] = (await this.prisma.oportunidade.findMany({
       where: { clienteId },
       orderBy: { createdAt: 'desc' }
-    });
+    })).map(o => ({ ...o, origem: 'persistida' as const }));
 
     // Calcula on-the-fly se não houver no banco (MVP Automático)
     if (oportunidades.length === 0) {
@@ -74,6 +74,7 @@ export class AnalyticsService {
         status: 'ABERTA' as any,
         createdAt: new Date(),
         updatedAt: new Date(),
+        origem: 'calculada' as const,
       }));
     }
 
