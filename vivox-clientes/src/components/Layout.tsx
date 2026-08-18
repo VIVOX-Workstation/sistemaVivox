@@ -1,4 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import VivoxIntro from './VivoxIntro';
 import { 
   LayoutDashboard,
   Users, 
@@ -8,12 +10,27 @@ import {
   PenTool, 
   Palette, 
   Film, 
-  Kanban 
+  Kanban,
+  LogOut,
+  Settings
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export function Layout() {
+  const { signOut } = useAuth();
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem('@Vivox:showIntro') === 'true') {
+      setShowIntro(true);
+      sessionStorage.removeItem('@Vivox:showIntro');
+    }
+  }, []);
+
   return (
-    <div className="flex min-h-screen bg-[#FAF7F2] text-[#1E1A16]">
+    <>
+      {showIntro && <VivoxIntro onComplete={() => setShowIntro(false)} />}
+      <div className="flex min-h-screen bg-[#FAF7F2] text-[#1E1A16]">
       {/* Sidebar VIVOX Design System */}
       <aside className="w-64 bg-[#14120E] border-r border-[#2B261F] flex flex-col shadow-2xl z-10 select-none">
         <div className="h-16 flex items-center px-6 border-b border-[#231F19] bg-[#0E0D0B]">
@@ -68,6 +85,20 @@ export function Layout() {
             Vivox Analytics
           </NavLink>
           
+          <NavLink
+            to="/configuracoes"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                isActive
+                  ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
+                  : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
+              }`
+            }
+          >
+            <Settings className="w-4 h-4 text-[#C7A15F]" />
+            Configurações
+          </NavLink>
+          
           <div className="pt-4 px-3 pb-1 text-[9px] font-bold text-[#8F8271] uppercase tracking-[0.13em]">
             Em Breve
           </div>
@@ -102,6 +133,16 @@ export function Layout() {
             Vivox GP
           </div>
         </nav>
+
+        <div className="p-4 border-t border-[#231F19] bg-[#0E0D0B]">
+          <button
+            onClick={signOut}
+            className="flex items-center w-full gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent transition-all duration-150"
+          >
+            <LogOut className="w-4 h-4" />
+            Sair
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -111,5 +152,6 @@ export function Layout() {
         </div>
       </main>
     </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Maximize2, Minimize2, Sparkles } from 'lucide-react';
 import { CanvasAnimation } from './ui/set-of-animations-4';
+import { getApiBaseUrl } from '../api/client';
 
 interface Message {
   id: string;
@@ -34,9 +35,15 @@ export function FloatingAssistant({ clienteId }: { clienteId?: string }) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/ia/chat', {
+      const token = localStorage.getItem('@Vivox:token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${getApiBaseUrl()}/ia/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           clienteId,
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),

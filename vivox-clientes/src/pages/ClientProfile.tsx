@@ -10,9 +10,10 @@ import { OverviewTab } from '../components/ClientTabs/OverviewTab';
 import { HostingTab } from '../components/ClientTabs/HostingTab';
 import { NotesTab } from '../components/ClientTabs/NotesTab';
 import { MarketTab } from '../components/ClientTabs/MarketTab';
+import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { FloatingAssistant } from '../components/FloatingAssistant';
 
-type Tab = 'overview' | 'hosting' | 'market' | 'productions' | 'media' | 'notes';
+type Tab = 'overview' | 'hosting' | 'market' | 'productions' | 'media' | 'notes' | 'services';
 
 export function ClientProfile() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +44,7 @@ export function ClientProfile() {
     { id: 'overview', label: 'Visão Geral' },
     { id: 'hosting', label: 'Landing Pages & Domínio' },
     { id: 'market', label: 'Mercado (IA)' },
+    { id: 'services', label: 'Mapa de Serviços' },
     { id: 'productions', label: 'Produções' },
     { id: 'media', label: 'Mídias' },
     { id: 'notes', label: 'Anotações' },
@@ -134,6 +136,7 @@ export function ClientProfile() {
         {activeTab === 'overview' && <OverviewTab cliente={cliente} onChange={loadCliente} />}
         {activeTab === 'hosting' && <HostingTab cliente={cliente} />}
         {activeTab === 'market' && <MarketTab clienteId={cliente.id} />}
+        {activeTab === 'services' && <ServicesTab cliente={cliente} />}
         {activeTab === 'notes' && <NotesTab cliente={cliente} onChange={loadCliente} />}
         {activeTab === 'productions' && <div className="py-12 text-center text-[#847663] text-xs bg-[#FFFDF8] rounded-[11px] border border-[#D8CBB8]">Módulo de produções em desenvolvimento.</div>}
         {activeTab === 'media' && <div className="py-12 text-center text-[#847663] text-xs bg-[#FFFDF8] rounded-[11px] border border-[#D8CBB8]">Módulo de mídias em desenvolvimento.</div>}

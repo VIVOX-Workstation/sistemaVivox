@@ -20,6 +20,7 @@ import {
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Badge } from '../components/Badge';
+import { CanvasAnimation } from '../components/CanvasAnimation';
 
 interface DashboardData {
   clientes: {
@@ -396,6 +397,11 @@ export function MainDashboard() {
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-[#847663] group-hover:text-[#8A6828] transition-colors" />
+            </div>
+
+            {/* Widget Status do Sistema */}
+            <div className="bg-[#14120E] p-4 rounded-[11px] border border-[#2B261F] shadow-2xs flex flex-col items-center justify-center relative overflow-hidden group">
+              <CanvasAnimation animationId="sphere-scan" title="Sistema Online" className="w-full h-40" />
             </div>
 
             {/* Banner Dica Estratégica */}

@@ -26,3 +26,6 @@ dist-ssr
 # Temp scripts
 fix_canvas.mjs
 check.mjs
+
+# Config
+.env

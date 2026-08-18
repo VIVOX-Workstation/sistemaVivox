@@ -7,6 +7,7 @@ import { ClientProfile } from './pages/ClientProfile';
 import { AnalyticsIndex } from './pages/AnalyticsIndex';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { PlanejamentoServico } from './pages/PlanejamentoServico';
+import { Configuracoes } from './pages/Configuracoes';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -32,6 +33,7 @@ function App() {
               
               <Route path="analytics" element={<AnalyticsIndex />} />
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />
+              <Route path="configuracoes" element={<Configuracoes />} />
               
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
