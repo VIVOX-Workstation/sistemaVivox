@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, NotFoundException, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Param, NotFoundException, Req, Res, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { RagService } from './rag.service';
@@ -6,7 +6,9 @@ import { PesquisaService } from './pesquisa.service';
 import { generateText, streamText } from 'ai';
 import { groq } from '@ai-sdk/groq';
 import { z } from 'zod';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('ia')
 export class IaController {
   constructor(
