@@ -45,12 +45,13 @@ frontend de produção no ambiente do Coolify, senão requests cross-origin em
 produção serão bloqueados.
 
 ## TASK-005 — Regularizar migrations Prisma
-**Status**: PLANEJAMENTO (precisa investigar o schema real de produção antes de decidir a estratégia — risco de drift)
-**Escopo**: gerar uma migration que reflita o `schema.prisma` atual (20
-models), incorporar a criação do índice HNSW (`create_hnsw_index.ts`) numa
-migration em vez de script manual. Cuidado: banco de produção pode já ter o
-schema atual aplicado via `db push` — migration precisa ser gerada sem tentar
-recriar o que já existe (`prisma migrate resolve`/baseline).
+**Status**: REVISÃO (migration gerada e commitada em `1ca73de`, ainda NÃO aplicada em nenhum ambiente)
+**Escopo**: migration `20260818154500_regulariza_schema_e_vetores` cobre os 9
+models que faltavam, extensão pgvector e índice HNSW.
+**Pendência crítica**: falta rodar `prisma migrate deploy` — isso precisa de
+aprovação explícita do Orquestrador/humano antes de executar contra o banco
+de produção (risco de conflito se o schema já tiver sido aplicado via
+`db push`). Rodar primeiro em ambiente de dev/staging para validar.
 
 ## TASK-006 — Resolver duplicação de vivox-tokens.css
 **Status**: BACKLOG
@@ -58,11 +59,10 @@ recriar o que já existe (`prisma migrate resolve`/baseline).
 e tratar a cópia da raiz como documentação/histórico, ou remover.
 
 ## TASK-007 — Diferenciar oportunidades mock vs persistidas no Analytics
-**Status**: BACKLOG
-**Arquivos**: `backend/src/analytics/analytics.service.ts`
-**Escopo**: `getResultados()` gera oportunidades mock (`id: 'mock-N'`) quando
-não há `Oportunidade` persistida. Adicionar flag explícita (`origem: 'calculada' | 'persistida'`)
-para o frontend não tratar sugestão como dado real.
+**Status**: REVISÃO (implementado, commit `1ca73de`)
+**Arquivos**: `backend/src/analytics/analytics.service.ts`, `vivox-clientes/src/types/index.ts`, `vivox-clientes/src/components/ClientTabs/AnalyticsTab.tsx`
+`getResultados()` agora marca cada oportunidade com `origem: 'persistida' | 'calculada'`;
+frontend exibe a distinção visualmente (badge verde/azul).
 
 ## TASK-008 — Decidir sobre Redis/BullMQ
 **Status**: BACKLOG (decisão arquitetural — Orquestrador + humano)
@@ -74,11 +74,12 @@ README/infra até haver necessidade real. Não deixar a divergência documentada
 vs. real como está.
 
 ## TASK-009 — Corrigir geração de URL pública do StorageService para produção
-**Status**: BACKLOG
-**Arquivos**: `backend/src/storage/storage.service.ts`
-**Escopo**: hoje troca a string `minio`→`localhost` no endpoint — hack válido
-só em dev local. Confirmar como funciona em produção (endpoint real de S3/R2)
-e tornar a geração de URL explícita por ambiente, não por substituição de string.
+**Status**: REVISÃO (implementado, commit `1ca73de`)
+**Arquivos**: `backend/src/storage/storage.service.ts`, `.env.example`
+Agora aceita `S3_PUBLIC_URL` explícito (usado se definido); fallback
+`minio`→`localhost` só roda se `NODE_ENV !== 'production'`.
+**Pendência operacional**: definir `S3_PUBLIC_URL` no ambiente de produção
+(Coolify) apontando para a URL pública real do bucket/CDN.
 
 ## TASK-010 — Mover scripts de debug para fora da árvore compilável
 **Status**: BACKLOG
