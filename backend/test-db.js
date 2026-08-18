@@ -1,11 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://equipe_vivox:Vivox_2026_Database!@179.198.120.113:5432/vivox?schema=public"
-    }
-  }
-});
+// Lê DATABASE_URL do ambiente (.env local ou variável exportada na hora) — nunca hardcoded aqui.
+const prisma = new PrismaClient();
 
 async function main() {
   try {

@@ -1,0 +1,18 @@
+# Variáveis de ambiente / segredos
+.env
+.env.*
+!.env.example
+*credentials*.json
+google-credentials.json
+
+# Dependências
+node_modules/
+
+# Build
+dist/
+build/
+
+# Editor / SO
+.vscode/
+.DS_Store
+Thumbs.db
