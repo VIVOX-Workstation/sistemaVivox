@@ -22,28 +22,27 @@ Postgres de produção, `JWT_SECRET` e chaves S3/MinIO em produção. Atualizar
 ~2 dias antes da higienização (ver DECISIONS.md).
 
 ## TASK-002 — Adicionar guard de autenticação no IaController
-**Status**: PRONTA
+**Status**: REVISÃO (implementado na branch `fix/seguranca-ia-seedadmin-cors`, commit `c5eef61`, aguardando merge)
 **Arquivos**: `backend/src/ia/ia.controller.ts`
-**Escopo**: aplicar `@UseGuards(JwtAuthGuard)` em todas as rotas
-(`/ia/pesquisar/:clienteId`, `/ia/mercado/:clienteId`,
-`/ia/generate-mindmap/:clienteId`, `/ia/chat`). Hoje expõem dado de cliente
-real (RAG) sem token.
+`@UseGuards(JwtAuthGuard)` aplicado no nível do controller, cobrindo todas as rotas.
 
 ## TASK-003 — Proteger endpoint seed-admin
-**Status**: PRONTA
-**Arquivos**: `backend/src/auth/auth.controller.ts`, `backend/src/users/users.service.ts`
-**Escopo**: remover o fallback de credenciais default (`kelson@vivox.com.br`/`123456`)
-quando o body vem vazio, ou proteger a rota (token de setup de um único uso via
-env var, por exemplo). Hoje qualquer pessoa pode chamar `POST /auth/seed-admin`
-sem autenticação e resetar a senha do admin.
-**nao_fazer**: não remover a funcionalidade de provisionamento — ela existe
-para viabilizar deploy no Coolify sem acesso a shell.
+**Status**: REVISÃO (implementado na branch `fix/seguranca-ia-seedadmin-cors`, commit `c5eef61`, aguardando merge)
+**Arquivos**: `backend/src/auth/auth.controller.ts`
+Endpoint agora exige `setupToken` no body, comparado a `SETUP_TOKEN` (env var,
+sem default). Sem essa env var definida, o endpoint recusa qualquer chamada.
+Defaults fracos de email/senha removidos — ambos passam a ser obrigatórios.
+**Pendência operacional**: `SETUP_TOKEN` precisa ser definido manualmente em
+`backend/.env` local e no ambiente de produção (Coolify) — não é versionado.
 
 ## TASK-004 — Restringir CORS
-**Status**: PRONTA
+**Status**: REVISÃO (implementado na branch `fix/seguranca-ia-seedadmin-cors`, commit `c5eef61`, aguardando merge)
 **Arquivos**: `backend/src/main.ts`
-**Escopo**: trocar `app.enableCors()` por uma allowlist de origins (frontend
-de produção + localhost em dev).
+`app.enableCors()` trocado por allowlist via `CORS_ORIGINS` (env var, CSV),
+fallback `http://localhost:5173` (porta padrão do Vite) se não definida.
+**Pendência operacional**: `CORS_ORIGINS` precisa incluir a origem real do
+frontend de produção no ambiente do Coolify, senão requests cross-origin em
+produção serão bloqueados.
 
 ## TASK-005 — Regularizar migrations Prisma
 **Status**: PLANEJAMENTO (precisa investigar o schema real de produção antes de decidir a estratégia — risco de drift)
