@@ -32,6 +32,7 @@ export interface Cliente {
   observacoes?: string;
   ga4PropertyId?: string;
   gscSiteUrl?: string;
+  openpanelProjectId?: string;
   responsavel?: { nome: string }; // Incluído caso o Prisma dê include
   fontesContexto?: FonteContexto[];
 }
@@ -242,6 +243,75 @@ export interface GoogleDashboardResult {
   cachedAt?: string;
 }
 
+// OpenPanel
+export interface OpenPanelOverview {
+  uniqueVisitors: number;
+  totalSessions: number;
+  totalScreenViews: number;
+  bounceRate: number;
+  avgSessionDuration: number;
+  viewsPerSession: number;
+}
+
+export interface OpenPanelTimelinePoint {
+  date: string;
+  uniqueVisitors: number;
+  totalSessions: number;
+  totalScreenViews: number;
+}
+
+export interface OpenPanelBreakdownItem {
+  name: string;
+  sessions: number;
+  pageviews: number;
+  percentage: number;
+}
+
+export interface OpenPanelPageMetric {
+  path: string;
+  origin: string;
+  sessions: number;
+  pageviews: number;
+}
+
+export interface OpenPanelWhatsappClick {
+  createdAt: string;
+  mensagem: string;
+  botao: string;
+  cidade: string;
+  dispositivo: string;
+  navegador: string;
+}
+
+export interface OpenPanelMetricsResult {
+  success: boolean;
+  projectId: string;
+  configured: boolean;
+  error?: string;
+  overview?: OpenPanelOverview;
+  timeline?: OpenPanelTimelinePoint[];
+  pages?: OpenPanelPageMetric[];
+  referrers?: OpenPanelBreakdownItem[];
+  devices?: OpenPanelBreakdownItem[];
+  browsers?: OpenPanelBreakdownItem[];
+  os?: OpenPanelBreakdownItem[];
+  countries?: OpenPanelBreakdownItem[];
+  utmSources?: OpenPanelBreakdownItem[];
+  utmMediums?: OpenPanelBreakdownItem[];
+  utmCampaigns?: OpenPanelBreakdownItem[];
+  liveVisitors?: number;
+  whatsappClicksCount?: number;
+  whatsappClicks?: OpenPanelWhatsappClick[];
+}
+
+export interface OpenPanelDashboardResult {
+  clienteId: string;
+  clienteNome: string;
+  range: string;
+  openpanel: OpenPanelMetricsResult;
+  cachedAt?: string;
+}
+
 // --- TIPAGENS HOSPEDAGEM, VPS & ATIVOS DIGITAIS ---
 
 export type StatusHospedagem = 'ATIVO' | 'PENDENTE_RENOVACAO' | 'MANUTENCAO' | 'EXPIRADO' | 'CANCELADO';
@@ -299,4 +369,125 @@ export interface Oportunidade {
   createdAt: string;
   updatedAt: string;
 }
+
+// --- TIPAGENS VIVOX GP (PROJETOS, TAREFAS & BITRIX STYLE) ---
+
+export type PrioridadeTarefa = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
+
+export type StatusTarefa = 
+  | 'BACKLOG' 
+  | 'A_FAZER' 
+  | 'EM_ANDAMENTO' 
+  | 'EM_REVISAO' 
+  | 'CONCLUIDA' 
+  | 'CANCELADA';
+
+export interface TarefaChecklist {
+  id: string;
+  tarefaId: string;
+  titulo: string;
+  concluido: boolean;
+  ordem: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TarefaComentario {
+  id: string;
+  tarefaId: string;
+  autorId: string;
+  autor?: {
+    id: string;
+    nome: string;
+    email: string;
+  };
+  texto: string;
+  createdAt: string;
+}
+
+export interface Projeto {
+  id: string;
+  nome: string;
+  descricao?: string;
+  cor?: string;
+  icone?: string;
+  clienteId?: string;
+  cliente?: {
+    id: string;
+    nomeFantasia: string;
+  };
+  responsavelId?: string;
+  responsavel?: {
+    id: string;
+    nome: string;
+    email: string;
+  };
+  _count?: {
+    tarefas: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Tarefa {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  status: StatusTarefa;
+  prioridade: PrioridadeTarefa;
+  prazo?: string; // ISO string
+  dataInicio?: string; // ISO string
+  dataConclusao?: string; // ISO string
+  horasEstimadas?: number;
+  horasGastas?: number;
+  tags: string[];
+  ordem: number;
+  autorId?: string;
+  autor?: {
+    id: string;
+    nome: string;
+    email: string;
+  };
+  responsavelId?: string;
+  responsavel?: {
+    id: string;
+    nome: string;
+    email: string;
+  };
+  clienteId?: string;
+  cliente?: {
+    id: string;
+    nomeFantasia: string;
+    logoUrl?: string;
+  };
+  projetoId?: string;
+  projeto?: {
+    id: string;
+    nome: string;
+    cor?: string;
+  };
+  servicoId?: string;
+  servico?: {
+    id: string;
+    tipoServico: string;
+    status: string;
+  };
+  checklist: TarefaChecklist[];
+  comentarios?: TarefaComentario[];
+  _count?: {
+    checklist: number;
+    comentarios: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MetricasTarefas {
+  total: number;
+  emAndamento: number;
+  atrasadas: number;
+  concluidasSemana: number;
+  horasGastasTotal: number;
+}
+
 

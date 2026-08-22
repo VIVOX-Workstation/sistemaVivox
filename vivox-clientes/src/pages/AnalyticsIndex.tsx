@@ -77,7 +77,7 @@ export function AnalyticsIndex() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((cliente) => {
-            const temGoogle = Boolean(cliente.ga4PropertyId || cliente.gscSiteUrl);
+            const temOpenPanel = Boolean(cliente.openpanelProjectId);
 
             return (
               <div
@@ -91,9 +91,9 @@ export function AnalyticsIndex() {
                       {cliente.nomeFantasia.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {temGoogle && (
+                      {temOpenPanel && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
-                          GA4 / SEO
+                          OpenPanel
                         </span>
                       )}
                       <Badge

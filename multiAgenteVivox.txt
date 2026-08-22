@@ -1,0 +1,19 @@
+                              ┌───────────────────────────────────┐
+                              │     VIVOX MASTER AGENT (Geral)    │
+                              │  Visão Macro, Relatórios da       │
+                              │  Agência, Alertas & Oportunidades │
+                              └─────────────────┬─────────────────┘
+                                                │
+                                                ▼
+                   ┌─────────────────────────────────────────────────────────┐
+                   │               CLIENT SPECIALIST AGENT                   │
+                   │           (Especialista Dedicado ao Cliente)            │
+                   └────────────────────────────┬────────────────────────────┘
+                                                │
+              ┌─────────────────────────────────┼─────────────────────────────────┐
+              ▼                                 ▼                                 ▼
+   ┌──────────────────────┐         ┌───────────────────────┐         ┌──────────────────────┐
+   │ Content & Copywriter │         │ Strategy & Planner    │         │ Data & Performance   │
+   │ Roteiros, Carrosséis,│         │ Pautas, Calendário,   │         │ Análise de GA4/GSC,  │
+   │ Copies de Anúncios   │         │ Tendências do Nicho   │         │ Métricas Instagram   │
+   └──────────────────────┘         └───────────────────────┘         └──────────────────────┘

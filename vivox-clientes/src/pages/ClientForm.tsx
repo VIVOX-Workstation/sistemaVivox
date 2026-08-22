@@ -24,8 +24,7 @@ export function ClientForm() {
     dataInicioContrato: new Date().toISOString().split('T')[0],
     contatos: [],
     observacoes: '',
-    ga4PropertyId: '',
-    gscSiteUrl: '',
+    openpanelProjectId: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,8 +38,7 @@ export function ClientForm() {
         status: (formData.status as string).toUpperCase() as StatusCliente,
         cnpjCpf: formData.cnpjCpf || '00000000000',
         dataInicioContrato: formData.dataInicioContrato ? new Date(formData.dataInicioContrato).toISOString() : new Date().toISOString(),
-        ga4PropertyId: formData.ga4PropertyId?.trim() || undefined,
-        gscSiteUrl: formData.gscSiteUrl?.trim() || undefined,
+        openpanelProjectId: formData.openpanelProjectId?.trim() || undefined,
         contatos: [],
       };
 
@@ -148,31 +146,20 @@ export function ClientForm() {
 
         <Card className="p-6 space-y-6">
           <div className="border-b border-slate-100 pb-2">
-            <h2 className="text-lg font-semibold text-slate-900">Integrações Google (Métricas & SEO)</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Opcional. Preencha para sincronizar automaticamente métricas de acessos e buscas orgânicas.</p>
+            <h2 className="text-lg font-semibold text-slate-900">Integração OpenPanel (Métricas de Tráfego)</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Opcional. Preencha para sincronizar automaticamente as métricas de acessos do site/LP.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Input 
-                label="ID da Propriedade GA4" 
-                name="ga4PropertyId"
-                placeholder="Ex: 481928472"
-                value={formData.ga4PropertyId || ''}
+              <Input
+                label="ID do Projeto OpenPanel"
+                name="openpanelProjectId"
+                placeholder="Ex: nome-do-cliente-lp"
+                value={formData.openpanelProjectId || ''}
                 onChange={handleChange}
               />
-              <p className="text-[11px] text-slate-400 mt-1">ID numérico exibido no painel de Administrador do Google Analytics 4.</p>
-            </div>
-            
-            <div>
-              <Input 
-                label="Site URL no Search Console" 
-                name="gscSiteUrl"
-                placeholder="Ex: https://www.cliente.com.br/"
-                value={formData.gscSiteUrl || ''}
-                onChange={handleChange}
-              />
-              <p className="text-[11px] text-slate-400 mt-1">URL completa com barra final ou domínio (ex: sc-domain:cliente.com.br).</p>
+              <p className="text-[11px] text-slate-400 mt-1">Slug do projeto exibido no dashboard do OpenPanel.</p>
             </div>
           </div>
         </Card>

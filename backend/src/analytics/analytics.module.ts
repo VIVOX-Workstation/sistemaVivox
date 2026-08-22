@@ -5,6 +5,8 @@ import { GoogleAuthService } from './google/google-auth.service';
 import { GA4Service } from './google/ga4.service';
 import { GSCService } from './google/gsc.service';
 import { AnalyticsCacheService } from './google/analytics-cache.service';
+import { OpenPanelAuthService } from './openpanel/openpanel-auth.service';
+import { OpenPanelService } from './openpanel/openpanel.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
@@ -16,7 +18,9 @@ import { PrismaModule } from '../prisma/prisma.module';
     GA4Service,
     GSCService,
     AnalyticsCacheService,
+    OpenPanelAuthService,
+    OpenPanelService,
   ],
-  exports: [AnalyticsService, GA4Service, GSCService, GoogleAuthService],
+  exports: [AnalyticsService, GA4Service, GSCService, GoogleAuthService, OpenPanelService, OpenPanelAuthService],
 })
 export class AnalyticsModule {}

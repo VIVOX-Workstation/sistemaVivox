@@ -63,4 +63,28 @@ export class AnalyticsController {
   testConnection(@Body() dto: { propertyId?: string; siteUrl?: string; days?: number }) {
     return this.analyticsService.testGoogleConnection(dto);
   }
+
+  /**
+   * Retorna as métricas de tráfego do OpenPanel para um cliente
+   */
+  @Get('openpanel/:clienteId')
+  getOpenPanelDashboard(
+    @Param('clienteId') clienteId: string,
+    @Query('range') range?: string,
+    @Query('refresh') refresh?: string,
+  ) {
+    const forceRefresh = refresh === 'true' || refresh === '1';
+    return this.analyticsService.getOpenPanelDashboard(clienteId, range || '30d', forceRefresh);
+  }
+
+  /**
+   * Salva o ID do Projeto OpenPanel do cliente
+   */
+  @Patch('openpanel/:clienteId')
+  updateOpenPanelConfig(
+    @Param('clienteId') clienteId: string,
+    @Body() dto: { openpanelProjectId?: string; openpanelClientId?: string; openpanelClientSecret?: string },
+  ) {
+    return this.analyticsService.updateClienteOpenPanelConfig(clienteId, dto);
+  }
 }

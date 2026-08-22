@@ -56,8 +56,7 @@ interface DashboardData {
     nomeFantasia: string;
     segmento: string;
     status: string;
-    ga4PropertyId?: string;
-    gscSiteUrl?: string;
+    openpanelProjectId?: string;
     logoUrl?: string;
     createdAt: string;
     responsavel?: { nome: string };
@@ -298,7 +297,7 @@ export function MainDashboard() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data?.ultimosClientes.map((cliente) => {
-              const temGoogle = Boolean(cliente.ga4PropertyId || cliente.gscSiteUrl);
+              const temOpenPanel = Boolean(cliente.openpanelProjectId);
 
               return (
                 <div
@@ -340,9 +339,9 @@ export function MainDashboard() {
                       <span>{cliente._count.servicosContratados} serviços</span>
                     </div>
 
-                    {temGoogle && (
+                    {temOpenPanel && (
                       <span className="text-[9px] font-bold text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-1.5 py-0.5 rounded">
-                        GA4 / SEO
+                        OpenPanel
                       </span>
                     )}
                   </div>

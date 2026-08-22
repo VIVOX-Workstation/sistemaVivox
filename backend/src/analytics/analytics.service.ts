@@ -6,6 +6,8 @@ import { GA4Service } from './google/ga4.service';
 import { GSCService } from './google/gsc.service';
 import { AnalyticsCacheService } from './google/analytics-cache.service';
 import { GoogleDashboardResult, GA4MetricsResult, GSCMetricsResult } from './google/interfaces';
+import { OpenPanelService } from './openpanel/openpanel.service';
+import { OpenPanelDashboardResult } from './openpanel/interfaces';
 
 @Injectable()
 export class AnalyticsService {
@@ -17,6 +19,7 @@ export class AnalyticsService {
     private ga4Service: GA4Service,
     private gscService: GSCService,
     private cacheService: AnalyticsCacheService,
+    private openpanelService: OpenPanelService,
   ) {}
 
   async saveSnapshot(dto: CreateMetricaDto) {
@@ -219,6 +222,92 @@ export class AnalyticsService {
   }
 
   /**
+   * Retorna o dashboard de tráfego do OpenPanel para um cliente
+   */
+  async getOpenPanelDashboard(
+    clienteId: string,
+    range: string = '30d',
+    forceRefresh: boolean = false,
+  ): Promise<OpenPanelDashboardResult> {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: {
+        id: true,
+        nomeFantasia: true,
+        openpanelProjectId: true,
+        openpanelClientId: true,
+        openpanelClientSecret: true,
+      },
+    });
+
+    if (!cliente) {
+      throw new NotFoundException(`Cliente com ID ${clienteId} não encontrado.`);
+    }
+
+    const cacheKey = `cliente_${clienteId}_op_${range}`;
+
+    if (!forceRefresh) {
+      const cached = this.cacheService.get<OpenPanelDashboardResult>(cacheKey);
+      if (cached) {
+        return {
+          ...cached.data,
+          cachedAt: cached.cachedAt,
+        };
+      }
+    }
+
+    const openpanel = cliente.openpanelProjectId
+      ? await this.openpanelService.getOpenPanelMetrics(
+          cliente.openpanelProjectId,
+          cliente.openpanelClientId,
+          cliente.openpanelClientSecret,
+          range,
+        )
+      : {
+          success: false,
+          projectId: '',
+          configured: false,
+          error: 'ID do Projeto OpenPanel não configurado para este cliente.',
+        };
+
+    const result: OpenPanelDashboardResult = {
+      clienteId: cliente.id,
+      clienteNome: cliente.nomeFantasia,
+      range,
+      openpanel,
+    };
+
+    this.cacheService.set(cacheKey, result, 3600);
+
+    return result;
+  }
+
+  /**
+   * Salva o ID do Projeto e as credenciais (Client ID / Client Secret) do OpenPanel do cliente.
+   * Client ID e Client Secret só são atualizados quando enviados (não vêm de volta ao
+   * frontend), permitindo trocar o Project ID sem reenviar/expor as credenciais salvas.
+   */
+  async updateClienteOpenPanelConfig(
+    clienteId: string,
+    dto: { openpanelProjectId?: string; openpanelClientId?: string; openpanelClientSecret?: string },
+  ) {
+    const updated = await this.prisma.cliente.update({
+      where: { id: clienteId },
+      data: {
+        openpanelProjectId: dto.openpanelProjectId !== undefined ? dto.openpanelProjectId.trim() || null : undefined,
+        openpanelClientId: dto.openpanelClientId !== undefined ? dto.openpanelClientId.trim() || null : undefined,
+        openpanelClientSecret:
+          dto.openpanelClientSecret !== undefined ? dto.openpanelClientSecret.trim() || null : undefined,
+      },
+      omit: { openpanelClientSecret: true },
+    });
+
+    this.cacheService.invalidateCliente(clienteId);
+
+    return updated;
+  }
+
+  /**
    * Resumo executivo consolidado da agência para a tela principal do Dashboard
    */
   async getDashboardExecutivo() {
@@ -250,6 +339,7 @@ export class AnalyticsService {
           status: true,
           ga4PropertyId: true,
           gscSiteUrl: true,
+          openpanelProjectId: true,
           logoUrl: true,
           createdAt: true,
           responsavel: {

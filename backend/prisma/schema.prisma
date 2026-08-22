@@ -1,7 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
   binaryTargets   = ["native", "debian-openssl-3.0.x", "windows"]
-  previewFeatures = ["postgresqlExtensions"]
+  previewFeatures = ["postgresqlExtensions", "omitApi"]
 }
 
 datasource db {
@@ -151,6 +151,10 @@ model User {
   reunioes              Reuniao[]             @relation("ReuniaoParticipantes")
   planejamentos         PlanejamentoServico[] @relation("PlanejamentoResponsaveis")
   historicoPlanejamento HistoricoServico[]
+  tarefasCriadas        Tarefa[]              @relation("TarefaCriador")
+  tarefasAtribuidas     Tarefa[]              @relation("TarefaResponsavel")
+  projetosGerenciados   Projeto[]             @relation("ProjetoResponsavel")
+  comentariosTarefas    TarefaComentario[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -176,12 +180,17 @@ model Cliente {
   observacoes        String?
   ga4PropertyId      String?
   gscSiteUrl         String?
+  openpanelProjectId    String?
+  openpanelClientId     String?
+  openpanelClientSecret String?
 
   // Relações Clientes
   servicosContratados ServicoContratado[]
   producoes           Producao[]
   midias              MidiaCliente[]
   ativosHospedagem    AtivoHospedagem[]
+  projetos            Projeto[]
+  tarefas             Tarefa[]
 
   // Relações Analytics
   analyticsSnapshots AnalyticsSnapshot[]
@@ -245,6 +254,7 @@ model ServicoContratado {
   historico       ServicoHistorico[]
   producoes       Producao[]
   planejamento    PlanejamentoServico?
+  tarefas         Tarefa[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -483,4 +493,112 @@ model AtivoHospedagem {
 
   @@index([clienteId])
 }
+
+// ============================================
+// MÓDULO: VIVOX GP (PROJETOS, TAREFAS & BITRIX STYLE)
+// ============================================
+
+enum PrioridadeTarefa {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum StatusTarefa {
+  BACKLOG
+  A_FAZER
+  EM_ANDAMENTO
+  EM_REVISAO
+  CONCLUIDA
+  CANCELADA
+}
+
+model Projeto {
+  id            String    @id @default(uuid())
+  nome          String
+  descricao     String?   @db.Text
+  cor           String?   @default("#C7A15F")
+  icone         String?   @default("folder")
+  clienteId     String?
+  cliente       Cliente?  @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  responsavelId String?
+  responsavel   User?     @relation("ProjetoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  tarefas       Tarefa[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([clienteId])
+  @@index([responsavelId])
+}
+
+model Tarefa {
+  id              String            @id @default(uuid())
+  titulo          String
+  descricao       String?           @db.Text
+  status          String            @default("A_FAZER")
+  prioridade      PrioridadeTarefa  @default(MEDIA)
+  prazo           DateTime?
+  dataInicio      DateTime?
+  dataConclusao   DateTime?
+  horasEstimadas  Float?
+  horasGastas     Float?            @default(0)
+  tags            String[]          @default([])
+  ordem           Int               @default(0)
+
+  // Relações
+  autorId         String?
+  autor           User?             @relation("TarefaCriador", fields: [autorId], references: [id], onDelete: SetNull)
+  responsavelId   String?
+  responsavel     User?             @relation("TarefaResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  
+  clienteId       String?
+  cliente         Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  
+  projetoId       String?
+  projeto         Projeto?          @relation(fields: [projetoId], references: [id], onDelete: SetNull)
+  
+  servicoId       String?
+  servico         ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+
+  checklist       TarefaChecklist[]
+  comentarios     TarefaComentario[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([status])
+  @@index([responsavelId])
+  @@index([clienteId])
+  @@index([projetoId])
+}
+
+model TarefaChecklist {
+  id        String   @id @default(uuid())
+  tarefaId  String
+  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  titulo    String
+  concluido Boolean  @default(false)
+  ordem     Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tarefaId])
+}
+
+model TarefaComentario {
+  id        String   @id @default(uuid())
+  tarefaId  String
+  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  autorId   String
+  autor     User     @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  texto     String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([tarefaId])
+}
+
 

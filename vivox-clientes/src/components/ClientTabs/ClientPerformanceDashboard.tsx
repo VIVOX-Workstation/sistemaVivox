@@ -1,28 +1,34 @@
 import { useState, useEffect, useMemo } from 'react';
-import type { Cliente, GoogleDashboardResult } from '../../types';
+import type { Cliente, OpenPanelDashboardResult } from '../../types';
 import { api } from '../../api/client';
 import {
   Globe,
-  TrendingUp,
-  TrendingDown,
   BarChart2,
-  Calendar,
-  Clock,
   RefreshCw,
-  ExternalLink,
-  ShieldCheck,
-  Zap,
   CheckCircle2,
-  AlertCircle,
   Radio,
   Smartphone,
   Monitor,
-  Activity,
+  Tablet,
+  MapPin,
   Settings,
-  Search,
-  Award,
-  Key,
+  Eye,
+  Activity,
+  Users,
+  Layers,
+  Clock,
+  AlertCircle,
   X,
+  MessageCircle,
+  TrendingUp,
+  Sparkles,
+  Search,
+  ExternalLink,
+  Target,
+  Cpu,
+  Compass,
+  ArrowUpRight,
+  Share2,
 } from 'lucide-react';
 
 interface Props {
@@ -30,33 +36,29 @@ interface Props {
   onClienteUpdated?: (updated: Partial<Cliente>) => void;
 }
 
+type MetricaGrafico = 'visualizacoes' | 'visitantes' | 'sessoes';
+type AbaTrafego = 'canais' | 'campanhas' | 'tecnologia' | 'localizacao';
+
 export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props) {
   const [periodo, setPeriodo] = useState<string>('30d');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefreshRealtime, setAutoRefreshRealtime] = useState(true);
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>(new Date().toLocaleTimeString('pt-BR'));
-  const [googleData, setGoogleData] = useState<GoogleDashboardResult | null>(null);
+  const [openpanelData, setOpenpanelData] = useState<OpenPanelDashboardResult | null>(null);
 
-  // Modal de Configuração de IDs do Google
+  // Controles de Visualização Interativa
+  const [metricaGrafico, setMetricaGrafico] = useState<MetricaGrafico>('visualizacoes');
+  const [abaTrafego, setAbaTrafego] = useState<AbaTrafego>('canais');
+  const [termoBuscaPagina, setTermoBuscaPagina] = useState<string>('');
+  const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
+
+  // Modal de Configuração do Projeto OpenPanel
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [ga4Input, setGa4Input] = useState(cliente.ga4PropertyId || '');
-  const [gscInput, setGscInput] = useState(cliente.gscSiteUrl || '');
+  const [projectIdInput, setProjectIdInput] = useState(cliente.openpanelProjectId || '');
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [clientSecretInput, setClientSecretInput] = useState('');
   const [savingConfig, setSavingConfig] = useState(false);
-
-  const diasParam = useMemo(() => {
-    switch (periodo) {
-      case '7d':
-        return 7;
-      case '90d':
-        return 90;
-      case 'last_month':
-        return 30;
-      case '30d':
-      default:
-        return 30;
-    }
-  }, [periodo]);
 
   const loadMetrics = async (forceRefresh: boolean = false) => {
     if (forceRefresh) {
@@ -67,12 +69,12 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
     try {
       const res = await api.get(
-        `/analytics/google/${cliente.id}?days=${diasParam}${forceRefresh ? '&refresh=true' : ''}`
+        `/analytics/openpanel/${cliente.id}?range=${periodo}${forceRefresh ? '&refresh=true' : ''}`
       );
-      setGoogleData(res.data);
+      setOpenpanelData(res.data);
       setLastUpdatedTime(new Date().toLocaleTimeString('pt-BR'));
     } catch (err) {
-      console.warn('Google Analytics não disponível ou offline, usando fallback local:', err);
+      console.warn('OpenPanel não disponível ou offline, usando fallback:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -80,12 +82,13 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
   };
 
   useEffect(() => {
-    setGa4Input(cliente.ga4PropertyId || '');
-    setGscInput(cliente.gscSiteUrl || '');
+    setProjectIdInput(cliente.openpanelProjectId || '');
+    setClientIdInput('');
+    setClientSecretInput('');
     loadMetrics(false);
-  }, [cliente.id, diasParam]);
+  }, [cliente.id, periodo]);
 
-  // Polling automático de Realtime a cada 15 segundos
+  // Polling automático a cada 15 segundos
   useEffect(() => {
     if (!autoRefreshRealtime) return;
 
@@ -94,41 +97,42 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [autoRefreshRealtime, cliente.id, diasParam]);
+  }, [autoRefreshRealtime, cliente.id, periodo]);
 
   const handleRefresh = () => {
     loadMetrics(true);
   };
 
-  const handleSaveGoogleConfig = async (e: React.FormEvent) => {
+  const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingConfig(true);
     try {
-      await api.patch(`/analytics/google/${cliente.id}`, {
-        ga4PropertyId: ga4Input.trim(),
-        gscSiteUrl: gscInput.trim(),
-      });
+      const payload: Record<string, string> = {
+        openpanelProjectId: projectIdInput.trim(),
+      };
+      if (clientIdInput.trim()) payload.openpanelClientId = clientIdInput.trim();
+      if (clientSecretInput.trim()) payload.openpanelClientSecret = clientSecretInput.trim();
+
+      await api.patch(`/analytics/openpanel/${cliente.id}`, payload);
 
       if (onClienteUpdated) {
-        onClienteUpdated({
-          ga4PropertyId: ga4Input.trim(),
-          gscSiteUrl: gscInput.trim(),
-        });
+        onClienteUpdated({ openpanelProjectId: projectIdInput.trim() });
       }
 
+      setClientIdInput('');
+      setClientSecretInput('');
       setIsConfigOpen(false);
       loadMetrics(true);
     } catch (err) {
-      console.error('Erro ao salvar configuração do Google:', err);
-      alert('Erro ao salvar configuração do Google.');
+      console.error('Erro ao salvar configuração do OpenPanel:', err);
+      alert('Erro ao salvar configuração do OpenPanel.');
     } finally {
       setSavingConfig(false);
     }
   };
 
-  const isRealData = googleData?.ga4?.success && googleData.ga4.overview;
-  const realtime = googleData?.ga4?.realtime;
-  const gscData = googleData?.gsc;
+  const op = openpanelData?.openpanel;
+  const isRealData = Boolean(op?.success && op?.overview);
 
   // Formata segundos em HH:MM:SS
   const formatSeconds = (seconds: number = 0) => {
@@ -139,187 +143,336 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
     return `${pad(hrs)}:${pad(mins % 60)}:${pad(secs)}`;
   };
 
-  // Métricas do Site & Landing Pages
+  // Métricas Principais
   const metricas = useMemo(() => {
-    if (isRealData && googleData?.ga4?.overview) {
-      const ov = googleData.ga4.overview;
-      const sessoesPorUser = ov.activeUsers > 0 ? (ov.sessions / ov.activeUsers).toFixed(2) : '1.00';
-      const taxaRejeicao = Math.max(0, +(100 - ov.engagementRate).toFixed(1));
+    if (isRealData && op?.overview) {
+      const ov = op.overview;
+      const whatsappCount = op?.whatsappClicksCount ?? 0;
+      const taxaConversaoWhats = ov.uniqueVisitors > 0 
+        ? Math.round((whatsappCount / ov.uniqueVisitors) * 1000) / 10 
+        : 0;
 
       return {
-        visualizacoes: ov.screenPageViews,
-        varVisualizacoes: +10.2,
-        sessoes: ov.sessions,
-        varSessoes: +8.5,
-        usuarios: ov.activeUsers,
-        varUsuarios: +12.0,
-        sessoesPorUsuario: sessoesPorUser,
-        varSessoesPorUsuario: +2.1,
-        duracaoMedia: formatSeconds(ov.averageSessionDuration),
-        varDuracaoMedia: +18.4,
-        taxaRejeicao: taxaRejeicao,
-        varTaxaRejeicao: -4.2,
-        taxaEngajamento: ov.engagementRate,
-        varTaxaEngajamento: +4.2,
+        visualizacoes: ov.totalScreenViews,
+        sessoes: ov.totalSessions,
+        usuarios: ov.uniqueVisitors,
+        paginasPorSessao: ov.viewsPerSession,
+        duracaoMedia: formatSeconds(ov.avgSessionDuration),
+        taxaRejeicao: ov.bounceRate,
+        whatsappCliques: whatsappCount,
+        taxaConversaoWhats,
       };
     }
 
     return {
       visualizacoes: 3451,
-      varVisualizacoes: -15.5,
       sessoes: 2573,
-      varSessoes: +7.6,
       usuarios: 2318,
-      varUsuarios: +5.1,
-      sessoesPorUsuario: 1.12,
-      varSessoesPorUsuario: +3.7,
+      paginasPorSessao: 1.34,
       duracaoMedia: '00:01:14',
-      varDuracaoMedia: +23.5,
-      taxaRejeicao: 63.78,
-      varTaxaRejeicao: +8.7,
-      taxaEngajamento: 36.22,
-      varTaxaEngajamento: -12.3,
+      taxaRejeicao: 63.8,
+      whatsappCliques: 128,
+      taxaConversaoWhats: 5.5,
     };
-  }, [googleData, isRealData]);
+  }, [op, isRealData]);
 
-  // Visitas diárias ao Site / LPs
+  // Timeline Diária de Acessos
   const timelineData = useMemo(() => {
-    if (isRealData && googleData?.ga4?.timeline && googleData.ga4.timeline.length > 0) {
-      return googleData.ga4.timeline.map((point) => {
+    if (isRealData && op?.timeline && op.timeline.length > 0) {
+      return op.timeline.map((point) => {
         const parts = point.date.split('-');
         let diaFormatado = point.date;
+        let dataCompleta = point.date;
         if (parts.length === 3) {
           const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
           const mesNum = parseInt(parts[1], 10) - 1;
           diaFormatado = `${parts[2]}/${meses[mesNum] || parts[1]}`;
+          dataCompleta = `${parts[2]} de ${meses[mesNum] || parts[1]} de ${parts[0]}`;
         }
         return {
           dia: diaFormatado,
-          visitas: point.screenPageViews || point.sessions || 0,
+          dataCompleta,
+          rawDate: point.date,
+          visualizacoes: point.totalScreenViews || 0,
+          visitantes: point.uniqueVisitors || 0,
+          sessoes: point.totalSessions || 0,
         };
       });
     }
 
-    return [
-      { dia: '01/ago', visitas: 82 },
-      { dia: '03/ago', visitas: 102 },
-      { dia: '05/ago', visitas: 45 },
-      { dia: '07/ago', visitas: 189 },
-      { dia: '09/ago', visitas: 97 },
-      { dia: '11/ago', visitas: 21 },
-      { dia: '13/ago', visitas: 18 },
-      { dia: '15/ago', visitas: 209 },
-      { dia: '17/ago', visitas: 195 },
-      { dia: '19/ago', visitas: 68 },
-      { dia: '21/ago', visitas: 55 },
-      { dia: '23/ago', visitas: 336 },
-      { dia: '25/ago', visitas: 86 },
-      { dia: '27/ago', visitas: 24 },
-      { dia: '29/ago', visitas: 295 },
-      { dia: '31/ago', visitas: 60 },
+    // Mock realista de 16 pontos no período
+    const mockDias = [
+      { dia: '01/ago', date: '2026-08-01', v: 82, u: 64, s: 71 },
+      { dia: '03/ago', date: '2026-08-03', v: 102, u: 85, s: 92 },
+      { dia: '05/ago', date: '2026-08-05', v: 45, u: 38, s: 41 },
+      { dia: '07/ago', date: '2026-08-07', v: 189, u: 142, s: 160 },
+      { dia: '09/ago', date: '2026-08-09', v: 97, u: 79, s: 88 },
+      { dia: '11/ago', date: '2026-08-11', v: 21, u: 18, s: 19 },
+      { dia: '13/ago', date: '2026-08-13', v: 18, u: 15, s: 16 },
+      { dia: '15/ago', date: '2026-08-15', v: 209, u: 168, s: 185 },
+      { dia: '17/ago', date: '2026-08-17', v: 195, u: 155, s: 172 },
+      { dia: '19/ago', date: '2026-08-19', v: 68, u: 54, s: 60 },
+      { dia: '21/ago', date: '2026-08-21', v: 55, u: 44, s: 49 },
+      { dia: '23/ago', date: '2026-08-23', v: 336, u: 260, s: 295 },
+      { dia: '25/ago', date: '2026-08-25', v: 86, u: 70, s: 78 },
+      { dia: '27/ago', date: '2026-08-27', v: 24, u: 20, s: 22 },
+      { dia: '29/ago', date: '2026-08-29', v: 295, u: 232, s: 261 },
+      { dia: '31/ago', date: '2026-08-31', v: 60, u: 48, s: 53 },
     ];
-  }, [googleData, isRealData]);
 
-  const maxVisitas = Math.max(...timelineData.map((d) => d.visitas), 1);
+    return mockDias.map((d) => ({
+      dia: d.dia,
+      dataCompleta: `${d.dia} de 2026`,
+      rawDate: d.date,
+      visualizacoes: d.v,
+      visitantes: d.u,
+      sessoes: d.s,
+    }));
+  }, [op, isRealData]);
 
-  // Paleta de Cores Vivox para os Canais
-  const coresCanais = ['#B89455', '#8A6828', '#D8CBB8', '#4A4032', '#247A4A', '#5C4418'];
+  // Valor atual para a métrica selecionada no gráfico
+  const getValorMetrica = (ponto: (typeof timelineData)[0]) => {
+    if (metricaGrafico === 'visitantes') return ponto.visitantes;
+    if (metricaGrafico === 'sessoes') return ponto.sessoes;
+    return ponto.visualizacoes;
+  };
 
-  // Canais de Origem do Tráfego para o Site
+  const valoresAtuais = timelineData.map(getValorMetrica);
+  const maxValorGrafico = Math.max(...valoresAtuais, 1);
+  const mediaDiaria = Math.round(
+    valoresAtuais.reduce((acc, curr) => acc + curr, 0) / Math.max(valoresAtuais.length, 1)
+  );
+
+  // Paleta de Cores Vivox Dourada & Neutra
+  const coresCanais = ['#B89455', '#8A6828', '#D8CBB8', '#4A4032', '#247A4A', '#5C4418', '#625746'];
+
+  // Canais de Origem / Referrers
   const canaisOrigem = useMemo(() => {
-    if (isRealData && googleData?.ga4?.trafficSources && googleData.ga4.trafficSources.length > 0) {
-      return googleData.ga4.trafficSources.map((ts, idx) => ({
-        canal: ts.sourceMedium,
-        porcentagem: ts.percentage,
+    if (isRealData && op?.referrers && op.referrers.length > 0) {
+      return op.referrers.slice(0, 6).map((r, idx) => ({
+        nome: r.name,
+        porcentagem: r.percentage,
         cor: coresCanais[idx % coresCanais.length],
-        sessoes: ts.sessions,
+        sessoes: r.sessions,
+        pageviews: r.pageviews,
       }));
     }
 
     return [
-      { canal: 'Google Search (Orgânico / SEO)', porcentagem: 40.2, cor: '#B89455', sessoes: 1034 },
-      { canal: 'Acesso Direto (Site / LP)', porcentagem: 32.5, cor: '#8A6828', sessoes: 836 },
-      { canal: 'Redes Sociais (Link na Bio / Reels)', porcentagem: 17.6, cor: '#D8CBB8', sessoes: 452 },
-      { canal: 'Tráfego Pago (Meta / Google Ads)', porcentagem: 6.8, cor: '#4A4032', sessoes: 175 },
-      { canal: 'Indicações / WhatsApp', porcentagem: 2.9, cor: '#247A4A', sessoes: 76 },
+      { nome: '(direto / links salvos)', porcentagem: 40.2, cor: '#B89455', sessoes: 1034, pageviews: 1386 },
+      { nome: 'Google Orgânico', porcentagem: 32.5, cor: '#8A6828', sessoes: 836, pageviews: 1120 },
+      { nome: 'Instagram (Stories & Bio)', porcentagem: 17.6, cor: '#D8CBB8', sessoes: 452, pageviews: 605 },
+      { nome: 'Meta Ads (Tráfego Pago)', porcentagem: 6.8, cor: '#4A4032', sessoes: 175, pageviews: 235 },
+      { nome: 'WhatsApp Links', porcentagem: 2.9, cor: '#247A4A', sessoes: 76, pageviews: 105 },
     ];
-  }, [googleData, isRealData]);
+  }, [op, isRealData]);
 
-  // Páginas e Landing Pages Mais Acessadas
+  // Campanhas UTM
+  const utmSources = useMemo(() => {
+    if (isRealData && op?.utmSources && op.utmSources.length > 0) {
+      return op.utmSources;
+    }
+    return [
+      { name: 'instagram_ads', sessions: 210, pageviews: 280, percentage: 54.0 },
+      { name: 'google_cpc', sessions: 115, pageviews: 160, percentage: 29.5 },
+      { name: 'link_bio', sessions: 64, pageviews: 85, percentage: 16.5 },
+    ];
+  }, [op, isRealData]);
+
+  const utmMediums = useMemo(() => {
+    if (isRealData && op?.utmMediums && op.utmMediums.length > 0) {
+      return op.utmMediums;
+    }
+    return [
+      { name: 'cpc / patrocinado', sessions: 280, pageviews: 380, percentage: 72.0 },
+      { name: 'social_bio', sessions: 75, pageviews: 98, percentage: 19.3 },
+      { name: 'newsletter', sessions: 34, pageviews: 45, percentage: 8.7 },
+    ];
+  }, [op, isRealData]);
+
+  const utmCampaigns = useMemo(() => {
+    if (isRealData && op?.utmCampaigns && op.utmCampaigns.length > 0) {
+      return op.utmCampaigns;
+    }
+    return [
+      { name: 'campanha_institucional_2026', sessions: 195, pageviews: 260, percentage: 50.1 },
+      { name: 'captacao_leads_promo', sessions: 130, pageviews: 180, percentage: 33.4 },
+      { name: 'remarketing_whatsapp', sessions: 64, pageviews: 83, percentage: 16.5 },
+    ];
+  }, [op, isRealData]);
+
+  // Dispositivos
+  const dispositivos = useMemo(() => {
+    if (isRealData && op?.devices && op.devices.length > 0) {
+      return op.devices;
+    }
+    return [
+      { name: 'mobile', sessions: 1860, pageviews: 2480, percentage: 72.3 },
+      { name: 'desktop', sessions: 620, pageviews: 840, percentage: 24.1 },
+      { name: 'tablet', sessions: 93, pageviews: 131, percentage: 3.6 },
+    ];
+  }, [op, isRealData]);
+
+  // Navegadores
+  const navegadores = useMemo(() => {
+    if (isRealData && op?.browsers && op.browsers.length > 0) {
+      return op.browsers.slice(0, 5);
+    }
+    return [
+      { name: 'Chrome', sessions: 1420, pageviews: 1900, percentage: 55.2 },
+      { name: 'Safari', sessions: 850, pageviews: 1140, percentage: 33.0 },
+      { name: 'Edge', sessions: 180, pageviews: 240, percentage: 7.0 },
+      { name: 'Firefox', sessions: 80, pageviews: 110, percentage: 3.1 },
+      { name: 'Opera', sessions: 43, pageviews: 61, percentage: 1.7 },
+    ];
+  }, [op, isRealData]);
+
+  // Sistemas Operacionais
+  const sistemasOperacionais = useMemo(() => {
+    if (isRealData && op?.os && op.os.length > 0) {
+      return op.os.slice(0, 5);
+    }
+    return [
+      { name: 'iOS (iPhone)', sessions: 1350, pageviews: 1810, percentage: 52.5 },
+      { name: 'Android', sessions: 600, pageviews: 800, percentage: 23.3 },
+      { name: 'Windows', sessions: 450, pageviews: 610, percentage: 17.5 },
+      { name: 'macOS', sessions: 150, pageviews: 200, percentage: 5.8 },
+      { name: 'Linux', sessions: 23, pageviews: 31, percentage: 0.9 },
+    ];
+  }, [op, isRealData]);
+
+  // Top Países
+  const paisesTop = useMemo(() => {
+    if (isRealData && op?.countries && op.countries.length > 0) {
+      return op.countries.slice(0, 6);
+    }
+    return [
+      { name: 'Brasil (BR)', sessions: 2420, pageviews: 3250, percentage: 94.1 },
+      { name: 'Estados Unidos (US)', sessions: 98, pageviews: 125, percentage: 3.8 },
+      { name: 'Portugal (PT)', sessions: 35, pageviews: 48, percentage: 1.4 },
+      { name: 'Outros', sessions: 20, pageviews: 28, percentage: 0.7 },
+    ];
+  }, [op, isRealData]);
+
+  // Cliques no WhatsApp
+  const whatsappClicks = isRealData ? op?.whatsappClicks || [] : [];
+  const whatsappClicksCount = isRealData ? op?.whatsappClicksCount ?? 0 : metricas.whatsappCliques;
+
+  const formatRelativeTime = (isoDate: string) => {
+    if (!isoDate) return '';
+    const data = new Date(isoDate.replace(' ', 'T') + (isoDate.includes('Z') ? '' : 'Z'));
+    if (isNaN(data.getTime())) return '';
+    const diffMs = Date.now() - data.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'agora mesmo';
+    if (diffMin < 60) return `há ${diffMin} min`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `há ${diffH}h`;
+    return `há ${Math.floor(diffH / 24)}d`;
+  };
+
+  // Páginas Acessadas com Busca e Identificação de Tipo
   const paginasAcessadas = useMemo(() => {
-    if (isRealData && googleData?.ga4?.pages && googleData.ga4.pages.length > 0) {
-      return googleData.ga4.pages.map((p) => ({
-        caminho: p.pagePath,
-        visualizacoes: p.screenPageViews,
-        sessoes: p.sessions,
-        usuarios: p.activeUsers,
-        duracao: '00:00:36',
-        taxaRejeicao: `${p.bounceRate}%`,
-      }));
+    let list: Array<{ caminho: string; visualizacoes: number; sessoes: number; tipo: string; badgeCor: string }> = [];
+
+    if (isRealData && op?.pages && op.pages.length > 0) {
+      list = op.pages.map((p) => {
+        const path = p.path.toLowerCase();
+        let tipo = 'Institucional';
+        let badgeCor = 'bg-[#4A4032]/10 text-[#4A4032] border-[#4A4032]/30';
+
+        if (path === '/' || path === '') {
+          tipo = 'Página Inicial';
+          badgeCor = 'bg-[#B89455]/15 text-[#8A6828] border-[#B89455]/40';
+        } else if (path.includes('lp') || path.includes('landing') || path.includes('oferta') || path.includes('plano') || path.includes('consulta')) {
+          tipo = 'Landing Page';
+          badgeCor = 'bg-[#247A4A]/15 text-[#247A4A] border-[#247A4A]/40 font-bold';
+        } else if (path.includes('bio') || path.includes('link') || path.includes('instagram')) {
+          tipo = 'Link da Bio';
+          badgeCor = 'bg-[#8A6828]/15 text-[#8A6828] border-[#8A6828]/40';
+        } else if (path.includes('blog') || path.includes('artigo') || path.includes('noticia')) {
+          tipo = 'Blog / Artigo';
+          badgeCor = 'bg-[#3B82F6]/15 text-[#2563EB] border-[#3B82F6]/30';
+        }
+
+        return {
+          caminho: p.path,
+          visualizacoes: p.pageviews,
+          sessoes: p.sessions,
+          tipo,
+          badgeCor,
+        };
+      });
+    } else {
+      list = [
+        { caminho: '/', visualizacoes: 1420, sessoes: 1100, tipo: 'Página Inicial', badgeCor: 'bg-[#B89455]/15 text-[#8A6828] border-[#B89455]/40' },
+        { caminho: '/lp-consulta-avancada', visualizacoes: 1250, sessoes: 920, tipo: 'Landing Page', badgeCor: 'bg-[#247A4A]/15 text-[#247A4A] border-[#247A4A]/40 font-bold' },
+        { caminho: '/links-bio', visualizacoes: 480, sessoes: 340, tipo: 'Link da Bio', badgeCor: 'bg-[#8A6828]/15 text-[#8A6828] border-[#8A6828]/40' },
+        { caminho: '/sobre-nos', visualizacoes: 180, sessoes: 130, tipo: 'Institucional', badgeCor: 'bg-[#4A4032]/10 text-[#4A4032] border-[#4A4032]/30' },
+        { caminho: '/blog/novidades-2026', visualizacoes: 121, sessoes: 83, tipo: 'Blog / Artigo', badgeCor: 'bg-[#3B82F6]/15 text-[#2563EB] border-[#3B82F6]/30' },
+      ];
     }
 
-    return [
-      { caminho: '/', visualizacoes: 15, sessoes: 13, usuarios: 12, duracao: '00:00:36', taxaRejeicao: '84.6%' },
-    ];
-  }, [googleData, isRealData]);
+    if (!termoBuscaPagina.trim()) return list;
 
-  // Eventos & Conversões de Leads no Site
-  const eventosConversao = useMemo(() => {
-    if (isRealData && googleData?.ga4?.events && googleData.ga4.events.length > 0) {
-      const maxCount = Math.max(...googleData.ga4.events.map((e) => e.eventCount), 10);
-      return googleData.ga4.events.map((e) => ({
-        nome: e.eventName,
-        total: e.eventCount,
-        max: maxCount,
-        desc: `Evento ${e.eventName} (${e.totalUsers} usuários)`,
-      }));
-    }
+    return list.filter((item) =>
+      item.caminho.toLowerCase().includes(termoBuscaPagina.toLowerCase()) ||
+      item.tipo.toLowerCase().includes(termoBuscaPagina.toLowerCase())
+    );
+  }, [op, isRealData, termoBuscaPagina]);
 
-    return [
-      { nome: 'page_view', total: 15, max: 20, desc: 'Visualizações de Página' },
-      { nome: 'session_start', total: 13, max: 20, desc: 'Sessões Iniciadas' },
-      { nome: 'first_visit', total: 12, max: 20, desc: 'Novos Visitantes' },
-      { nome: 'user_engagement', total: 4, max: 20, desc: 'Sessões com Engajamento (>10s)' },
-      { nome: 'scroll', total: 1, max: 20, desc: 'Leitura da Página' },
-    ];
-  }, [googleData, isRealData]);
+  const maxPaginaVisualizacoes = useMemo(() => {
+    return Math.max(...paginasAcessadas.map((p) => p.visualizacoes), 1);
+  }, [paginasAcessadas]);
+
+  // Ícone por tipo de dispositivo
+  const deviceIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('mobile') || n.includes('phone')) return <Smartphone className="w-3.5 h-3.5 text-[#247A4A]" />;
+    if (n.includes('tablet') || n.includes('ipad')) return <Tablet className="w-3.5 h-3.5 text-[#8A6828]" />;
+    return <Monitor className="w-3.5 h-3.5 text-[#B89455]" />;
+  };
+
+  // Insights Rápidos Automáticos
+  const topCanalNome = canaisOrigem[0]?.nome || 'Direto';
+  const topCanalPct = canaisOrigem[0]?.porcentagem || 0;
+  const mobilePct = dispositivos.find((d) => d.name.toLowerCase().includes('mobile'))?.percentage || 70;
 
   return (
     <div className="space-y-6 w-full">
-      {/* CABEÇALHO DO RELATÓRIO DE ACESSOS AO SITE/LP (STICKY) */}
+      {/* CABEÇALHO PRINCIPAL VIVOX LUXURY (STICKY) */}
       <div className="sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14120E]/95 backdrop-blur-md text-[#F6F0E7] p-4 sm:p-5 rounded-[11px] border border-[#2B261F] shadow-lg">
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C7A15F] animate-pulse"></span>
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
               Tráfego & Landing Pages • {cliente.nomeFantasia}
             </span>
             {isRealData ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#247A4A]/20 text-[#4ADE80] border border-[#247A4A]/40">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#247A4A]/25 text-[#4ADE80] border border-[#247A4A]/50 shadow-xs">
                 <CheckCircle2 className="w-2.5 h-2.5" />
-                Dados Reais GA4 #{cliente.ga4PropertyId || '550043870'}
+                Dados Reais OpenPanel · {op?.projectId}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#C7A15F]/15 text-[#C7A15F] border border-[#C7A15F]/30">
-                Google Analytics 4
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#C7A15F] border border-[#C7A15F]/35">
+                Modo Demonstrativo
               </span>
             )}
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-[#FAF7F2] mt-0.5 flex items-center gap-2">
+          <h2 className="text-xl font-bold tracking-tight text-[#FAF7F2] mt-1 flex items-center gap-2">
             <Globe className="w-5 h-5 text-[#C7A15F]" />
-            VISITANTES SITE & LANDING PAGES — MTD
+            VISITANTES SITE & LANDING PAGES
           </h2>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <select
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value)}
-            className="h-9 px-3 rounded-lg bg-[#24201A] border border-[#4A4032] text-xs font-semibold text-[#C7A15F] focus:outline-none focus:border-[#C7A15F] cursor-pointer"
+            className="h-9 px-3 rounded-lg bg-[#24201A] border border-[#4A4032] text-xs font-semibold text-[#C7A15F] focus:outline-none focus:border-[#C7A15F] cursor-pointer shadow-inner"
           >
-            <option value="30d">🗓️ 1 de ago. de 2026 - Hoje (MTD)</option>
             <option value="7d">🗓️ Últimos 7 dias</option>
-            <option value="last_month">🗓️ Mês Anterior Completo</option>
+            <option value="30d">🗓️ Últimos 30 dias</option>
             <option value="90d">🗓️ Últimos 90 dias</option>
           </select>
 
@@ -327,7 +480,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             onClick={handleRefresh}
             disabled={loading || refreshing}
             className="h-9 px-3 rounded-lg border border-[#4A4032] bg-[#24201A] hover:bg-[#2F2A22] text-[#F6F0E7] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Sincronizar dados em tempo real do Google Analytics"
+            title="Sincronizar dados mais recentes"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-[#C7A15F] ${refreshing || loading ? 'animate-spin' : ''}`} />
             {refreshing ? 'Sincronizando...' : 'Atualizar'}
@@ -336,312 +489,272 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
           <button
             onClick={() => setIsConfigOpen(true)}
             className="h-9 px-3 rounded-lg border border-[#4A4032] bg-[#24201A] hover:bg-[#2F2A22] text-[#C7A15F] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Configurar IDs do Google Analytics e Search Console"
+            title="Configurar Projeto e Credenciais do OpenPanel"
           >
             <Settings className="w-3.5 h-3.5 text-[#C7A15F]" />
-            <span className="hidden sm:inline">Configurar Google</span>
+            <span className="hidden sm:inline">Configurar OpenPanel</span>
           </button>
         </div>
       </div>
 
-      {/* 🟢 CARD RADAR: DADOS EM TEMPO REAL (REALTIME - IDÊNTICO AO GOOGLE ANALYTICS) */}
-      <div className="bg-[#FFFDF8] border border-[#D8CBB8] text-[#1E1A16] p-5 sm:p-6 rounded-[11px] shadow-xs space-y-5">
-        {/* Topo com indicador ao vivo e auto-sync */}
+      {/* MINI-PAINEL DE INSIGHTS AUTOMÁTICOS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-[#FFFDF8] border border-[#D8CBB8] p-3.5 rounded-[11px] shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#B89455]/15 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4 text-[#8A6828]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Origem Principal</p>
+            <p className="text-xs font-bold text-[#1E1A16] truncate">
+              {topCanalNome} ({topCanalPct}%)
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-[#FFFDF8] border border-[#D8CBB8] p-3.5 rounded-[11px] shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#247A4A]/15 flex items-center justify-center shrink-0">
+            <Smartphone className="w-4 h-4 text-[#247A4A]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Mobile Share</p>
+            <p className="text-xs font-bold text-[#1E1A16] truncate">
+              {mobilePct}% dos acessos via celular
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-[#FFFDF8] border border-[#D8CBB8] p-3.5 rounded-[11px] shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#22C55E]/15 flex items-center justify-center shrink-0">
+            <Target className="w-4 h-4 text-[#16A34A]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Taxa Conv. WhatsApp</p>
+            <p className="text-xs font-bold text-[#16A34A] truncate">
+              {metricas.taxaConversaoWhats}% ({metricas.whatsappCliques} leads)
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-[#FFFDF8] border border-[#D8CBB8] p-3.5 rounded-[11px] shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#8A6828]/15 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-4 h-4 text-[#8A6828]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Média de Tráfego</p>
+            <p className="text-xs font-bold text-[#1E1A16] truncate">
+              ~{mediaDiaria} visitas por dia
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* CARD: VISITANTES ATIVOS AGORA (TEMPO REAL) */}
+      <div className="bg-[#FFFDF8] border border-[#D8CBB8] text-[#1E1A16] p-5 sm:p-6 rounded-[11px] shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EEE7DC] pb-3">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-3 w-3">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${(realtime?.activeUsersNow || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#B89455]'} opacity-75`}></span>
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${(realtime?.activeUsersNow || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#B89455]'}`}></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${(op?.liveVisitors || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#B89455]'} opacity-75`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${(op?.liveVisitors || 0) > 0 ? 'bg-[#22C55E]' : 'bg-[#B89455]'}`}></span>
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E1A16] flex items-center gap-1.5">
-                <Radio className={`w-3.5 h-3.5 ${(realtime?.activeUsersNow || 0) > 0 ? 'text-[#22C55E]' : 'text-[#8A6828]'}`} />
-                Visão Geral em Tempo Real (Google Analytics 4)
+                <Radio className={`w-3.5 h-3.5 ${(op?.liveVisitors || 0) > 0 ? 'text-[#22C55E]' : 'text-[#8A6828]'}`} />
+                Visitantes Ativos Agora no Site / Landing Pages
               </h3>
-              <span className="text-[10px] text-[#847663] font-mono">Sincronizado às {lastUpdatedTime}</span>
+              <span className="text-[10px] text-[#847663] font-mono">Última checagem: {lastUpdatedTime}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAutoRefreshRealtime(!autoRefreshRealtime)}
+            className={`text-[10px] font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer flex items-center gap-1 ${
+              autoRefreshRealtime
+                ? 'bg-[#22C55E]/10 border-[#22C55E]/30 text-[#16A34A]'
+                : 'bg-[#FAF7F2] border-[#D8CBB8] text-[#847663]'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${autoRefreshRealtime ? 'bg-[#22C55E] animate-pulse' : 'bg-[#847663]'}`} />
+            {autoRefreshRealtime ? 'Auto-Sync 15s Ativo' : 'Auto-Sync Pausado'}
+          </button>
+        </div>
+
+        <div className="flex items-baseline gap-3">
+          <span className="text-6xl font-light text-[#1E1A16] font-mono tracking-tight">
+            {op?.liveVisitors ?? 0}
+          </span>
+          <span className="text-xs text-[#847663] font-medium">
+            usuários com sessões abertas neste instante
+          </span>
+        </div>
+      </div>
+
+      {/* LINHA 1: KPIS PRINCIPAIS (COM CONVERSÃO DE WHATSAPP) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#847663] mb-1">
+            <span className="text-[11px] font-semibold">Visualizações</span>
+            <Eye className="w-3.5 h-3.5 text-[#8A6828]" />
+          </div>
+          <h3 className="text-xl font-black text-[#1E1A16]">{metricas.visualizacoes.toLocaleString('pt-BR')}</h3>
+        </div>
+
+        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#847663] mb-1">
+            <span className="text-[11px] font-semibold">Sessões</span>
+            <Activity className="w-3.5 h-3.5 text-[#3b82f6]" />
+          </div>
+          <h3 className="text-xl font-black text-[#1E1A16]">{metricas.sessoes.toLocaleString('pt-BR')}</h3>
+        </div>
+
+        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#847663] mb-1">
+            <span className="text-[11px] font-semibold">Visitantes Únicos</span>
+            <Users className="w-3.5 h-3.5 text-[#B89455]" />
+          </div>
+          <h3 className="text-xl font-black text-[#1E1A16]">{metricas.usuarios.toLocaleString('pt-BR')}</h3>
+        </div>
+
+        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#847663] mb-1">
+            <span className="text-[11px] font-semibold">Páginas/Sessão</span>
+            <Layers className="w-3.5 h-3.5 text-[#625746]" />
+          </div>
+          <h3 className="text-xl font-black text-[#1E1A16]">{metricas.paginasPorSessao}</h3>
+        </div>
+
+        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#847663] mb-1">
+            <span className="text-[11px] font-semibold">Duração Média</span>
+            <Clock className="w-3.5 h-3.5 text-[#625746]" />
+          </div>
+          <h3 className="text-lg font-black text-[#1E1A16] mt-0.5">{metricas.duracaoMedia}</h3>
+        </div>
+
+        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#847663] mb-1">
+            <span className="text-[11px] font-semibold">Taxa de Rejeição</span>
+            <AlertCircle className="w-3.5 h-3.5 text-[#B83B32]" />
+          </div>
+          <h3 className="text-xl font-black text-[#1E1A16]">{metricas.taxaRejeicao}%</h3>
+        </div>
+
+        {/* CARD ESPECIAL: CONVERSÃO DE WHATSAPP */}
+        <div className="bg-gradient-to-br from-[#F3FBF6] to-[#FFFDF8] p-3.5 rounded-[11px] border border-[#22C55E]/30 shadow-2xs flex flex-col justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-[#16A34A] mb-1">
+            <span className="text-[11px] font-bold">Conv. WhatsApp</span>
+            <MessageCircle className="w-3.5 h-3.5 text-[#16A34A]" />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-[#16A34A]">{metricas.taxaConversaoWhats}%</h3>
+            <span className="text-[10px] text-[#847663] font-mono">{metricas.whatsappCliques} cliques</span>
+          </div>
+        </div>
+      </div>
+
+      {/* LINHA 2: GRÁFICO DIÁRIO MULTI-MÉTRICA COM TOOLTIP INTERATIVO */}
+      <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE7DC] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#B89455]/15 flex items-center justify-center">
+              <BarChart2 className="w-4 h-4 text-[#8A6828]" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
+                Linha do Tempo Diária de Tráfego
+              </h3>
+              <p className="text-[10px] text-[#847663]">
+                Pico: <strong>{maxValorGrafico}</strong> • Média diária: <strong>~{mediaDiaria}</strong>
+              </p>
+            </div>
+          </div>
+
+          {/* SELETOR DE MÉTRICA DO GRÁFICO */}
+          <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-lg border border-[#D8CBB8]/70">
             <button
-              onClick={() => setAutoRefreshRealtime(!autoRefreshRealtime)}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer flex items-center gap-1 ${
-                autoRefreshRealtime
-                  ? 'bg-[#22C55E]/10 border-[#22C55E]/30 text-[#16A34A]'
-                  : 'bg-[#FAF7F2] border-[#D8CBB8] text-[#847663]'
+              onClick={() => setMetricaGrafico('visualizacoes')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                metricaGrafico === 'visualizacoes'
+                  ? 'bg-[#14120E] text-[#C7A15F] shadow-xs'
+                  : 'text-[#625746] hover:text-[#1E1A16]'
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${autoRefreshRealtime ? 'bg-[#22C55E] animate-pulse' : 'bg-[#847663]'}`} />
-              {autoRefreshRealtime ? 'Auto-Sync 15s Ativo' : 'Auto-Sync Pausado'}
+              Visualizações
+            </button>
+            <button
+              onClick={() => setMetricaGrafico('visitantes')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                metricaGrafico === 'visitantes'
+                  ? 'bg-[#14120E] text-[#C7A15F] shadow-xs'
+                  : 'text-[#625746] hover:text-[#1E1A16]'
+              }`}
+            >
+              Visitantes Únicos
+            </button>
+            <button
+              onClick={() => setMetricaGrafico('sessoes')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                metricaGrafico === 'sessoes'
+                  ? 'bg-[#14120E] text-[#C7A15F] shadow-xs'
+                  : 'text-[#625746] hover:text-[#1E1A16]'
+              }`}
+            >
+              Sessões
             </button>
           </div>
         </div>
 
-        {/* 📊 LINHA 1: USUÁRIOS NOS ÚLTIMOS 30 MIN E 5 MIN */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-1">
-          {/* Usuários Ativos nos Últimos 30 Minutos */}
-          <div>
-            <span className="text-[11px] font-bold text-[#847663] uppercase tracking-wider border-b border-dotted border-[#D8CBB8] pb-0.5 inline-block">
-              USUÁRIOS ATIVOS NOS ÚLTIMOS 30 MINUTOS
-            </span>
-            <div className="text-5xl font-light text-[#1E1A16] mt-2 font-mono tracking-tight">
-              {realtime?.activeUsersNow || 0}
-            </div>
-          </div>
-
-          {/* Usuários Ativos nos Últimos 5 Minutos */}
-          <div>
-            <span className="text-[11px] font-bold text-[#847663] uppercase tracking-wider border-b border-dotted border-[#D8CBB8] pb-0.5 inline-block">
-              USUÁRIOS ATIVOS NOS ÚLTIMOS 5 MINUTOS
-            </span>
-            <div className="text-5xl font-light text-[#1E1A16] mt-2 font-mono tracking-tight">
-              {realtime?.activeUsers5Min || 0}
-            </div>
-          </div>
-        </div>
-
-        {/* 📈 LINHA 2: GRÁFICO DE USUÁRIOS ATIVOS POR MINUTO (ESTILO OFICIAL GA4) */}
-        <div className="pt-3 border-t border-[#EEE7DC]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-[#847663] uppercase tracking-wider">
-              USUÁRIOS ATIVOS POR MINUTO
-            </span>
-            <span className="text-[10px] font-mono text-[#847663]">Escala em tempo real</span>
-          </div>
-
-          {/* Área do Gráfico de 30 Minutos com Linhas de Grade e Eixo Y */}
-          <div className="relative bg-[#FAF7F2] border border-[#EEE7DC] rounded-lg p-3 pt-4">
-            {/* Linhas de Grade do Eixo Y */}
-            <div className="absolute inset-x-3 top-3 bottom-8 flex flex-col justify-between pointer-events-none opacity-40">
-              <div className="border-b border-dashed border-[#D8CBB8] w-full flex justify-end pr-1">
-                <span className="text-[9px] font-mono text-[#625746] -mt-2">1</span>
-              </div>
-              <div className="border-b border-dashed border-[#D8CBB8] w-full flex justify-end pr-1">
-                <span className="text-[9px] font-mono text-[#625746] -mt-2">0,5</span>
-              </div>
-              <div className="border-b border-[#D8CBB8] w-full" />
-            </div>
-
-            {/* As 30 Barras Verticais de Minuto a Minuto */}
-            <div className="h-20 flex items-end justify-between gap-1 relative z-10 px-1">
-              {(realtime?.perMinuteTimeline && realtime.perMinuteTimeline.length > 0
-                ? realtime.perMinuteTimeline
-                : Array.from({ length: 30 }, (_, i) => ({ minutesAgo: 29 - i, activeUsers: 0 }))
-              ).map((pt, idx) => {
-                const hasUsers = pt.activeUsers > 0;
-                const heightPercent = hasUsers ? Math.min(Math.max((pt.activeUsers / 1) * 100, 25), 100) : 4;
-
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                    {/* Tooltip ao passar o mouse */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 bg-[#14120E] border border-[#C7A15F] px-1.5 py-0.5 rounded text-[9px] font-mono text-[#FAF7F2] whitespace-nowrap pointer-events-none z-20 shadow-md">
-                      -{pt.minutesAgo} min: {pt.activeUsers} {pt.activeUsers === 1 ? 'usuário' : 'usuários'}
-                    </div>
-
-                    {/* Barra Vertical */}
-                    <div
-                      style={{ height: `${heightPercent}%` }}
-                      className={`w-full rounded-xs transition-all ${
-                        hasUsers
-                          ? 'bg-[#1A73E8] hover:bg-[#1557B0] shadow-xs'
-                          : 'bg-[#E5DFD5] hover:bg-[#D8CBB8]'
-                      }`}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Rótulos do Eixo X (-30 min a -1 min) */}
-            <div className="flex justify-between text-[9px] text-[#847663] font-mono pt-2 border-t border-[#EEE7DC] mt-1">
-              <span>-30 min</span>
-              <span>-25 min</span>
-              <span>-20 min</span>
-              <span>-15 min</span>
-              <span>-10 min</span>
-              <span>-5 min</span>
-              <span>-1 min</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 📱 LINHA 3: DISPOSITIVOS & PÁGINAS ATIVAS AGORA */}
-        <div className="pt-3 border-t border-[#EEE7DC] grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          {/* Páginas Sendo Vistas Neste Momento */}
-          <div className="md:col-span-2 space-y-1.5">
-            <span className="text-[#847663] font-semibold text-[11px] block">
-              Páginas Sendo Acessadas Agora:
-            </span>
-            {realtime?.pages && realtime.pages.length > 0 ? (
-              <div className="space-y-1.5">
-                {realtime.pages.map((p, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-[#FAF7F2] px-3 py-1.5 rounded border border-[#EEE7DC]">
-                    <span className="text-[11px] text-[#1E1A16] font-medium truncate pr-2" title={p.pageTitle}>
-                      {p.pageTitle}
-                    </span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#1A73E8]/10 text-[#1A73E8] shrink-0 border border-[#1A73E8]/30">
-                      {p.activeUsers} {p.activeUsers === 1 ? 'usuário' : 'usuários'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-[#FAF7F2] px-3 py-2 rounded border border-[#EEE7DC] text-center text-[#847663] text-[11px]">
-                Nenhum visitante navegando no site neste exato momento (0 usuários ativos nos últimos 30 minutos).
-              </div>
-            )}
-          </div>
-
-          {/* Dispositivos & Eventos */}
-          <div className="bg-[#FAF7F2] p-3 rounded border border-[#EEE7DC] flex flex-col justify-between">
-            <span className="text-[#847663] font-semibold text-[11px]">Dispositivos Ativos</span>
-            <div className="space-y-1.5 my-2">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 text-[#1E1A16]">
-                  <Monitor className="w-3.5 h-3.5 text-[#8A6828]" /> Desktop:
-                </span>
-                <span className="font-mono font-bold text-[#8A6828]">
-                  {realtime?.devices?.find((d) => d.device.toLowerCase() === 'desktop')?.activeUsers || 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 text-[#1E1A16]">
-                  <Smartphone className="w-3.5 h-3.5 text-[#247A4A]" /> Mobile:
-                </span>
-                <span className="font-mono font-bold text-[#247A4A]">
-                  {realtime?.devices?.find((d) => d.device.toLowerCase() === 'mobile')?.activeUsers || 0}
-                </span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-[#EEE7DC] flex items-center justify-between text-[10px] text-[#847663]">
-              <span>Eventos nos 30m:</span>
-              <span className="font-mono font-bold text-[#1E1A16]">{realtime?.eventCountNow || 0}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* LINHA 1: KPIS DO SITE / LP (MTD COM % DE VARIAÇÃO) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Visualizações */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Visualizações</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {metricas.visualizacoes.toLocaleString('pt-BR')}
-          </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
-            <TrendingUp className="w-3 h-3" />
-            <span>+{metricas.varVisualizacoes}%</span>
-          </div>
-        </div>
-
-        {/* Sessões */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Sessões de Acesso</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {metricas.sessoes.toLocaleString('pt-BR')}
-          </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
-            <TrendingUp className="w-3 h-3" />
-            <span>+{metricas.varSessoes}%</span>
-          </div>
-        </div>
-
-        {/* Total Usuários */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Usuários Únicos</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {metricas.usuarios.toLocaleString('pt-BR')}
-          </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
-            <TrendingUp className="w-3 h-3" />
-            <span>+{metricas.varUsuarios}%</span>
-          </div>
-        </div>
-
-        {/* Sessões por Usuário */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Sessões/Usuário</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">{metricas.sessoesPorUsuario}</h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
-            <TrendingUp className="w-3 h-3" />
-            <span>+{metricas.varSessoesPorUsuario}%</span>
-          </div>
-        </div>
-
-        {/* Duração Média */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Duração Média</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">{metricas.duracaoMedia}</h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
-            <TrendingUp className="w-3 h-3" />
-            <span>+{metricas.varDuracaoMedia}%</span>
-          </div>
-        </div>
-
-        {/* Taxa de Rejeição */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Taxa Rejeição</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">{metricas.taxaRejeicao}%</h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#B83B32]">
-            <TrendingDown className="w-3 h-3" />
-            <span>{metricas.varTaxaRejeicao}%</span>
-          </div>
-        </div>
-
-        {/* Taxa de Engajamento */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Engajamento</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">{metricas.taxaEngajamento}%</h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
-            <TrendingUp className="w-3 h-3" />
-            <span>+{metricas.varTaxaEngajamento}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* LINHA 2: GRÁFICO VISITAS POR DIA + CANAIS DE ORIGEM */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* GRÁFICO: VISITAS POR DIA (2 COLUNAS) */}
-        <div className="lg:col-span-2 bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-[#B89455]" />
-              <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-                Visitas por Dia no Site / LPs (Tempo Real GA4)
-              </h3>
-            </div>
-            <span className="text-[11px] font-mono text-[#847663]">Picos: até {maxVisitas} visualizações</span>
-          </div>
-
-          {/* Área do Gráfico */}
-          <div className="h-52 flex items-end justify-between gap-1.5 pt-6 pb-2 border-b border-[#EEE7DC]">
+        {/* CONTAINER DO GRÁFICO DE BARRAS */}
+        <div className="relative pt-6">
+          <div className="h-56 flex items-end justify-between gap-1 sm:gap-2 pb-2 border-b border-[#EEE7DC]">
             {timelineData.map((d, index) => {
-              const heightPercent = Math.max((d.visitas / maxVisitas) * 100, 8);
-              const isPico = d.visitas > 0 && d.visitas >= maxVisitas * 0.7;
+              const valor = getValorMetrica(d);
+              const heightPercent = Math.max((valor / maxValorGrafico) * 100, 6);
+              const isPico = valor > 0 && valor >= maxValorGrafico * 0.75;
+              const isHovered = hoveredPointIndex === index;
 
               return (
-                <div key={index} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                  {/* Tooltip com valor */}
+                <div
+                  key={index}
+                  onMouseEnter={() => setHoveredPointIndex(index)}
+                  onMouseLeave={() => setHoveredPointIndex(null)}
+                  className="flex-1 flex flex-col items-center h-full justify-end group relative cursor-pointer"
+                >
+                  {/* TOOLTIP FLUTUANTE DE ALTA RESOLUÇÃO */}
+                  {isHovered && (
+                    <div className="absolute -top-20 z-40 bg-[#14120E] text-[#FAF7F2] border border-[#C7A15F]/40 p-2.5 rounded-lg shadow-xl text-left pointer-events-none min-w-[140px] animate-fade-in">
+                      <p className="text-[10px] font-bold text-[#C7A15F] uppercase tracking-wider">{d.dataCompleta}</p>
+                      <p className="text-xs font-black text-[#FAF7F2] mt-0.5">
+                        {valor.toLocaleString('pt-BR')}{' '}
+                        <span className="text-[9px] font-normal text-[#D8CBB8]">
+                          {metricaGrafico === 'visualizacoes' ? 'views' : metricaGrafico === 'visitantes' ? 'visitantes' : 'sessões'}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-2 text-[9px] text-[#A89880] mt-1 pt-1 border-t border-[#2B261F]">
+                        <span>Views: {d.visualizacoes}</span>
+                        <span>•</span>
+                        <span>Únicos: {d.visitantes}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <span
                     className={`text-[9px] font-bold mb-1 transition-opacity ${
-                      isPico
-                        ? 'text-[#8A6828] opacity-100'
-                        : 'text-[#847663] opacity-0 group-hover:opacity-100'
+                      isPico || isHovered ? 'text-[#8A6828] opacity-100' : 'text-[#847663] opacity-0 group-hover:opacity-100'
                     }`}
                   >
-                    {d.visitas}
+                    {valor}
                   </span>
 
-                  {/* Barra com degradê dourado Vivox */}
                   <div
                     style={{ height: `${heightPercent}%` }}
-                    className={`w-full rounded-t-md transition-all ${
-                      isPico
+                    className={`w-full rounded-t-md transition-all duration-200 ${
+                      isHovered
+                        ? 'bg-[#8A6828] shadow-md scale-y-102'
+                        : isPico
                         ? 'bg-gradient-to-t from-[#B89455] to-[#D8CBB8] shadow-xs'
-                        : d.visitas > 0
-                        ? 'bg-[#B89455]/80 hover:bg-[#B89455]'
-                        : 'bg-[#EEE7DC] group-hover:bg-[#B89455]/50'
+                        : valor > 0
+                        ? 'bg-[#B89455]/75 hover:bg-[#B89455]'
+                        : 'bg-[#EEE7DC]'
                     }`}
                   />
                 </div>
@@ -649,218 +762,389 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             })}
           </div>
 
-          {/* Rótulos dos dias */}
+          {/* DATAS NO EIXO X */}
           <div className="flex justify-between text-[9px] text-[#847663] font-mono pt-2 overflow-hidden">
             {timelineData.map((d, index) => (
-              <span key={index} className="truncate max-w-[32px] text-center">
+              <span key={index} className="truncate max-w-[36px] text-center">
                 {d.dia}
               </span>
             ))}
           </div>
         </div>
-
-        {/* GRÁFICO: CANAIS DE ORIGEM DO TRÁFEGO */}
-        <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-              Canais de Origem (Tráfego)
-            </h3>
-            <span className="text-[10px] text-[#8A6828] font-bold">100% Rastreado</span>
-          </div>
-
-          {/* Barra de Distribuição Visual */}
-          <div className="h-4 w-full rounded-full overflow-hidden flex shadow-2xs mb-4">
-            {canaisOrigem.map((c, i) => (
-              <div
-                key={i}
-                style={{ width: `${Math.max(c.porcentagem, 2)}%`, backgroundColor: c.cor }}
-                title={`${c.canal}: ${c.porcentagem}%`}
-              />
-            ))}
-          </div>
-
-          {/* Lista de Canais com Porcentagens */}
-          <div className="space-y-2">
-            {canaisOrigem.map((c, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.cor }} />
-                  <span className="text-[#1E1A16] font-medium text-[11px] truncate max-w-[140px]">{c.canal}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-[#847663] font-mono">{c.sessoes}</span>
-                  <span className="font-bold text-[#1E1A16] text-[11px] w-12 text-right">
-                    {c.porcentagem}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* LINHA 3: PÁGINAS & LANDING PAGES MAIS ACESSADAS + EVENTOS DE CONVERSÃO */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* PÁGINAS ACESSADAS (2 COLUNAS) */}
-        <div className="lg:col-span-2 bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-[#B89455]" />
-              <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-                Páginas & Landing Pages Mais Acessadas
-              </h3>
-            </div>
-            <span className="text-[11px] text-[#847663]">Ranking por Visualizações</span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#FAF7F2] text-[#625746] border-b border-[#D8CBB8]">
-                <tr>
-                  <th className="py-2.5 px-3 font-bold">Caminho da Página</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Visualizações</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Sessões</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Usuários</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Duração Média</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EEE7DC]">
-                {paginasAcessadas.map((p, i) => (
-                  <tr key={i} className="hover:bg-[#FAF7F2] transition-colors">
-                    <td className="py-2 px-3 font-mono text-[11px] text-[#8A6828] truncate max-w-[200px]">
-                      {p.caminho}
-                    </td>
-                    <td className="py-2 px-3 text-right font-bold text-[#1E1A16]">
-                      {p.visualizacoes.toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2 px-3 text-right text-[#625746]">
-                      {p.sessoes.toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2 px-3 text-right text-[#625746]">
-                      {p.usuarios.toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-[11px] text-[#1E1A16]">
-                      {p.duracao}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* EVENTOS & CONVERSÕES DE LEADS */}
-        <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-[#247A4A]" />
-              Eventos & Leads (Conversões)
-            </h3>
-            <span className="text-[10px] text-[#247A4A] font-bold">Metas do Site</span>
-          </div>
-
-          <div className="space-y-2">
-            {eventosConversao.map((ev, i) => {
-              const widthPct = Math.min((ev.total / ev.max) * 100, 100);
-              const isLead = ev.nome.includes('whatsapp') || ev.nome.includes('formulario');
-
-              return (
-                <div key={i} className="space-y-0.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className={`font-mono text-[10px] ${isLead ? 'text-[#247A4A] font-bold' : 'text-[#1E1A16]'}`} title={ev.desc}>
-                      {ev.nome}
-                    </span>
-                    <span className="font-bold text-[#1E1A16] text-[10px]">{ev.total}</span>
-                  </div>
-
-                  <div className="w-full bg-[#EEE7DC] h-1.5 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${widthPct}%` }}
-                      className={`h-full rounded-full transition-all ${
-                        isLead ? 'bg-[#247A4A]' : 'bg-[#B89455]'
-                      }`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* LINHA 4: GOOGLE SEARCH CONSOLE (CONSULTAS SEO & PALAVRAS-CHAVE) */}
+      {/* LINHA 3: ORIGENS DE TRÁFEGO, CAMPANHAS UTMS, TECNOLOGIA & GEOLOCALIZAÇÃO (ABAS) */}
       <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE7DC] pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-[#B89455]" />
-              <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-                Google Search Console (SEO & Buscas Orgânicas)
-              </h3>
-            </div>
-            <p className="text-xs text-[#625746] mt-0.5">
-              Termos que as pessoas digitaram no Google e encontraram o site <strong className="text-[#1E1A16]">{cliente.gscSiteUrl || 'dramanuelacordeiropediatra.com.br'}</strong>
-            </p>
+          <div className="flex items-center gap-2">
+            <Compass className="w-4 h-4 text-[#B89455]" />
+            <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
+              Segmentação Detalhada de Tráfego
+            </h3>
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
-            <span className="px-2.5 py-1 rounded-lg bg-[#FAF2E4] border border-[#E8D4B4] font-bold text-[#8A6828]">
-              {gscData?.queries?.length || 0} termos monitorados
-            </span>
+          {/* ABAS DE SEGMENTAÇÃO */}
+          <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-lg border border-[#D8CBB8]/70 overflow-x-auto">
+            <button
+              onClick={() => setAbaTrafego('canais')}
+              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                abaTrafego === 'canais' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
+              }`}
+            >
+              Canais & Redes
+            </button>
+            <button
+              onClick={() => setAbaTrafego('campanhas')}
+              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                abaTrafego === 'campanhas' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
+              }`}
+            >
+              <Share2 className="w-3 h-3" />
+              Campanhas UTM
+            </button>
+            <button
+              onClick={() => setAbaTrafego('tecnologia')}
+              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                abaTrafego === 'tecnologia' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
+              }`}
+            >
+              <Cpu className="w-3 h-3" />
+              Tecnologia & OS
+            </button>
+            <button
+              onClick={() => setAbaTrafego('localizacao')}
+              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                abaTrafego === 'localizacao' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
+              }`}
+            >
+              <MapPin className="w-3 h-3" />
+              Localização
+            </button>
           </div>
         </div>
 
-        {gscData?.queries && gscData.queries.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#FAF7F2] text-[#625746] border-b border-[#D8CBB8]">
-                <tr>
-                  <th className="py-2.5 px-3 font-bold">Termo de Busca (Palavra-chave)</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Cliques</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Impressões</th>
-                  <th className="py-2.5 px-3 text-right font-bold">CTR</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Posição Média</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EEE7DC]">
-                {gscData.queries.map((q, idx) => (
-                  <tr key={idx} className="hover:bg-[#FAF7F2] transition-colors">
-                    <td className="py-2 px-3 font-semibold text-[#1E1A16]">
-                      {q.query}
-                    </td>
-                    <td className="py-2 px-3 text-right font-bold text-[#247A4A]">
-                      {q.clicks}
-                    </td>
-                    <td className="py-2 px-3 text-right text-[#625746]">
-                      {q.impressions.toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-[#8A6828]">
-                      {q.ctr}%
-                    </td>
-                    <td className="py-2 px-3 text-right font-bold text-[#1E1A16]">
-                      #{q.position}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* CONTEÚDO DA ABA SELECIONADA */}
+        {abaTrafego === 'canais' && (
+          <div className="space-y-4 animate-fade-in">
+            {/* Barra Visual de Proporção de Canais */}
+            <div className="h-4 w-full rounded-full overflow-hidden flex shadow-2xs">
+              {canaisOrigem.map((c, i) => (
+                <div
+                  key={i}
+                  style={{ width: `${Math.max(c.porcentagem, 2)}%`, backgroundColor: c.cor }}
+                  title={`${c.nome}: ${c.porcentagem}% (${c.sessoes} sessões)`}
+                />
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {canaisOrigem.map((c, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[#FAF7F2] border border-[#E5D9C8]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.cor }} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#1E1A16] truncate">{c.nome}</p>
+                      <p className="text-[10px] text-[#847663]">{c.pageviews.toLocaleString('pt-BR')} visualizações</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-bold text-[#1E1A16] text-xs">{c.porcentagem}%</span>
+                    <p className="text-[9px] text-[#847663] font-mono">{c.sessoes} sessões</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="bg-[#FAF7F2] rounded-lg border border-dashed border-[#D8CBB8] p-6 text-center text-xs text-[#847663]">
-            <Search className="w-7 h-7 mx-auto mb-2 opacity-50 text-[#8A6828]" />
-            Nenhuma consulta orgânica recente registrada pelo Google Search Console para este domínio no período selecionado.
+        )}
+
+        {abaTrafego === 'campanhas' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+            {/* UTM Sources */}
+            <div className="bg-[#FAF7F2] p-3.5 rounded-lg border border-[#E5D9C8] space-y-2">
+              <h4 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#B89455]"></span>
+                UTM Source (Origens)
+              </h4>
+              <div className="space-y-1.5">
+                {utmSources.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC] text-xs">
+                    <span className="font-mono text-[11px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
+                    <div className="text-right">
+                      <span className="font-bold text-[#1E1A16]">{item.percentage}%</span>
+                      <p className="text-[9px] text-[#847663]">{item.sessions} sessões</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* UTM Mediums */}
+            <div className="bg-[#FAF7F2] p-3.5 rounded-lg border border-[#E5D9C8] space-y-2">
+              <h4 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#8A6828]"></span>
+                UTM Medium (Mídias)
+              </h4>
+              <div className="space-y-1.5">
+                {utmMediums.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC] text-xs">
+                    <span className="font-mono text-[11px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
+                    <div className="text-right">
+                      <span className="font-bold text-[#1E1A16]">{item.percentage}%</span>
+                      <p className="text-[9px] text-[#847663]">{item.sessions} sessões</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* UTM Campaigns */}
+            <div className="bg-[#FAF7F2] p-3.5 rounded-lg border border-[#E5D9C8] space-y-2">
+              <h4 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#247A4A]"></span>
+                UTM Campaign (Campanhas)
+              </h4>
+              <div className="space-y-1.5">
+                {utmCampaigns.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC] text-xs">
+                    <span className="font-mono text-[11px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
+                    <div className="text-right">
+                      <span className="font-bold text-[#1E1A16]">{item.percentage}%</span>
+                      <p className="text-[9px] text-[#847663]">{item.sessions} sessões</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {abaTrafego === 'tecnologia' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+            {/* Dispositivos */}
+            <div className="bg-[#FAF7F2] p-3.5 rounded-lg border border-[#E5D9C8] space-y-2">
+              <h4 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-[#B89455]" />
+                Dispositivos
+              </h4>
+              <div className="space-y-1.5">
+                {dispositivos.map((dev, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC]">
+                    <div className="flex items-center gap-2">
+                      {deviceIcon(dev.name)}
+                      <span className="text-xs font-semibold text-[#1E1A16] capitalize">{dev.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-[#1E1A16]">{dev.percentage}%</span>
+                      <p className="text-[9px] text-[#847663]">{dev.sessions} sessões</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sistemas Operacionais */}
+            <div className="bg-[#FAF7F2] p-3.5 rounded-lg border border-[#E5D9C8] space-y-2">
+              <h4 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-[#8A6828]" />
+                Sistemas Operacionais
+              </h4>
+              <div className="space-y-1.5">
+                {sistemasOperacionais.map((osItem, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC]">
+                    <span className="text-xs font-semibold text-[#1E1A16]">{osItem.name}</span>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-[#1E1A16]">{osItem.percentage}%</span>
+                      <p className="text-[9px] text-[#847663]">{osItem.sessions} sessões</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Navegadores */}
+            <div className="bg-[#FAF7F2] p-3.5 rounded-lg border border-[#E5D9C8] space-y-2">
+              <h4 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-[#247A4A]" />
+                Navegadores
+              </h4>
+              <div className="space-y-1.5">
+                {navegadores.map((nav, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC]">
+                    <span className="text-xs font-semibold text-[#1E1A16]">{nav.name}</span>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-[#1E1A16]">{nav.percentage}%</span>
+                      <p className="text-[9px] text-[#847663]">{nav.sessions} sessões</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {abaTrafego === 'localizacao' && (
+          <div className="space-y-3 animate-fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {paisesTop.map((c, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-[#FAF7F2] border border-[#E5D9C8] text-xs">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-[#B89455]" />
+                    <span className="font-bold text-[#1E1A16]">{c.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-[#1E1A16]">{c.percentage}%</span>
+                    <p className="text-[9px] text-[#847663]">{c.sessions} sessões</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* MODAL DE CONFIGURAÇÃO DE IDS DO GOOGLE */}
+      {/* LINHA 4: PÁGINAS & LANDING PAGES COM CLASSIFICAÇÃO INTELIGENTE */}
+      <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE7DC] pb-3">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#B89455]" />
+            <div>
+              <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
+                Páginas & Landing Pages Mais Acessadas
+              </h3>
+              <p className="text-[10px] text-[#847663]">Ranking por volume de visualizações e engajamento</p>
+            </div>
+          </div>
+
+          {/* BARRA DE PESQUISA DE PÁGINAS */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-[#847663] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={termoBuscaPagina}
+              onChange={(e) => setTermoBuscaPagina(e.target.value)}
+              placeholder="Filtrar páginas ou tipo..."
+              className="h-8 pl-8 pr-3 rounded-lg bg-[#FAF7F2] border border-[#D8CBB8] text-xs text-[#1E1A16] placeholder:text-[#847663] focus:outline-none focus:border-[#8A6828] w-full sm:w-56"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-[#FAF7F2] text-[#625746] border-b border-[#D8CBB8]">
+              <tr>
+                <th className="py-2.5 px-3 font-bold">Caminho da Rota</th>
+                <th className="py-2.5 px-3 font-bold">Tipo</th>
+                <th className="py-2.5 px-3 font-bold text-center">Share Visual</th>
+                <th className="py-2.5 px-3 text-right font-bold">Visualizações</th>
+                <th className="py-2.5 px-3 text-right font-bold">Sessões</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EEE7DC]">
+              {paginasAcessadas.map((p, i) => {
+                const percentualShare = Math.round((p.visualizacoes / maxPaginaVisualizacoes) * 100);
+
+                return (
+                  <tr key={i} className="hover:bg-[#FAF7F2] transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-[#8A6828] max-w-[240px] truncate">
+                      <div className="flex items-center gap-1.5">
+                        <span>{p.caminho}</span>
+                        {p.caminho.startsWith('http') && (
+                          <a href={p.caminho} target="_blank" rel="noreferrer" className="text-[#847663] hover:text-[#1E1A16]">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] border ${p.badgeCor}`}>
+                        {p.tipo}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 min-w-[120px]">
+                      <div className="w-full bg-[#EEE7DC] h-2 rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${percentualShare}%` }}
+                          className="bg-[#B89455] h-full rounded-full transition-all"
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold text-[#1E1A16]">
+                      {p.visualizacoes.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-[#625746] font-mono">
+                      {p.sessoes.toLocaleString('pt-BR')}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* LINHA 5: CLIQUES NO WHATSAPP (INTENÇÃO & LEADS CAPTADOS) */}
+      <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-[11px] shadow-xs overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-[#EEE7DC] bg-[#F3FBF6] gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#22C55E]/15 flex items-center justify-center shrink-0">
+              <MessageCircle className="w-5 h-5 text-[#16A34A]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
+                  Histórico de Cliques no WhatsApp (Intenção de Compra)
+                </h3>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#22C55E]/15 text-[#16A34A] border border-[#22C55E]/30">
+                  Taxa {metricas.taxaConversaoWhats}%
+                </span>
+              </div>
+              <p className="text-[10px] text-[#847663]">
+                Rastreamento de visitantes que acionaram o botão de contato comercial no site ou LP
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <span className="text-3xl font-black text-[#16A34A]">{whatsappClicksCount}</span>
+            <p className="text-[10px] text-[#847663]">leads/cliques no período</p>
+          </div>
+        </div>
+
+        {whatsappClicks.length > 0 ? (
+          <div className="divide-y divide-[#EEE7DC] max-h-72 overflow-y-auto">
+            {whatsappClicks.map((c, idx) => (
+              <div key={idx} className="flex items-start justify-between gap-3 px-4 sm:px-5 py-2.5 hover:bg-[#FAF7F2] transition-colors">
+                <div className="min-w-0">
+                  <p className="text-xs text-[#1E1A16] font-medium truncate flex items-center gap-1.5">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                    <span>{c.mensagem || c.botao || 'Clique no botão de WhatsApp'}</span>
+                  </p>
+                  <p className="text-[10px] text-[#847663] font-mono mt-0.5">
+                    {[c.cidade, c.dispositivo, c.navegador].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                <span className="text-[10px] text-[#847663] shrink-0 whitespace-nowrap">
+                  {formatRelativeTime(c.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-[#847663] px-4 sm:px-5 py-4">
+            {isRealData
+              ? 'Nenhum clique no botão de WhatsApp registrado no período selecionado.'
+              : 'Conecte o OpenPanel para visualizar a lista completa de intenções e leads rastreados.'}
+          </p>
+        )}
+      </div>
+
+      {/* MODAL DE CONFIGURAÇÃO DO PROJETO OPENPANEL */}
       {isConfigOpen && (
         <div className="fixed inset-0 bg-[#14120E]/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-[#FAF7F2] rounded-[14px] border border-[#D8CBB8] shadow-2xl max-w-lg w-full overflow-hidden">
             <div className="flex items-center justify-between p-4 bg-[#14120E] text-[#FAF7F2] border-b border-[#2B261F]">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-[#C7A15F]" />
-                <h3 className="font-bold text-sm">Configuração Google (GA4 & Search Console)</h3>
+                <h3 className="font-bold text-sm">Configuração OpenPanel</h3>
               </div>
               <button
                 onClick={() => setIsConfigOpen(false)}
@@ -870,40 +1154,65 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               </button>
             </div>
 
-            <form onSubmit={handleSaveGoogleConfig} className="p-5 space-y-4">
+            <form onSubmit={handleSaveConfig} className="p-5 space-y-4">
               <p className="text-xs text-[#625746]">
-                Vincule o <strong>ID da Propriedade GA4</strong> e a <strong>URL do Search Console</strong> para puxar tráfego e palavras-chave ranqueadas automaticamente.
+                Informe o <strong>ID do Projeto no OpenPanel</strong> deste cliente para puxar o tráfego do site/LP automaticamente.
               </p>
 
               <div>
-                <label className="block text-xs font-bold text-[#1E1A16] mb-1">
-                  ID da Propriedade Google Analytics 4 (GA4)
-                </label>
+                <label className="block text-xs font-bold text-[#1E1A16] mb-1">ID do Projeto OpenPanel</label>
                 <input
                   type="text"
-                  value={ga4Input}
-                  onChange={(e) => setGa4Input(e.target.value)}
-                  placeholder="Ex: 550043870"
+                  value={projectIdInput}
+                  onChange={(e) => setProjectIdInput(e.target.value)}
+                  placeholder="Ex: dra-manuela-cordeiro-lp"
                   className="w-full h-10 px-3 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs font-mono text-[#1E1A16] focus:outline-none focus:border-[#8A6828]"
                 />
                 <span className="text-[10px] text-[#847663] mt-1 block">
-                  Visível no Google Analytics em Administrador ➔ Detalhes da Propriedade.
+                  Visível no dashboard do OpenPanel, na URL ou nas configurações do projeto (slug).
                 </span>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#1E1A16] mb-1">
-                  URL ou Domínio no Google Search Console (GSC)
-                </label>
-                <input
-                  type="text"
-                  value={gscInput}
-                  onChange={(e) => setGscInput(e.target.value)}
-                  placeholder="Ex: sc-domain:dramanuelacordeiropediatra.com.br"
-                  className="w-full h-10 px-3 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs font-mono text-[#1E1A16] focus:outline-none focus:border-[#8A6828]"
-                />
-                <span className="text-[10px] text-[#847663] mt-1 block">
-                  Pode ser no formato de domínio (ex: <code>sc-domain:dramanuelacordeiropediatra.com.br</code>) ou URL (<code>https://...</code>).
+              <div className="pt-3 border-t border-[#D8CBB8] space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-[#1E1A16]">Credenciais deste cliente</label>
+                  {op?.configured ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#247A4A]/10 text-[#247A4A] border border-[#247A4A]/30">
+                      <CheckCircle2 className="w-2.5 h-2.5" />
+                      Configuradas
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#B83B32]/10 text-[#B83B32] border border-[#B83B32]/30">
+                      <AlertCircle className="w-2.5 h-2.5" />
+                      Pendentes
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#625746] mb-1">Client ID</label>
+                    <input
+                      type="text"
+                      value={clientIdInput}
+                      onChange={(e) => setClientIdInput(e.target.value)}
+                      placeholder="Deixe em branco para manter"
+                      className="w-full h-10 px-3 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs font-mono text-[#1E1A16] focus:outline-none focus:border-[#8A6828]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#625746] mb-1">Client Secret</label>
+                    <input
+                      type="password"
+                      value={clientSecretInput}
+                      onChange={(e) => setClientSecretInput(e.target.value)}
+                      placeholder="Deixe em branco para manter"
+                      className="w-full h-10 px-3 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs font-mono text-[#1E1A16] focus:outline-none focus:border-[#8A6828]"
+                    />
+                  </div>
+                </div>
+                <span className="text-[10px] text-[#847663] block">
+                  Gerados especificamente para este cliente no painel do OpenPanel (Organization → API Keys).
                 </span>
               </div>
 

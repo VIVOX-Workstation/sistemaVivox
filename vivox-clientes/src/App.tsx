@@ -8,6 +8,7 @@ import { AnalyticsIndex } from './pages/AnalyticsIndex';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { PlanejamentoServico } from './pages/PlanejamentoServico';
 import { Configuracoes } from './pages/Configuracoes';
+import { VivoxGP } from './pages/VivoxGP';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -33,6 +34,10 @@ function App() {
               
               <Route path="analytics" element={<AnalyticsIndex />} />
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />
+              <Route path="gp" element={<VivoxGP />} />
+              <Route path="gp/tarefa/:tarefaId" element={<VivoxGP />} />
+              <Route path="gp/workspace/:workspaceId" element={<VivoxGP />} />
+              <Route path="gp/workspace/:workspaceId/tarefa/:tarefaId" element={<VivoxGP />} />
               <Route path="configuracoes" element={<Configuracoes />} />
               
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -10,16 +10,20 @@ export class ClientesService {
   create(createClienteDto: CreateClienteDto) {
     return this.prisma.cliente.create({
       data: createClienteDto,
+      omit: { openpanelClientSecret: true },
     });
   }
 
   findAll() {
-    return this.prisma.cliente.findMany();
+    return this.prisma.cliente.findMany({
+      omit: { openpanelClientSecret: true },
+    });
   }
 
   findOne(id: string) {
     return this.prisma.cliente.findUnique({
       where: { id },
+      omit: { openpanelClientSecret: true },
       include: {
         fontesContexto: {
           orderBy: { createdAt: 'desc' }
@@ -32,6 +36,7 @@ export class ClientesService {
     return this.prisma.cliente.update({
       where: { id },
       data: updateClienteDto,
+      omit: { openpanelClientSecret: true },
     });
   }
 

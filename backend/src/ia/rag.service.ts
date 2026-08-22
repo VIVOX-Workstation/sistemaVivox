@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { OpenPanelService } from '../analytics/openpanel/openpanel.service';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { encoding_for_model, Tiktoken } from 'tiktoken';
 import { embed, embedMany } from 'ai';
@@ -10,8 +11,10 @@ export class RagService {
   private readonly logger = new Logger(RagService.name);
   private tokenizer: Tiktoken;
 
-  constructor(private readonly prisma: PrismaService) {
-    // Inicializa o tokenizer para o mesmo modelo de embedding que usaremos
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly openpanelService?: OpenPanelService,
+  ) {
     this.tokenizer = encoding_for_model('text-embedding-3-small');
   }
 
@@ -143,6 +146,35 @@ export class RagService {
               },
             },
           },
+          producoes: {
+            orderBy: { createdAt: 'desc' },
+            take: 8,
+            select: {
+              id: true,
+              tipo: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+          publicacoes: {
+            orderBy: { curtidas: 'desc' },
+            take: 5,
+            select: {
+              tipo: true,
+              alcance: true,
+              curtidas: true,
+              comentarios: true,
+              compartilhamentos: true,
+            },
+          },
+          oportunidades: {
+            where: { status: 'ABERTA' },
+            take: 5,
+            select: {
+              servicoSugerido: true,
+              justificativa: true,
+            },
+          },
           documentosVetoriais: {
             orderBy: { createdAt: 'desc' },
             take: 10,
@@ -192,6 +224,68 @@ export class RagService {
             }
           }
         });
+      }
+
+      if (cliente.producoes && cliente.producoes.length > 0) {
+        contextStr += `\n=== HISTÓRICO DE PRODUÇÕES RECENTES ===\n`;
+        cliente.producoes.forEach((p) => {
+          contextStr += `- Formato: ${p.tipo} | Status: ${p.status}\n`;
+        });
+      }
+
+      if (cliente.publicacoes && cliente.publicacoes.length > 0) {
+        contextStr += `\n=== POSTS DE MAIOR PERFORMANCE / ENGAJAMENTO (REFERÊNCIAS) ===\n`;
+        cliente.publicacoes.forEach((pub, idx) => {
+          contextStr += `Top Post ${idx + 1}: Tipo: ${pub.tipo} | Curtidas: ${pub.curtidas || 0} | Comentários: ${pub.comentarios || 0} | Compartilhamentos: ${pub.compartilhamentos || 0}\n`;
+        });
+      }
+
+      if (cliente.oportunidades && cliente.oportunidades.length > 0) {
+        contextStr += `\n=== OPORTUNIDADES COMERCIAIS IDENTIFICADAS ===\n`;
+        cliente.oportunidades.forEach((op) => {
+          contextStr += `- Sugestão: ${op.servicoSugerido} (${op.justificativa || 'Sem justificativa'})\n`;
+        });
+      }
+
+      // Métricas em Tempo Real do OpenPanel (Landing Page / Site)
+      if (cliente.openpanelProjectId && this.openpanelService) {
+        try {
+          const openpanelRes = await this.openpanelService.getOpenPanelMetrics(
+            cliente.openpanelProjectId,
+            cliente.openpanelClientId,
+            cliente.openpanelClientSecret,
+            '30d',
+          );
+
+          if (openpanelRes && openpanelRes.success && openpanelRes.overview) {
+            const ov = openpanelRes.overview;
+            const durationMin = Math.floor(ov.avgSessionDuration / 60);
+            const durationSec = ov.avgSessionDuration % 60;
+            const durationFormatted = `${String(durationMin).padStart(2, '0')}:${String(durationSec).padStart(2, '0')}`;
+            const whatsappCount = openpanelRes.whatsappClicks ? openpanelRes.whatsappClicks.length : 0;
+            const whatsappConvRate = ov.totalSessions > 0 ? ((whatsappCount / ov.totalSessions) * 100).toFixed(0) : '0';
+
+            contextStr += `\n=== MÉTRICAS REAIS DA LANDING PAGE / SITE (OPENPANEL EM TEMPO REAL) ===\n`;
+            contextStr += `• Projeto OpenPanel: ${cliente.openpanelProjectId}\n`;
+            contextStr += `• Visualizações Totais (Pageviews): ${ov.totalScreenViews}\n`;
+            contextStr += `• Total de Sessões: ${ov.totalSessions}\n`;
+            contextStr += `• Visitantes Únicos: ${ov.uniqueVisitors}\n`;
+            contextStr += `• Páginas por Sessão: ${ov.viewsPerSession}\n`;
+            contextStr += `• Duração Média da Sessão: ${durationFormatted} (${ov.avgSessionDuration} segundos)\n`;
+            contextStr += `• Taxa de Rejeição (Bounce Rate): ${ov.bounceRate}%\n`;
+            contextStr += `• Conversões WhatsApp: ${whatsappCount} cliques registrados (Taxa de Conversão: ${whatsappConvRate}%)\n`;
+
+            if (openpanelRes.pages && openpanelRes.pages.length > 0) {
+              contextStr += `• Principais Páginas Acessadas: ${openpanelRes.pages.map((p) => `${p.path} (${p.pageviews} views, ${p.sessions} sessões)`).join(', ')}\n`;
+            }
+
+            if (openpanelRes.referrers && openpanelRes.referrers.length > 0) {
+              contextStr += `• Principais Origens de Tráfego: ${openpanelRes.referrers.map((s) => `${s.name}: ${s.sessions} sessões (${s.percentage}%)`).join(', ')}\n`;
+            }
+          }
+        } catch (err) {
+          this.logger.warn(`Não foi possível obter métricas do OpenPanel para cliente ${clienteId}: ${err}`);
+        }
       }
 
       return contextStr;

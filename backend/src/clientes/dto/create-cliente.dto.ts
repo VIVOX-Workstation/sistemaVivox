@@ -48,4 +48,8 @@ export class CreateClienteDto {
   @IsString()
   @IsOptional()
   gscSiteUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  openpanelProjectId?: string;
 }

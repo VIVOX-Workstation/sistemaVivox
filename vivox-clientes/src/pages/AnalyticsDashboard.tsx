@@ -10,6 +10,8 @@ import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { AnalyticsTab } from '../components/ClientTabs/AnalyticsTab';
 import { InstagramPerformanceDashboard } from '../components/ClientTabs/InstagramPerformanceDashboard';
 import { PlanningTab } from '../components/ClientTabs/PlanningTab';
+import { ExecutiveReportTab } from '../components/ClientTabs/ExecutiveReportTab';
+import { Sparkles } from 'lucide-react';
 
 function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -21,7 +23,7 @@ function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-type Tab = 'site_analytics' | 'instagram' | 'planning' | 'services';
+type Tab = 'site_analytics' | 'instagram' | 'executive_report' | 'planning' | 'services';
 
 export function AnalyticsDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -87,6 +89,13 @@ export function AnalyticsDashboard() {
 
         <div className="flex items-center gap-2 self-start md:self-auto">
           <button
+            onClick={() => setActiveTab('executive_report')}
+            className="px-3.5 py-2 rounded-lg bg-[#24201A] hover:bg-[#2F2922] border border-[#4A4032] text-[#C7A15F] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
+          >
+            <Sparkles className="w-4 h-4" />
+            Relatório Executivo (IA)
+          </button>
+          <button
             onClick={() => navigate(`/cliente/${cliente.id}`)}
             className="px-3.5 py-2 rounded-lg border border-[#D8CBB8] bg-[#FFFDF8] hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
           >
@@ -123,6 +132,18 @@ export function AnalyticsDashboard() {
         </button>
 
         <button
+          onClick={() => setActiveTab('executive_report')}
+          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'executive_report'
+              ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
+              : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
+          ✨ Relatório Executivo (IA)
+        </button>
+
+        <button
           onClick={() => setActiveTab('planning')}
           className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap ${
             activeTab === 'planning'
@@ -149,6 +170,7 @@ export function AnalyticsDashboard() {
       <div className="w-full pt-2">
         {activeTab === 'site_analytics' && <AnalyticsTab cliente={cliente} />}
         {activeTab === 'instagram' && <InstagramPerformanceDashboard cliente={cliente} />}
+        {activeTab === 'executive_report' && <ExecutiveReportTab cliente={cliente} />}
         {activeTab === 'services' && <ServicesTab cliente={cliente} />}
         {activeTab === 'planning' && <PlanningTab cliente={cliente} />}
       </div>

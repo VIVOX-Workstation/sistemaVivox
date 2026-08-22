@@ -11,9 +11,9 @@ import { HostingTab } from '../components/ClientTabs/HostingTab';
 import { NotesTab } from '../components/ClientTabs/NotesTab';
 import { MarketTab } from '../components/ClientTabs/MarketTab';
 import { ServicesTab } from '../components/ClientTabs/ServicesTab';
-import { FloatingAssistant } from '../components/FloatingAssistant';
+import { AiContentStudioTab } from '../components/ClientTabs/AiContentStudioTab';
 
-type Tab = 'overview' | 'hosting' | 'market' | 'productions' | 'media' | 'notes' | 'services';
+type Tab = 'overview' | 'ai-studio' | 'hosting' | 'market' | 'productions' | 'media' | 'notes' | 'services';
 
 export function ClientProfile() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +42,7 @@ export function ClientProfile() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: 'Visão Geral' },
+    { id: 'ai-studio', label: '✨ Estúdio de Criação (IA)' },
     { id: 'hosting', label: 'Landing Pages & Domínio' },
     { id: 'market', label: 'Mercado (IA)' },
     { id: 'services', label: 'Mapa de Serviços' },
@@ -105,16 +106,22 @@ export function ClientProfile() {
 
         <div className="flex items-center gap-2 self-start md:self-auto">
           <button
+            onClick={() => setActiveTab('ai-studio')}
+            className="px-3.5 py-2 rounded-lg bg-[#24201A] hover:bg-[#2F2922] border border-[#4A4032] text-[#C7A15F] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
+          >
+            <span>✨ Criar Conteúdo (IA)</span>
+          </button>
+          <button
             onClick={() => navigate(`/analytics/${cliente.id}`)}
             className="px-3.5 py-2 rounded-lg bg-[#B89455] hover:bg-[#9E7A3F] text-[#1D160B] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
           >
             <BarChart2 className="w-4 h-4" />
-            Ver Métricas & Relatórios
+            Ver Métricas
           </button>
         </div>
       </div>
 
-      {/* NAVEGAÇÃO DE ABAS ABERTA E ELEGANTE (SEM CAIXA RESTRITA) */}
+      {/* NAVEGAÇÃO DE ABAS ABERTA E ELEGANTE */}
       <div className="flex border-b border-[#D8CBB8] gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -134,6 +141,7 @@ export function ClientProfile() {
       {/* CONTEÚDO EM LARGURA TOTAL COM SCROLL NATURAL */}
       <div className="w-full pt-2">
         {activeTab === 'overview' && <OverviewTab cliente={cliente} onChange={loadCliente} />}
+        {activeTab === 'ai-studio' && <AiContentStudioTab cliente={cliente} />}
         {activeTab === 'hosting' && <HostingTab cliente={cliente} />}
         {activeTab === 'market' && <MarketTab clienteId={cliente.id} />}
         {activeTab === 'services' && <ServicesTab cliente={cliente} />}
@@ -141,8 +149,6 @@ export function ClientProfile() {
         {activeTab === 'productions' && <div className="py-12 text-center text-[#847663] text-xs bg-[#FFFDF8] rounded-[11px] border border-[#D8CBB8]">Módulo de produções em desenvolvimento.</div>}
         {activeTab === 'media' && <div className="py-12 text-center text-[#847663] text-xs bg-[#FFFDF8] rounded-[11px] border border-[#D8CBB8]">Módulo de mídias em desenvolvimento.</div>}
       </div>
-
-      <FloatingAssistant clienteId={cliente.id} />
     </div>
   );
 }

@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Param, NotFoundException, Req, Res, UseGuards } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Controller, Get, Post, Body, Param, NotFoundException, Req, Res, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RagService } from './rag.service';
 import { PesquisaService } from './pesquisa.service';
-import { generateText, streamText } from 'ai';
+import { ClientSpecialistAgent, GenerateContentDto } from './agents/client-specialist.agent';
+import { VivoxMasterAgent, GenerateExecutiveReportDto } from './agents/vivox-master.agent';
+import { generateText } from 'ai';
 import { groq } from '@ai-sdk/groq';
-import { z } from 'zod';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -14,14 +14,16 @@ export class IaController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ragService: RagService,
-    private readonly pesquisaService: PesquisaService
+    private readonly pesquisaService: PesquisaService,
+    private readonly clientSpecialistAgent: ClientSpecialistAgent,
+    private readonly vivoxMasterAgent: VivoxMasterAgent,
   ) {}
 
   @Post('pesquisar/:clienteId')
   async forcarPesquisa(@Param('clienteId') clienteId: string) {
     const cliente = await this.prisma.cliente.findUnique({
       where: { id: clienteId },
-      select: { id: true, segmento: true, nomeFantasia: true }
+      select: { id: true, segmento: true, nomeFantasia: true },
     });
 
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
@@ -41,18 +43,17 @@ export class IaController {
 
   @Post('generate-mindmap/:clienteId')
   async generateMindmap(@Param('clienteId') clienteId: string) {
-    // 1. Busca contexto rico do cliente via RAG
     const contextMatches = await this.ragService.searchContext(
-      clienteId, 
-      "Briefing, escopo do serviço e tendências de mercado para montar o mapa mental", 
-      10 
+      clienteId,
+      'Briefing, escopo do serviço e tendências de mercado para montar o mapa mental',
+      10,
     );
-    const contextText = contextMatches.map(m => `[${m.tipo}] ${m.titulo || ''}: ${m.conteudo}`).join('\n\n');
+    const contextText = contextMatches.map((m) => `[${m.tipo}] ${m.titulo || ''}: ${m.conteudo}`).join('\n\n');
 
-    // 2. Gerar o JSON da árvore mental com Llama 3 (Groq)
     const { text } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
-      system: 'Você é um Estrategista Especialista em Marketing e Operações. Responda SEMPRE E EXCLUSIVAMENTE em formato JSON válido, sem tags markdown como ```json.',
+      model: groq('openai/gpt-oss-120b'),
+      system:
+        'Você é um Estrategista Especialista em Marketing e Operações. Responda SEMPRE E EXCLUSIVAMENTE em formato JSON válido, sem tags markdown como ```json.',
       prompt: `Gere um mapa mental estratégico para um cliente no formato JSON exato:
 {
   "name": "Foco da Estratégia",
@@ -67,7 +68,7 @@ export class IaController {
 }
 
 Aqui está o contexto e as tendências do cliente:
-${contextText}`
+${contextText}`,
     });
 
     try {
@@ -75,43 +76,107 @@ ${contextText}`
       return JSON.parse(cleaned);
     } catch {
       return {
-        name: "Planejamento Estratégico",
+        name: 'Planejamento Estratégico',
         children: [
-          { name: "Posicionamento & Marca", children: [{ name: "Definição de Tom de Voz" }] },
-          { name: "Produção de Conteúdo", children: [{ name: "Roteiros de Reels Semanais" }] }
-        ]
+          { name: 'Posicionamento & Marca', children: [{ name: 'Definição de Tom de Voz' }] },
+          { name: 'Produção de Conteúdo', children: [{ name: 'Roteiros de Reels Semanais' }] },
+        ],
       };
     }
   }
 
+  /**
+   * Chat Streaming inteligente: detecta se é Especialista do Cliente ou Vivox Master Geral
+   */
   @Post('chat')
   async chat(@Req() req: any, @Res() res: any) {
-    const { messages, clienteId } = req.body;
+    try {
+      const { messages, clienteId } = req.body;
 
-    let systemContext = `Você é o Consultor Estratégico e Diretor de Criação da Vivox, especialista dedicado ao negócio deste cliente.
-Seu objetivo é analisar profundamente o contexto, histórico, briefing e as fontes do Segundo Cérebro do cliente para fornecer respostas ricas, personalizadas e de alto valor estratégico.
-
-Diretrizes:
-- Pense de forma crítica e analítica antes de responder.
-- Sempre cruze as informações das Fontes de Contexto, Briefing e Tendências de Mercado.
-- Responda sempre em Português do Brasil com tom profissional, experiente e criativo.
-- Se o usuário perguntar sobre pessoas, marcas ou detalhes do negócio (como 'quem é a Dra...', sócios, produtos, etc.), consulte diretamente os dados fornecidos abaixo no Segundo Cérebro.`;
-
-    if (clienteId) {
-      const fullContext = await this.ragService.getFullClientContext(clienteId);
-      if (fullContext) {
-        systemContext += `\n\n--- INFORMAÇÕES DO SEGUNDO CÉREBRO & CONTEXTO DO CLIENTE ---\n${fullContext}\n-----------------------------------------------------------`;
+      if (!process.env.GROQ_API_KEY && !process.env.OPENAI_API_KEY) {
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return res.send(
+          '⚠️ Chave de API não configurada!\n\nPara ativar o assistente de IA, adicione `GROQ_API_KEY=sua_chave_aqui` (gratuita em console.groq.com) ou `OPENAI_API_KEY` no arquivo `.env` do projeto e reinicie o backend.',
+        );
       }
-    }
 
-    // 2. Cria o Stream usando o modelo super-rápido Llama 3 via Groq
-    const result = streamText({
-      model: groq('llama-3.3-70b-versatile'),
-      system: systemContext,
-      messages,
+      let result;
+      if (clienteId) {
+        result = await this.clientSpecialistAgent.chatStream(clienteId, messages);
+      } else {
+        result = await this.vivoxMasterAgent.chatStream(messages);
+      }
+
+      result.pipeTextStreamToResponse(res);
+    } catch (err: any) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.status(500).send(`Erro ao processar resposta da IA: ${err.message}`);
+    }
+  }
+
+  /**
+   * Gerador de Conteúdo de Marketing Estruturado (Reels, Carrosséis, Copies de Anúncios, Pautas)
+   */
+  @Post('marketing/generate')
+  async generateMarketing(@Body() dto: GenerateContentDto) {
+    if (!process.env.GROQ_API_KEY && !process.env.OPENAI_API_KEY) {
+      throw new NotFoundException(
+        'Chave de API não encontrada. Configure GROQ_API_KEY ou OPENAI_API_KEY no arquivo .env.',
+      );
+    }
+    if (!dto.clienteId) {
+      throw new NotFoundException('clienteId é obrigatório para gerar conteúdo de marketing');
+    }
+    return this.clientSpecialistAgent.generateMarketingContent(dto);
+  }
+
+  /**
+   * Gerador de Relatório Executivo Analítico (Global ou por Cliente)
+   */
+  @Post('reports/executive')
+  async generateExecutiveReport(@Body() dto: GenerateExecutiveReportDto) {
+    if (!process.env.GROQ_API_KEY && !process.env.OPENAI_API_KEY) {
+      throw new NotFoundException(
+        'Chave de API não encontrada. Configure GROQ_API_KEY ou OPENAI_API_KEY no arquivo .env.',
+      );
+    }
+    return this.vivoxMasterAgent.generateExecutiveReport(dto);
+  }
+
+  /**
+   * Transforma sugestão de IA diretamente em um item de Produção no Kanban
+   */
+  @Post('productions/create-from-ai')
+  async createProductionFromAi(
+    @Body()
+    body: {
+      clienteId: string;
+      tipo: 'POST' | 'VIDEO' | 'FOLDER' | 'REVISTA' | 'LANDING_PAGE' | 'APP' | 'FOTO';
+      servicoId?: string;
+    },
+  ) {
+    const { clienteId, tipo, servicoId } = body;
+
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: { id: true, nomeFantasia: true },
+    });
+    if (!cliente) throw new NotFoundException('Cliente não encontrado');
+
+    const novaProducao = await this.prisma.producao.create({
+      data: {
+        clienteId,
+        tipo,
+        status: 'EM_PRODUCAO',
+        servicoId: servicoId || null,
+      },
     });
 
-    // 3. Envia os fragmentos da resposta (streaming puro)
-    result.pipeTextStreamToResponse(res);
+    return {
+      success: true,
+      message: 'Produção criada com sucesso no Kanban',
+      producao: novaProducao,
+    };
   }
 }
+
