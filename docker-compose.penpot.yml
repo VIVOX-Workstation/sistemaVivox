@@ -28,10 +28,6 @@ services:
       - "9005:8080"
     volumes:
       - penpot_assets:/opt/data/assets
-      # Fix: penpot 2.16 referencia css/ui.css que não existe na imagem, causando erro MIME no browser
-      - ./penpot-config/ui.css:/usr/share/nginx/html/css/ui.css:ro
-      # Fix: sobrescrever cabeçalhos de segurança para permitir iframes
-      - ./penpot-config/nginx-security-headers.conf:/etc/nginx/nginx-security-headers.conf:ro
     depends_on:
       - penpot-backend
       - penpot-exporter
