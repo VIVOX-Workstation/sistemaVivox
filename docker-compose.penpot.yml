@@ -28,12 +28,6 @@ services:
       - "9005:8080"
     volumes:
       - penpot_assets:/opt/data/assets
-    entrypoint: >
-      /bin/sh -c "
-      find / -name '*nginx*.template' -exec sed -i 's/add_header X-Frame-Options/#add_header X-Frame-Options/g' {} + 2>/dev/null || true;
-      find / -name '*nginx*.template' -exec sed -i 's/SAMEORIGIN/ALLOWALL/g' {} + 2>/dev/null || true;
-      exec /entrypoint.sh
-      "
     depends_on:
       - penpot-backend
       - penpot-exporter
