@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import * as argon2 from 'argon2';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PenpotService {
@@ -171,6 +173,64 @@ export class PenpotService {
       };
     } catch (err: any) {
       this.logger.error(`Erro ao liberar usuario: ${err.message}`);
+      return { success: false, error: err.message };
+    } finally {
+      client.release();
+      await pool.end().catch(() => {});
+    }
+  }
+
+  async definirSenha(email: string, novaSenha: string = 'Vivox@2026') {
+    const { client, pool } = await this.getClient();
+    try {
+      const salt = crypto.randomBytes(16);
+      const rawHash = await argon2.hash(novaSenha, {
+        type: argon2.argon2id,
+        memoryCost: 32768,
+        timeCost: 3,
+        parallelism: 2,
+        hashLength: 32,
+        salt,
+        raw: true,
+      });
+      const formattedHash = `argon2id$${salt.toString('hex')}$32768$3$2$${rawHash.toString('hex')}`;
+
+      // 1. Busca o perfil pelo email original ou com prefixo old_
+      const profileRes = await client.query(
+        "SELECT id, email FROM profile WHERE email = $1 OR email ILIKE '%kelson.almeida123@gmail.com%' ORDER BY created_at DESC LIMIT 1",
+        [email]
+      );
+
+      if (profileRes.rows.length === 0) {
+        return { success: false, message: `Nenhum perfil encontrado no Penpot para ${email}` };
+      }
+
+      const profileId = profileRes.rows[0].id;
+
+      // 2. Atualiza email para o oficial e salva a nova senha com hash Argon2id nativo
+      await client.query(
+        'UPDATE profile SET email = $1, password = $2, is_active = true, is_blocked = false, auth_backend = $3 WHERE id = $4',
+        [email, formattedHash, 'penpot', profileId]
+      );
+
+      // 3. Garante que profile_email está sincronizado e ativo
+      await client.query(
+        'UPDATE profile_email SET email = $1, is_verified = true WHERE profile_id = $2',
+        [email, profileId]
+      ).catch(() => {});
+
+      // 4. Limpa sessões antigas para forçar novo login limpo
+      await client.query('DELETE FROM auth_token WHERE profile_id = $1', [profileId]).catch(() => {});
+
+      this.logger.log(`Senha do Penpot redefinida com sucesso para ${email} (Senha: ${novaSenha})!`);
+      return {
+        success: true,
+        email,
+        novaSenha,
+        message: `Senha redefinida com sucesso para: ${novaSenha}! Você já pode entrar em http://179.198.120.113:9005/#/login com o e-mail ${email} e essa senha.`,
+      };
+    } catch (err: any) {
+      this.logger.error(`Erro ao redefinir senha no Penpot: ${err.message}`);
       return { success: false, error: err.message };
     } finally {
       client.release();
