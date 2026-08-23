@@ -70,10 +70,7 @@ const getPenpotBaseUrl = () => {
   if (import.meta.env.VITE_PENPOT_URL) {
     return import.meta.env.VITE_PENPOT_URL;
   }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `http://${window.location.hostname}:9005`;
-  }
-  return 'http://localhost:9005';
+  return 'http://179.198.120.113:9005';
 };
 
 const resolvePenpotUrl = (url?: string) => {
@@ -83,10 +80,8 @@ const resolvePenpotUrl = (url?: string) => {
     // Em desenvolvimento local, roteia através do proxy local na porta 9005
     return url.replace(/http:\/\/[^/]+:9005/, 'http://localhost:9005');
   }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return url.replace('http://localhost:9005', base).replace('http://127.0.0.1:9005', base);
-  }
-  return url;
+  // Em produção, garante o destino correto no IP 179.198.120.113:9005
+  return url.replace('http://localhost:9005', base).replace('http://127.0.0.1:9005', base);
 };
 
 export function PlanejamentoServico() {
