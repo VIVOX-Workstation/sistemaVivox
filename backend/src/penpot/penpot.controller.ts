@@ -25,4 +25,9 @@ export class PenpotController {
       };
     }
   }
+
+  @Post('reset-usuario')
+  async resetUsuario(@Body() body: { email?: string }) {
+    return this.penpotService.resetarUsuario(body.email || 'kelson.almeida123@gmail.com');
+  }
 }

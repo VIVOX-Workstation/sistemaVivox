@@ -138,9 +138,21 @@ export class PenpotService {
         projectId: row.project_id,
         url: fileUrl,
       };
-    } catch (err) {
-      this.logger.error('Erro ao criar arquivo no Penpot:', err);
+    } catch (err: any) {
+      this.logger.error(`Erro ao criar arquivo no Penpot: ${err.message}`);
       throw err;
+    } finally {
+      client.release();
+      await pool.end().catch(() => {});
+    }
+  }
+
+  async resetarUsuario(email: string) {
+    const { client, pool } = await this.getClient();
+    try {
+      const res = await client.query('DELETE FROM profile WHERE email = $1 RETURNING id, email', [email]);
+      this.logger.log(`Perfil ${email} removido do Penpot para recadastro.`);
+      return { success: true, count: res.rowCount, message: `Conta ${email} resetada com sucesso. Pode criar uma nova conta agora!` };
     } finally {
       client.release();
       await pool.end().catch(() => {});
