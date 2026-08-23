@@ -28,7 +28,6 @@ services:
       - "9005:8080"
     volumes:
       - penpot_assets:/opt/data/assets
-      - ./penpot-config/nginx-security-headers.conf:/etc/nginx/nginx-security-headers.conf:ro
     depends_on:
       - penpot-backend
       - penpot-exporter
