@@ -100,11 +100,13 @@ export class PenpotService {
           has_media_trimmed: false,
           revn: 0,
           data: null,
-          features: '["fdata/objects-map"]',
+          features: ['fdata/objects-map'],
           version: 1,
           vern: 1,
         };
       }
+
+      const featuresVal = Array.isArray(m.features) ? m.features : ['fdata/objects-map'];
 
       // Insere o novo arquivo na Organização e Projeto corretos com revn 0
       const insertQuery = `
@@ -118,7 +120,7 @@ export class PenpotService {
         m.is_shared || false,
         m.has_media_trimmed || false,
         m.data,
-        m.features,
+        featuresVal,
         m.version || 1,
         m.vern || 0,
       ];
