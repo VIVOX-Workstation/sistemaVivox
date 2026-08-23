@@ -156,21 +156,21 @@ export class PenpotService {
       }
 
       const profileId = p.rows[0].id;
+      const timestamp = Date.now();
+      const oldEmail = `old_${timestamp}_${email}`;
 
-      // Remove todas as relações com o perfil
-      await client.query('DELETE FROM file_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM project_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM team_project_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM team_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM profile WHERE id = $1', [profileId]);
+      // 1. Atualiza profile_email e profile para liberar o e-mail original
+      await client.query('UPDATE profile SET email = $1 WHERE id = $2', [oldEmail, profileId]).catch(() => {});
+      await client.query('UPDATE profile_email SET email = $1 WHERE profile_id = $2', [oldEmail, profileId]).catch(() => {});
+      await client.query('DELETE FROM auth_token WHERE profile_id = $1', [profileId]).catch(() => {});
 
-      this.logger.log(`Perfil ${email} resetado com sucesso no Penpot.`);
+      this.logger.log(`E-mail ${email} liberado com sucesso no Penpot.`);
       return {
         success: true,
-        message: `Conta ${email} resetada com sucesso! Você já pode acessar http://179.198.120.113:9005/#/auth/register e criar sua conta com a senha que preferir.`,
+        message: `Conta ${email} liberada com sucesso! Você já pode acessar http://179.198.120.113:9005/#/auth/register e criar sua conta agora com sua senha.`,
       };
     } catch (err: any) {
-      this.logger.error(`Erro ao resetar usuario: ${err.message}`);
+      this.logger.error(`Erro ao liberar usuario: ${err.message}`);
       return { success: false, error: err.message };
     } finally {
       client.release();
