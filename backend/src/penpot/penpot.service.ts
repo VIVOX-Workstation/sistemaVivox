@@ -47,22 +47,22 @@ export class PenpotService {
   async criarArquivo(titulo: string, nomeCliente?: string): Promise<{ fileId: string; projectId: string; url: string }> {
     const { client, pool } = await this.getClient();
     try {
-      // 1. Busca a Organização/Time principal (ex: VIVOX, priorizando times não-default)
+      // 1. Busca a Organização/Time principal ativo (ex: VIVOX - Workspace mais recente)
       let teamRes = await client.query(
-        "SELECT id, name FROM team WHERE is_default = false OR name ILIKE '%vivox%' ORDER BY is_default ASC LIMIT 1"
+        "SELECT id, name FROM team WHERE is_default = false ORDER BY created_at DESC LIMIT 1"
       );
       let teamId = teamRes.rows[0]?.id;
 
       if (!teamId) {
         // Busca qualquer time existente no Penpot
-        const anyTeam = await client.query('SELECT id FROM team ORDER BY created_at ASC LIMIT 1');
+        const anyTeam = await client.query('SELECT id FROM team ORDER BY created_at DESC LIMIT 1');
         teamId = anyTeam.rows[0]?.id;
       }
 
       if (!teamId) {
         // Se ainda não há time, cria um time default da agência VIVOX
         const newTeam = await client.query(
-          "INSERT INTO team (id, name, is_default) VALUES (gen_random_uuid(), 'VIVOX Comunicação', false) RETURNING id"
+          "INSERT INTO team (id, name, is_default) VALUES (gen_random_uuid(), 'VIVOX - Workspace', false) RETURNING id"
         );
         teamId = newTeam.rows[0]?.id;
       }
@@ -85,12 +85,12 @@ export class PenpotService {
         projectId = novoProjetoRes.rows[0].id;
       }
 
-      // 3. Busca o template binário do arquivo base (prioriza Template_Limpo ou arquivos recentes)
+      // 3. Busca o template binário do arquivo base (prioriza Template_Limpo)
       const modelRes = await client.query(
         `SELECT is_shared, has_media_trimmed, revn, data, features, version, vern 
          FROM file 
          WHERE data IS NOT NULL 
-         ORDER BY (name = 'Template_Limpo' OR name = 'Template' OR name = 'Template Vazio') DESC, created_at DESC 
+         ORDER BY (name ILIKE '%Template_Limpo%' OR name ILIKE '%Template%') DESC, created_at DESC 
          LIMIT 1`
       );
 
@@ -130,7 +130,7 @@ export class PenpotService {
       const row = res.rows[0];
       const isProd = process.env.NODE_ENV === 'production';
       const penpotHost = process.env.PENPOT_PUBLIC_URI || (isProd ? 'http://179.198.120.113:9005' : 'http://localhost:9005');
-      const fileUrl = `${penpotHost}/#/workspace/${row.project_id}/${row.id}`;
+      const fileUrl = `${penpotHost}/#/workspace?team-id=${teamId}&file-id=${row.id}`;
 
       this.logger.log(`Arquivo criado na Organização VIVOX [Projeto: ${projectName}]: ${row.name} -> ${fileUrl}`);
 
