@@ -27,8 +27,8 @@ export class PenpotController {
   }
 
   @Post('reset-usuario')
-  async resetUsuario(@Body() body: { email?: string }) {
-    return this.penpotService.resetarUsuario(body.email || 'kelson.almeida123@gmail.com');
+  async resetUsuario(@Body() body: { email?: string; senha?: string }) {
+    return this.penpotService.resetarUsuario(body.email || 'kelson.almeida123@gmail.com', body.senha || 'Vivox@2026');
   }
 
   @Post('definir-senha')
