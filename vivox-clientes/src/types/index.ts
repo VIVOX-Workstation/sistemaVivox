@@ -31,6 +31,10 @@ export interface Cliente {
   logoUrl?: string;
   bannerUrl?: string;
   observacoes?: string;
+  email?: string;
+  telefone?: string;
+  localizacao?: string;
+  loginsSenhas?: string;
   ga4PropertyId?: string;
   gscSiteUrl?: string;
   openpanelProjectId?: string;

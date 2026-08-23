@@ -75,6 +75,10 @@ export function ClientProfile() {
     segmento: '',
     status: 'ATIVO' as StatusCliente,
     dataInicioContrato: '',
+    email: '',
+    telefone: '',
+    localizacao: '',
+    loginsSenhas: '',
     ga4PropertyId: '',
     gscSiteUrl: '',
     openpanelProjectId: '',
@@ -126,6 +130,10 @@ export function ClientProfile() {
       segmento: cliente.segmento || '',
       status: cliente.status || 'ATIVO',
       dataInicioContrato: cliente.dataInicioContrato ? cliente.dataInicioContrato.split('T')[0] : '',
+      email: cliente.email || '',
+      telefone: cliente.telefone || '',
+      localizacao: cliente.localizacao || '',
+      loginsSenhas: cliente.loginsSenhas || '',
       ga4PropertyId: cliente.ga4PropertyId || '',
       gscSiteUrl: cliente.gscSiteUrl || '',
       openpanelProjectId: cliente.openpanelProjectId || '',
@@ -145,6 +153,10 @@ export function ClientProfile() {
         segmento: editClientForm.segmento.trim(),
         status: editClientForm.status,
         dataInicioContrato: editClientForm.dataInicioContrato ? new Date(editClientForm.dataInicioContrato).toISOString() : null,
+        email: editClientForm.email.trim() || null,
+        telefone: editClientForm.telefone.trim() || null,
+        localizacao: editClientForm.localizacao.trim() || null,
+        loginsSenhas: editClientForm.loginsSenhas.trim() || null,
         ga4PropertyId: editClientForm.ga4PropertyId.trim() || null,
         gscSiteUrl: editClientForm.gscSiteUrl.trim() || null,
         openpanelProjectId: editClientForm.openpanelProjectId.trim() || null,
@@ -469,10 +481,10 @@ export function ClientProfile() {
 
                 {/* Barra de Ações Redondas: [ ✉ ] [ 📞 ] [ 💬 ] [ 📊 ] */}
                 <div className="flex items-center gap-2.5 pt-1">
-                  {primeiroContato?.email ? (
+                  {(cliente.email || primeiroContato?.email) ? (
                     <a
-                      href={`mailto:${primeiroContato.email}`}
-                      title={primeiroContato.email}
+                      href={`mailto:${cliente.email || primeiroContato?.email}`}
+                      title={cliente.email || primeiroContato?.email}
                       className="w-10 h-10 rounded-2xl bg-[#181512] text-[#C7A15F] flex items-center justify-center shadow-2xs hover:scale-105 transition-all border border-[#C7A15F]/20"
                     >
                       <Mail className="w-4 h-4" />
@@ -483,10 +495,10 @@ export function ClientProfile() {
                     </button>
                   )}
 
-                  {primeiroContato?.telefone ? (
+                  {(cliente.telefone || primeiroContato?.telefone) ? (
                     <a
-                      href={`tel:${primeiroContato.telefone.replace(/\D/g, '')}`}
-                      title={primeiroContato.telefone}
+                      href={`tel:${(cliente.telefone || primeiroContato?.telefone || '').replace(/\D/g, '')}`}
+                      title={cliente.telefone || primeiroContato?.telefone}
                       className="w-10 h-10 rounded-2xl bg-[#FAF7F2] hover:bg-[#181512] hover:text-[#C7A15F] text-[#1E1A16] flex items-center justify-center transition-all hover:scale-105 shadow-2xs"
                     >
                       <Phone className="w-4 h-4" />
@@ -497,9 +509,9 @@ export function ClientProfile() {
                     </button>
                   )}
 
-                  {primeiroContato?.telefone ? (
+                  {(cliente.telefone || primeiroContato?.telefone) ? (
                     <a
-                      href={`https://wa.me/55${primeiroContato.telefone.replace(/\D/g, '')}`}
+                      href={`https://wa.me/55${(cliente.telefone || primeiroContato?.telefone || '').replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Conversar no WhatsApp"
@@ -614,7 +626,7 @@ export function ClientProfile() {
                       <span className="text-[10px] font-bold text-[#8F8271] uppercase">Email Address</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {primeiroContato?.email || 'Nenhum e-mail'}
+                      {cliente.email || primeiroContato?.email || 'Nenhum e-mail'}
                     </p>
                   </div>
                   <Mail className="w-4 h-4 text-[#C7A15F] shrink-0" />
@@ -628,10 +640,27 @@ export function ClientProfile() {
                       <span className="text-[10px] font-bold text-[#8F8271] uppercase">Contact Number</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {primeiroContato?.telefone || 'Não cadastrado'}
+                      {cliente.telefone || primeiroContato?.telefone || 'Não cadastrado'}
                     </p>
                   </div>
                   <Phone className="w-4 h-4 text-[#C7A15F] shrink-0" />
+                </div>
+
+                {/* Localização */}
+                <div 
+                  onClick={openEditClientModal}
+                  className="p-3.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#FAF2E4] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
+                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">Localização</span>
+                    </div>
+                    <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
+                      {cliente.localizacao || 'Não cadastrada'}
+                    </p>
+                  </div>
+                  <Globe className="w-4 h-4 text-[#8A6828] shrink-0 group-hover:text-[#1E1A16]" />
                 </div>
 
                 {/* Linha 5: Designation / Responsável */}
@@ -666,6 +695,23 @@ export function ClientProfile() {
                 </button>
               </div>
             </div>
+
+            {/* Acessos e Credenciais (Visível apenas se preenchido) */}
+            {cliente.loginsSenhas && (
+              <div className="bg-[#FFFDF8] rounded-[28px] p-6 shadow-xs space-y-3 mt-6">
+                <div className="flex items-center gap-2 pb-1">
+                  <ShieldCheck className="w-4 h-4 text-[#8A6828]" />
+                  <h3 className="text-sm font-black text-[#1E1A16] tracking-tight">
+                    Acessos & Credenciais
+                  </h3>
+                </div>
+                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8D4B4]">
+                  <p className="text-xs text-[#1E1A16] whitespace-pre-wrap leading-relaxed">
+                    {cliente.loginsSenhas}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ======================================================================= */}
@@ -789,6 +835,45 @@ export function ClientProfile() {
                 value={editClientForm.openpanelProjectId}
                 onChange={(e) => setEditClientForm({ ...editClientForm, openpanelProjectId: e.target.value })}
                 placeholder="ID de monitoramento"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#1E1A16] mb-1">E-mail Corporativo</label>
+              <Input
+                type="email"
+                value={editClientForm.email}
+                onChange={(e) => setEditClientForm({ ...editClientForm, email: e.target.value })}
+                placeholder="Ex: contato@cliente.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Telefone Principal</label>
+              <Input
+                value={editClientForm.telefone}
+                onChange={(e) => setEditClientForm({ ...editClientForm, telefone: e.target.value })}
+                placeholder="Ex: (00) 00000-0000"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Localização</label>
+              <Input
+                value={editClientForm.localizacao}
+                onChange={(e) => setEditClientForm({ ...editClientForm, localizacao: e.target.value })}
+                placeholder="Ex: São Paulo, SP"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Logins e Senhas</label>
+              <Input
+                value={editClientForm.loginsSenhas}
+                onChange={(e) => setEditClientForm({ ...editClientForm, loginsSenhas: e.target.value })}
+                placeholder="Cole aqui acessos ou link de vault"
               />
             </div>
           </div>

@@ -47,6 +47,22 @@ export class CreateClienteDto {
 
   @IsString()
   @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  telefone?: string;
+
+  @IsString()
+  @IsOptional()
+  localizacao?: string;
+
+  @IsString()
+  @IsOptional()
+  loginsSenhas?: string;
+
+  @IsString()
+  @IsOptional()
   ga4PropertyId?: string;
 
   @IsString()

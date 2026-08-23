@@ -24,6 +24,10 @@ export function ClientForm() {
     dataInicioContrato: new Date().toISOString().split('T')[0],
     contatos: [],
     observacoes: '',
+    email: '',
+    telefone: '',
+    localizacao: '',
+    loginsSenhas: '',
     openpanelProjectId: '',
   });
 
@@ -104,7 +108,38 @@ export function ClientForm() {
               onChange={handleChange}
               required
             />
+            <Input 
+              label="E-mail" 
+              name="email"
+              type="email"
+              value={formData.email || ''}
+              onChange={handleChange}
+            />
+            <Input 
+              label="Telefone / WhatsApp" 
+              name="telefone"
+              value={formData.telefone || ''}
+              onChange={handleChange}
+            />
+            <Input 
+              label="Localização (Cidade/Estado)" 
+              name="localizacao"
+              value={formData.localizacao || ''}
+              onChange={handleChange}
+            />
           </div>
+        </Card>
+
+        <Card className="p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-2">Acessos & Credenciais</h2>
+          <Textarea 
+            label="Logins e Senhas"
+            name="loginsSenhas"
+            value={formData.loginsSenhas || ''}
+            onChange={handleChange}
+            rows={4}
+            placeholder="Ex: Instagram: @cliente / Senha: 123&#10;WordPress: admin / Senha: abc"
+          />
         </Card>
 
         <Card className="p-6 space-y-6">

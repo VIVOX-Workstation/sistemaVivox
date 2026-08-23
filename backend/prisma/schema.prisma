@@ -176,6 +176,10 @@ model Cliente {
   status             StatusCliente
   dataInicioContrato DateTime?
   dataFimContrato    DateTime?
+  email              String?
+  telefone           String?
+  localizacao        String?
+  loginsSenhas       String?       @db.Text
   logoUrl            String?
   bannerUrl          String?
   observacoes        String?
