@@ -150,30 +150,27 @@ export class PenpotService {
   async resetarUsuario(email: string) {
     const { client, pool } = await this.getClient();
     try {
-      // 1. Inspeciona as colunas da tabela profile
+      // 1. Inspeciona todas as tabelas relacionadas a profile
+      const tables = await client.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name ILIKE '%profile%'"
+      );
+
+      // 2. Inspeciona colunas de profile
       const cols = await client.query(
         "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'profile'"
       );
-      this.logger.log(`Colunas de profile: ${JSON.stringify(cols.rows.map((c) => c.column_name))}`);
 
-      // 2. Busca o perfil pelo email
-      const p = await client.query('SELECT id, email, fullname FROM profile WHERE email = $1', [email]);
-      if (p.rows.length === 0) {
-        return { success: true, message: `Email ${email} não existe no banco. Você já pode criar uma nova conta!` };
-      }
+      // 3. Busca os dados atuais do perfil
+      const p = await client.query('SELECT * FROM profile WHERE email = $1', [email]);
 
-      const profileId = p.rows[0].id;
-
-      // 3. Remove dependências para permitir recadastro limpo
-      await client.query('DELETE FROM team_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM auth_token WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM profile_email WHERE profile_id = $1', [profileId]).catch(() => {});
-      await client.query('DELETE FROM profile WHERE id = $1', [profileId]);
-
-      this.logger.log(`Perfil ${email} removido do Penpot com sucesso.`);
-      return { success: true, message: `Conta ${email} resetada com sucesso! Acesse http://179.198.120.113:9005/#/auth/register e cadastre sua senha desejada.` };
+      return {
+        success: true,
+        tables: tables.rows.map((t) => t.table_name),
+        columns: cols.rows.map((c) => c.column_name),
+        profile: p.rows[0],
+      };
     } catch (err: any) {
-      this.logger.error(`Erro ao resetar usuario: ${err.message}`);
+      this.logger.error(`Erro ao inspecionar usuario: ${err.message}`);
       return { success: false, error: err.message };
     } finally {
       client.release();
