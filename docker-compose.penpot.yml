@@ -3,7 +3,7 @@ x-flags: &penpot-flags
   PENPOT_FLAGS: disable-email-verification enable-prepl-server disable-secure-session-cookies allow-iframe allow-embed enable-login-with-password enable-registration demo-users
 
 x-uri: &penpot-public-uri
-  PENPOT_PUBLIC_URI: ${PENPOT_PUBLIC_URI:-http://fyv7zw27adh3hutwqbl72qad.179.198.120.113.sslip.io}
+  PENPOT_PUBLIC_URI: ${PENPOT_PUBLIC_URI:-http://179.198.120.113:9005}
 
 x-body-size: &penpot-http-body-size
   PENPOT_HTTP_SERVER_MAX_BODY_SIZE: 367001600
