@@ -70,7 +70,11 @@ const getPenpotBaseUrl = () => {
   if (import.meta.env.VITE_PENPOT_URL) {
     return import.meta.env.VITE_PENPOT_URL;
   }
-  return 'http://179.198.120.113:9005';
+  // Usa o hostname via sslip.io (em vez do IP puro) para que o iframe fique no
+  // mesmo "site" do app: IPs nus são sempre um site isolado para o navegador,
+  // o que faz o cookie de sessão do Penpot (SameSite=Lax) ser bloqueado dentro
+  // do iframe após o login, gerando "Algo errado aconteceu".
+  return 'http://179.198.120.113.sslip.io:9005';
 };
 
 const resolvePenpotUrl = (url?: string) => {
@@ -80,8 +84,11 @@ const resolvePenpotUrl = (url?: string) => {
     // Em desenvolvimento local, roteia através do proxy local na porta 9005
     return url.replace(/http:\/\/[^/]+:9005/, 'http://localhost:9005');
   }
-  // Em produção, garante o destino correto no IP 179.198.120.113:9005
-  return url.replace('http://localhost:9005', base).replace('http://127.0.0.1:9005', base);
+  // Em produção, migra URLs antigas salvas com o IP puro para o hostname sslip.io
+  return url
+    .replace('http://localhost:9005', base)
+    .replace('http://127.0.0.1:9005', base)
+    .replace('http://179.198.120.113:9005', base);
 };
 
 export function PlanejamentoServico() {

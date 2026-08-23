@@ -129,7 +129,7 @@ export class PenpotService {
       const res = await client.query(insertQuery, values);
       const row = res.rows[0];
       const isProd = process.env.NODE_ENV === 'production';
-      const penpotHost = process.env.PENPOT_PUBLIC_URI || (isProd ? 'http://179.198.120.113:9005' : 'http://localhost:9005');
+      const penpotHost = process.env.PENPOT_PUBLIC_URI || (isProd ? 'http://179.198.120.113.sslip.io:9005' : 'http://localhost:9005');
       const fileUrl = `${penpotHost}/#/workspace?team-id=${teamId}&file-id=${row.id}`;
 
       this.logger.log(`Arquivo criado na Organização VIVOX [Projeto: ${projectName}]: ${row.name} -> ${fileUrl}`);
@@ -192,7 +192,7 @@ export class PenpotService {
         success: true,
         email,
         novaSenha,
-        message: `Senha redefinida com sucesso para: ${novaSenha}! Você já pode entrar em http://179.198.120.113:9005/#/login com o e-mail ${email} e essa senha.`,
+        message: `Senha redefinida com sucesso para: ${novaSenha}! Você já pode entrar em http://179.198.120.113.sslip.io:9005/#/login com o e-mail ${email} e essa senha.`,
       };
     } catch (err: any) {
       this.logger.error(`Erro ao redefinir senha no Penpot: ${err.message}`);

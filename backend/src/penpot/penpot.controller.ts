@@ -15,7 +15,7 @@ export class PenpotController {
     } catch (err: any) {
       this.logger.error(`Falha ao criar arquivo no Penpot: ${err.message}`);
       const isProd = process.env.NODE_ENV === 'production';
-      const penpotHost = process.env.PENPOT_PUBLIC_URI || (isProd ? 'http://179.198.120.113:9005' : 'http://localhost:9005');
+      const penpotHost = process.env.PENPOT_PUBLIC_URI || (isProd ? 'http://179.198.120.113.sslip.io:9005' : 'http://localhost:9005');
       return {
         fileId: '',
         projectId: '',
