@@ -150,9 +150,31 @@ export class PenpotService {
   async resetarUsuario(email: string) {
     const { client, pool } = await this.getClient();
     try {
-      const res = await client.query('DELETE FROM profile WHERE email = $1 RETURNING id, email', [email]);
-      this.logger.log(`Perfil ${email} removido do Penpot para recadastro.`);
-      return { success: true, count: res.rowCount, message: `Conta ${email} resetada com sucesso. Pode criar uma nova conta agora!` };
+      // 1. Inspeciona as colunas da tabela profile
+      const cols = await client.query(
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'profile'"
+      );
+      this.logger.log(`Colunas de profile: ${JSON.stringify(cols.rows.map((c) => c.column_name))}`);
+
+      // 2. Busca o perfil pelo email
+      const p = await client.query('SELECT id, email, fullname FROM profile WHERE email = $1', [email]);
+      if (p.rows.length === 0) {
+        return { success: true, message: `Email ${email} não existe no banco. Você já pode criar uma nova conta!` };
+      }
+
+      const profileId = p.rows[0].id;
+
+      // 3. Remove dependências para permitir recadastro limpo
+      await client.query('DELETE FROM team_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM auth_token WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM profile_email WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM profile WHERE id = $1', [profileId]);
+
+      this.logger.log(`Perfil ${email} removido do Penpot com sucesso.`);
+      return { success: true, message: `Conta ${email} resetada com sucesso! Acesse http://179.198.120.113:9005/#/auth/register e cadastre sua senha desejada.` };
+    } catch (err: any) {
+      this.logger.error(`Erro ao resetar usuario: ${err.message}`);
+      return { success: false, error: err.message };
     } finally {
       client.release();
       await pool.end().catch(() => {});
