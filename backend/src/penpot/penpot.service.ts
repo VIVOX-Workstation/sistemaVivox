@@ -7,12 +7,17 @@ export class PenpotService {
   private pool: Pool;
 
   constructor() {
+    const isProd = process.env.NODE_ENV === 'production';
+    const host = process.env.PENPOT_DB_HOST || (isProd ? '179.198.120.113' : 'localhost');
+    const port = Number(process.env.PENPOT_DB_PORT) || (isProd ? 5434 : 5432);
+
     this.pool = new Pool({
-      host: process.env.PENPOT_DB_HOST || 'vivox-penpot-postgres',
-      port: 5432,
+      host,
+      port,
       user: process.env.PENPOT_DB_USER || 'penpot',
       password: process.env.PENPOT_DB_PASSWORD || 'penpot',
       database: process.env.PENPOT_DB_NAME || 'penpot',
+      connectionTimeoutMillis: 5000,
     });
   }
 
@@ -20,13 +25,23 @@ export class PenpotService {
     const client = await this.pool.connect();
     try {
       // 1. Busca a Organização/Time principal (ex: VIVOX, priorizando times não-default)
-      const teamRes = await client.query(
+      let teamRes = await client.query(
         "SELECT id, name FROM team WHERE is_default = false OR name ILIKE '%vivox%' ORDER BY is_default ASC LIMIT 1"
       );
-      const teamId = teamRes.rows[0]?.id;
+      let teamId = teamRes.rows[0]?.id;
 
       if (!teamId) {
-        throw new Error('Nenhuma organização encontrada no Penpot');
+        // Busca qualquer time existente no Penpot
+        const anyTeam = await client.query('SELECT id FROM team ORDER BY created_at ASC LIMIT 1');
+        teamId = anyTeam.rows[0]?.id;
+      }
+
+      if (!teamId) {
+        // Se ainda não há time, cria um time default da agência VIVOX
+        const newTeam = await client.query(
+          "INSERT INTO team (id, name, is_default) VALUES (gen_random_uuid(), 'VIVOX Comunicação', false) RETURNING id"
+        );
+        teamId = newTeam.rows[0]?.id;
       }
 
       // 2. Busca ou cria o Projeto correspondente ao Cliente dentro da Organização VIVOX
@@ -56,11 +71,18 @@ export class PenpotService {
          LIMIT 1`
       );
 
-      if (modelRes.rows.length === 0) {
-        throw new Error('Nenhum arquivo base encontrado no Penpot para modelo');
+      let m = modelRes.rows[0];
+      if (!m) {
+        m = {
+          is_shared: false,
+          has_media_trimmed: false,
+          revn: 0,
+          data: null,
+          features: '["fdata/objects-map"]',
+          version: 1,
+          vern: 1,
+        };
       }
-
-      const m = modelRes.rows[0];
 
       // Insere o novo arquivo na Organização e Projeto corretos com revn 0
       const insertQuery = `
@@ -81,7 +103,8 @@ export class PenpotService {
 
       const res = await client.query(insertQuery, values);
       const row = res.rows[0];
-      const penpotHost = process.env.PENPOT_PUBLIC_URI || 'http://localhost:9005';
+      const isProd = process.env.NODE_ENV === 'production';
+      const penpotHost = process.env.PENPOT_PUBLIC_URI || (isProd ? 'http://179.198.120.113:9005' : 'http://localhost:9005');
       const fileUrl = `${penpotHost}/#/workspace/${row.project_id}/${row.id}`;
 
       this.logger.log(`Arquivo criado na Organização VIVOX [Projeto: ${projectName}]: ${row.name} -> ${fileUrl}`);

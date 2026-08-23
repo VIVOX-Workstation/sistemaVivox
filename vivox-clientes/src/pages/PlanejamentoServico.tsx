@@ -66,6 +66,25 @@ export interface ItemPlanejado {
   createdAt: string;
 }
 
+const getPenpotBaseUrl = () => {
+  if (import.meta.env.VITE_PENPOT_URL) {
+    return import.meta.env.VITE_PENPOT_URL;
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `http://${window.location.hostname}:9005`;
+  }
+  return 'http://localhost:9005';
+};
+
+const resolvePenpotUrl = (url?: string) => {
+  const base = getPenpotBaseUrl();
+  if (!url || !url.trim()) return base;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return url.replace('http://localhost:9005', base).replace('http://127.0.0.1:9005', base);
+  }
+  return url;
+};
+
 export function PlanejamentoServico() {
   const { id: clienteId, servicoId, itemId: paramItemId } = useParams<{
     id: string;
@@ -246,7 +265,7 @@ export function PlanejamentoServico() {
     e.preventDefault();
     if (!novoItemTitulo.trim()) return;
 
-    let penpotFileUrl = 'http://localhost:9005';
+    let penpotFileUrl = getPenpotBaseUrl();
     try {
       const clientName = nomeCliente || servico?.cliente?.nomeFantasia || 'Cliente';
       const penpotRes = await api.post<{ url: string }>('/penpot/criar-arquivo', {
@@ -1035,7 +1054,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                       Estúdio de Design Integrado (Penpot)
                     </h3>
                     <span className="text-[10px] font-bold bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/40 px-2 py-0.5 rounded-full">
-                      Local • Porta 9005
+                      {typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? 'Produção • Integrado' : 'Local • Porta 9005'}
                     </span>
                   </div>
                   <p className="text-xs text-[#8F8271] mt-0.5">
@@ -1062,7 +1081,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                     onClick={() => {
                       const iframe = document.getElementById('penpot-frame') as HTMLIFrameElement;
                       if (iframe) {
-                        iframe.src = itemAtivo.penpotUrl || 'http://localhost:9005';
+                        iframe.src = resolvePenpotUrl(itemAtivo.penpotUrl);
                       }
                     }}
                     title="Recarregar o canvas do Penpot"
@@ -1087,7 +1106,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                   </button>
 
                   <a
-                    href={itemAtivo.penpotUrl || 'http://localhost:9005'}
+                    href={resolvePenpotUrl(itemAtivo.penpotUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-3.5 py-1.5 rounded-xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
@@ -1107,7 +1126,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                   </span>
                   <input
                     type="url"
-                    placeholder="Cole aqui a URL direta do arquivo no Penpot (ex: http://localhost:9005/#/workspace/...)"
+                    placeholder={`Cole aqui a URL direta do arquivo no Penpot (ex: ${getPenpotBaseUrl()}/#/workspace/...)`}
                     value={itemAtivo.penpotUrl || ''}
                     onChange={(e) => atualizarItemAtivo({ penpotUrl: e.target.value })}
                     className="w-full bg-white border border-[#D8CBB8] rounded-xl px-3 py-1.5 outline-none focus:border-[#C7A15F] font-mono text-[11px]"
@@ -1128,7 +1147,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               <div className="relative w-full rounded-2xl overflow-hidden border border-[#D8CBB8] bg-[#1E1E1E] shadow-inner" style={{ height: '780px' }}>
                 <iframe
                   id="penpot-frame"
-                  src={itemAtivo.penpotUrl || 'http://localhost:9005'}
+                  src={resolvePenpotUrl(itemAtivo.penpotUrl)}
                   title="Penpot Studio"
                   className="w-full h-full border-0"
                   allow="clipboard-read; clipboard-write; fullscreen"
