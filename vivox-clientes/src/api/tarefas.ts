@@ -8,6 +8,7 @@ export interface TarefaFiltros {
   responsavelId?: string;
   clienteId?: string;
   projetoId?: string;
+  servicoId?: string;
 }
 
 export interface CreateTarefaPayload {

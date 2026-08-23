@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Tarefa, MetricasTarefas, StatusTarefa, Cliente, Projeto } from '../types';
 import { tarefasApi } from '../api/tarefas';
 import { api } from '../api/client';
@@ -26,7 +26,8 @@ import {
   CheckCircle2,
   Clock,
   Layers,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 
 interface UserOption {
@@ -38,6 +39,10 @@ interface UserOption {
 export const VivoxGP: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClienteId = searchParams.get('clienteId');
+  const queryServicoId = searchParams.get('servicoId');
+
   const { workspaceId: paramWorkspaceId, tarefaId: paramTarefaId } = useParams<{
     workspaceId?: string;
     tarefaId?: string;
@@ -70,10 +75,11 @@ export const VivoxGP: React.FC = () => {
 
   // Workspace selecionado
   const selectedWorkspaceId = useMemo(() => {
+    if (queryClienteId || queryServicoId) return 'ALL';
     if (!paramWorkspaceId) return null;
     if (paramWorkspaceId.toLowerCase() === 'all') return 'ALL';
     return paramWorkspaceId;
-  }, [paramWorkspaceId]);
+  }, [paramWorkspaceId, queryClienteId, queryServicoId]);
 
   const tarefaSelecionadaId = paramTarefaId || null;
 
@@ -197,6 +203,14 @@ export const VivoxGP: React.FC = () => {
         if (t.projetoId !== selectedWorkspaceId) return false;
       }
 
+      if (queryClienteId && t.clienteId !== queryClienteId) {
+        return false;
+      }
+
+      if (queryServicoId && t.servicoId !== queryServicoId) {
+        return false;
+      }
+
       if (busca.trim()) {
         const matchBusca =
           t.titulo.toLowerCase().includes(busca.toLowerCase()) ||
@@ -231,7 +245,7 @@ export const VivoxGP: React.FC = () => {
 
       return true;
     });
-  }, [tarefas, selectedWorkspaceId, busca, apenasMinhas, user, filtroResponsavel, filtroPrioridade, filtroStatusRapido]);
+  }, [tarefas, selectedWorkspaceId, queryClienteId, queryServicoId, busca, apenasMinhas, user, filtroResponsavel, filtroPrioridade, filtroStatusRapido]);
 
   // Se nenhum workspace estiver na URL (e não estiver abrindo uma tarefa), exibe o Hub
   if (selectedWorkspaceId === null && !tarefaSelecionadaId) {
@@ -461,6 +475,26 @@ export const VivoxGP: React.FC = () => {
                 {concluidasCount}
               </span>
             </button>
+
+            {/* Badge de Filtro de Cliente/Serviço ativo do Mapa de Serviços */}
+            {(queryClienteId || queryServicoId) && (
+              <div className="flex items-center gap-1.5 bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/40 px-3 py-1 rounded-full text-xs font-bold shadow-2xs ml-1">
+                <span>
+                  Filtro: {clientes.find((c) => c.id === queryClienteId)?.nomeFantasia || 'Cliente/Serviço'}
+                </span>
+                <button
+                  onClick={() => {
+                    searchParams.delete('clienteId');
+                    searchParams.delete('servicoId');
+                    setSearchParams(searchParams);
+                  }}
+                  title="Limpar filtro de cliente"
+                  className="w-4 h-4 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Busca e Filtro de Responsável */}

@@ -67,19 +67,19 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
   }, [workspaces, busca, filtroCategoria, tarefas]);
 
   return (
-    <div className="flex-1 w-full h-full overflow-y-auto bg-[#F4F1EA] p-6 md:p-10 flex flex-col select-none">
+    <div className="flex-1 w-full h-full overflow-y-auto bg-transparent p-6 md:p-10 flex flex-col select-none">
       <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
         {/* ========================================================================= */}
         {/* TOPO: LOGO WORKSPACE + BOTÃO PILL + GRANDES NÚMEROS DE MÉTRICAS          */}
         {/* ========================================================================= */}
         <div className="flex items-center justify-between gap-6 flex-wrap pb-4">
-          {/* Título Estilo Editorial com Glowing Ring no 'O' */}
+          {/* Título Estilo Editorial com Glowing Ring no 'O' com as cores do Sistema Vivox */}
           <div className="flex items-center gap-4">
             <div className="flex items-center text-3xl md:text-4xl font-black text-[#1E1A16] tracking-tight uppercase">
               <span>W</span>
               <span className="relative flex items-center justify-center w-8 h-8 md:w-9 md:h-9 mx-0.5">
-                <span className="w-6 h-6 md:w-7 md:h-7 rounded-full border-[3px] border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.6)] flex items-center justify-center">
-                  <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
+                <span className="w-6 h-6 md:w-7 md:h-7 rounded-full border-[3px] border-[#C7A15F] shadow-[0_0_16px_rgba(199,161,95,0.75)] flex items-center justify-center bg-gradient-to-br from-[#FAF7F2] to-[#E5D9C8] transition-all">
+                  <span className="w-2 h-2 rounded-full bg-[#8A6828] shadow-2xs" />
                 </span>
               </span>
               <span>RKSPACE</span>
@@ -88,9 +88,9 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
             {/* Botão Pill Dark '+ New Workspace' */}
             <button
               onClick={onOpenCreateWorkspace}
-              className="px-5 py-2 rounded-full bg-[#181512] hover:bg-[#2A241E] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95"
+              className="px-5 py-2 rounded-full bg-[#181512] hover:bg-[#2A241E] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95 border border-[#C7A15F]/20"
             >
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-white text-xs">
+              <span className="w-4 h-4 rounded-full bg-[#C7A15F]/30 text-[#C7A15F] flex items-center justify-center text-xs font-black">
                 +
               </span>
               <span>New Task / Workspace</span>
@@ -106,7 +106,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Demandas</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#A3E635]/25 text-[#4D7C0F] border border-[#A3E635]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
                   ↑{workspaces.length}
                 </span>
               </div>
@@ -245,25 +245,29 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
         {/* GRID DE CARDS NEO-ORGANIC NO ESTILO EXATO DA REFERÊNCIA                   */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
-          {/* Card 1 Especial: 'Todos os Workspaces / Pipeline Global' */}
+          {/* Card 1 Especial: 'Todos os Workspaces / Pipeline Global' com Degradê Vivox */}
           <div
             onClick={() => onSelectWorkspace('ALL')}
-            className="group bg-[#181512] text-[#F6F0E7] border border-[#2B261F] rounded-[28px] p-5 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[220px] relative overflow-hidden"
+            className="group bg-gradient-to-br from-[#1E1A16] via-[#2B2319] to-[#14100D] text-[#F6F0E7] border border-[#C7A15F]/40 hover:border-[#C7A15F] rounded-[28px] p-5 shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[220px] relative overflow-hidden"
           >
+            {/* Brilhos decorativos sutis em degradê Vivox */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#C7A15F]/15 blur-2xl pointer-events-none group-hover:bg-[#C7A15F]/30 transition-all duration-500" />
+            <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-[#8F6F2D]/10 blur-xl pointer-events-none" />
+
             {/* Linha Topo: Avatar + Botão Seta ↗ */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#24201A] border border-[#3A332A] flex items-center justify-center text-xl shadow-inner group-hover:scale-105 transition-transform">
+            <div className="flex items-start justify-between gap-3 relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#3D3325] to-[#241F18] border border-[#C7A15F]/40 flex items-center justify-center text-xl shadow-inner group-hover:scale-105 transition-transform">
                 <Globe className="w-6 h-6 text-[#C7A15F]" />
               </div>
 
               {/* Botão Seta Circular ↗ no Canto */}
-              <div className="w-9 h-9 rounded-full bg-[#24201A] border border-[#3A332A] group-hover:bg-[#C7A15F] group-hover:text-[#181512] text-[#C7A15F] flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-xs">
+              <div className="w-9 h-9 rounded-full bg-[#241F18] border border-[#C7A15F]/30 group-hover:bg-[#C7A15F] group-hover:text-[#181512] text-[#C7A15F] flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-xs">
                 <ArrowUpRight className="w-4 h-4" />
               </div>
             </div>
 
             {/* Informações Centrais */}
-            <div className="my-2">
+            <div className="my-2 relative z-10">
               <h3 className="text-lg font-black text-[#F6F0E7] group-hover:text-[#C7A15F] transition-colors leading-tight">
                 Visão Geral
               </h3>
@@ -273,16 +277,16 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
             </div>
 
             {/* Rodapé: Tags em Pílula + Indicador de Pontos de Status */}
-            <div className="pt-3 border-t border-[#2B261F] flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-[#C7A15F]/20 flex items-center justify-between gap-2 relative z-10">
               <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-white">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#C7A15F]/20 text-[#E8D7B8] border border-[#C7A15F]/30">
                   {totalTarefas} tarefas
                 </span>
               </div>
 
-              {/* Pontos de Intensidade de Status (●●●●●) */}
+              {/* Pontos de Intensidade de Status (●●●●●) com paleta harmoniosa */}
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#A3E635]" />
+                <span className="w-2 h-2 rounded-full bg-[#C7A15F]" />
                 <span className="w-2 h-2 rounded-full bg-[#FFA800]" />
                 <span className="w-2 h-2 rounded-full bg-[#0284C7]" />
                 <span className="w-2 h-2 rounded-full bg-[#FF5B5B]" />

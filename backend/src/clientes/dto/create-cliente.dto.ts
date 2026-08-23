@@ -39,6 +39,10 @@ export class CreateClienteDto {
 
   @IsString()
   @IsOptional()
+  bannerUrl?: string;
+
+  @IsString()
+  @IsOptional()
   observacoes?: string;
 
   @IsString()

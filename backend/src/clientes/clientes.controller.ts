@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Body, 
+  Patch, 
+  Param, 
+  Delete, 
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ClientesService } from './clientes.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -7,7 +21,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('clientes')
 export class ClientesController {
-  constructor(private readonly clientesService: ClientesService) {}
+  constructor(
+    private readonly clientesService: ClientesService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Post()
   create(@Body() createClienteDto: CreateClienteDto) {
@@ -37,6 +54,29 @@ export class ClientesController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.clientesService.remove(id);
+  }
+
+  // --- UPLOAD DE IMAGEM / LOGO & BANNER ---
+  @Post(':id/upload-logo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadLogo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Nenhum arquivo enviado');
+    const logoUrl = await this.storageService.uploadFile(file, 'clientes/logos');
+    return this.clientesService.update(id, { logoUrl });
+  }
+
+  @Post(':id/upload-banner')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadBanner(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Nenhum arquivo enviado');
+    const bannerUrl = await this.storageService.uploadFile(file, 'clientes/banners');
+    return this.clientesService.update(id, { bannerUrl });
   }
 
   // --- FONTES & CONTEXTO ---

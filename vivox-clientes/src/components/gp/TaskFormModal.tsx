@@ -24,6 +24,8 @@ interface UserOption {
 interface TaskFormModalProps {
   initialStatus?: StatusTarefa;
   initialWorkspaceId?: string | null;
+  initialClienteId?: string | null;
+  initialServicoId?: string | null;
   workspaces?: Projeto[];
   onClose: () => void;
   onTaskCreated: () => void;
@@ -32,6 +34,8 @@ interface TaskFormModalProps {
 export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   initialStatus = 'A_FAZER',
   initialWorkspaceId = null,
+  initialClienteId = null,
+  initialServicoId = null,
   workspaces = [],
   onClose,
   onTaskCreated,
@@ -42,7 +46,8 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [prioridade, setPrioridade] = useState<PrioridadeTarefa>('MEDIA');
   const [projetoId, setProjetoId] = useState<string>(initialWorkspaceId || '');
   const [responsavelId, setResponsavelId] = useState('');
-  const [clienteId, setClienteId] = useState('');
+  const [clienteId, setClienteId] = useState(initialClienteId || '');
+  const [servicoId, setServicoId] = useState(initialServicoId || '');
   const [prazo, setPrazo] = useState('');
   const [horasEstimadas, setHorasEstimadas] = useState('');
   const [checklist, setChecklist] = useState<string[]>([]);
@@ -50,20 +55,51 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   const [usuarios, setUsuarios] = useState<UserOption[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [servicosCliente, setServicosCliente] = useState<any[]>([]);
+  const [listaWorkspaces, setListaWorkspaces] = useState<Projeto[]>(workspaces);
   const [loading, setLoading] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
+
+  const carregarServicos = async (cId: string) => {
+    if (!cId) {
+      setServicosCliente([]);
+      return;
+    }
+    try {
+      const res = await api.get(`/servicos/cliente/${cId}`);
+      setServicosCliente(res.data || []);
+    } catch {
+      setServicosCliente([]);
+    }
+  };
+
+  useEffect(() => {
+    if (initialClienteId) {
+      carregarServicos(initialClienteId);
+    }
+  }, [initialClienteId]);
 
   useEffect(() => {
     const carregarDependencias = async () => {
       try {
-        const [usersRes, clientesRes] = await Promise.all([
+        const [usersRes, clientesRes, wsRes] = await Promise.all([
           api.get<UserOption[]>('/users').catch(() => ({ data: [] })),
           api.get<Cliente[]>('/clientes').catch(() => ({ data: [] })),
+          workspaces.length > 0 ? Promise.resolve(workspaces) : tarefasApi.getProjetos().catch(() => []),
         ]);
         setUsuarios(usersRes.data || []);
         setClientes(clientesRes.data || []);
+        setListaWorkspaces(wsRes || []);
+
+        // Se houver initialClienteId e existir um workspace para este cliente, pré-seleciona
+        if (initialClienteId && !initialWorkspaceId && wsRes) {
+          const wsDoCliente = wsRes.find((w: any) => w.clienteId === initialClienteId);
+          if (wsDoCliente) {
+            setProjetoId(wsDoCliente.id);
+          }
+        }
       } catch (err) {
-        console.error('Erro ao carregar usuários/clientes:', err);
+        console.error('Erro ao carregar usuários/clientes/workspaces:', err);
       }
     };
 
@@ -115,6 +151,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         projetoId: projetoId || undefined,
         responsavelId: responsavelId || undefined,
         clienteId: clienteId || undefined,
+        servicoId: servicoId || undefined,
         prazo: prazo ? new Date(prazo).toISOString() : undefined,
         horasEstimadas: horasEstimadas ? Number(horasEstimadas) : undefined,
         checklist: checklist.length > 0 ? checklist : undefined,
@@ -194,7 +231,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 className="w-full text-xs font-semibold py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
               >
                 <option value="">Nenhum (Workspace Geral)</option>
-                {workspaces.map((ws) => (
+                {listaWorkspaces.map((ws) => (
                   <option key={ws.id} value={ws.id}>
                     {ws.icone || '📁'} {ws.nome}
                   </option>
@@ -267,7 +304,12 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               </label>
               <select
                 value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
+                onChange={(e) => {
+                  const newCId = e.target.value;
+                  setClienteId(newCId);
+                  setServicoId('');
+                  carregarServicos(newCId);
+                }}
                 className="w-full text-xs py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
               >
                 <option value="">Nenhum cliente</option>
@@ -292,6 +334,28 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               />
             </div>
           </div>
+
+          {/* Serviço Contratado do Cliente (Se houver cliente) */}
+          {clienteId && (
+            <div>
+              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+                <FolderKanban className="w-3.5 h-3.5 text-[#C7A15F]" />
+                Serviço Contratado do Cliente
+              </label>
+              <select
+                value={servicoId}
+                onChange={(e) => setServicoId(e.target.value)}
+                className="w-full text-xs py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
+              >
+                <option value="">Nenhum (Demanda Avulsa / Geral)</option>
+                {servicosCliente.map((srv) => (
+                  <option key={srv.id} value={srv.id}>
+                    {srv.tipoServico?.replace(/_/g, ' ')} ({srv.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Checklist Inicial */}
           <div className="pt-2 border-t border-[#D8CBB8]">

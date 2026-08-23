@@ -65,6 +65,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [responsavelId, setResponsavelId] = useState<string>('');
   const [clienteId, setClienteId] = useState<string>('');
   const [projetoId, setProjetoId] = useState<string>('');
+  const [servicoId, setServicoId] = useState<string>('');
   const [prazo, setPrazo] = useState('');
   const [horasEstimadas, setHorasEstimadas] = useState<string>('');
   const [horasGastas, setHorasGastas] = useState<string>('');
@@ -80,6 +81,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [usuarios, setUsuarios] = useState<UserOption[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [workspaces, setWorkspaces] = useState<Projeto[]>([]);
+  const [servicosCliente, setServicosCliente] = useState<any[]>([]);
+
+  // Carrega os serviços do cliente selecionado
+  const carregarServicosCliente = async (cId: string) => {
+    if (!cId) {
+      setServicosCliente([]);
+      return;
+    }
+    try {
+      const res = await api.get(`/servicos/cliente/${cId}`);
+      setServicosCliente(res.data || []);
+    } catch {
+      setServicosCliente([]);
+    }
+  };
 
   const carregarTarefa = async (id: string) => {
     try {
@@ -92,10 +108,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setResponsavelId(data.responsavelId || '');
       setClienteId(data.clienteId || '');
       setProjetoId(data.projetoId || '');
+      setServicoId(data.servicoId || '');
       setPrazo(data.prazo ? data.prazo.split('T')[0] : '');
       setHorasEstimadas(data.horasEstimadas ? String(data.horasEstimadas) : '');
       setHorasGastas(data.horasGastas ? String(data.horasGastas) : '');
       setTags(data.tags || []);
+
+      if (data.clienteId) {
+        carregarServicosCliente(data.clienteId);
+      }
     } catch (err) {
       console.error('Erro ao carregar detalhes da tarefa:', err);
     } finally {
@@ -138,6 +159,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         responsavelId: responsavelId || undefined,
         clienteId: clienteId || undefined,
         projetoId: projetoId || undefined,
+        servicoId: servicoId || undefined,
         prazo: prazo ? new Date(prazo).toISOString() : undefined,
         horasEstimadas: horasEstimadas ? Number(horasEstimadas) : undefined,
         horasGastas: horasGastas ? Number(horasGastas) : undefined,
@@ -629,7 +651,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </span>
                   <select
                     value={clienteId}
-                    onChange={(e) => setClienteId(e.target.value)}
+                    onChange={(e) => {
+                      const newCId = e.target.value;
+                      setClienteId(newCId);
+                      setServicoId('');
+                      carregarServicosCliente(newCId);
+                    }}
                     className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-medium text-[#1E1A16]"
                   >
                     <option value="">Nenhum cliente vinculado</option>
@@ -640,6 +667,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     ))}
                   </select>
                 </div>
+
+                {/* Serviço Contratado do Cliente */}
+                {clienteId && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
+                      <FolderKanban className="w-3.5 h-3.5 text-[#C7A15F]" />
+                      Serviço do Contrato:
+                    </span>
+                    <select
+                      value={servicoId}
+                      onChange={(e) => setServicoId(e.target.value)}
+                      className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
+                    >
+                      <option value="">Nenhum (Demanda Avulsa / Geral)</option>
+                      {servicosCliente.map((srv) => (
+                        <option key={srv.id} value={srv.id}>
+                          {srv.tipoServico?.replace(/_/g, ' ')} ({srv.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Status da Tarefa */}
                 <div className="flex items-center justify-between text-xs">

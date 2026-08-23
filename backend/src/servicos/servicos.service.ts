@@ -20,13 +20,41 @@ export class ServicosService {
   findOne(id: string) {
     return this.prisma.servicoContratado.findUnique({
       where: { id },
+      include: {
+        cliente: {
+          select: { id: true, nomeFantasia: true, razaoSocial: true },
+        },
+        historico: {
+          include: {
+            usuario: { select: { id: true, nome: true, email: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        tarefas: {
+          select: { id: true, titulo: true, status: true, prioridade: true, prazo: true },
+        },
+      },
     });
   }
 
   findByCliente(clienteId: string) {
     return this.prisma.servicoContratado.findMany({
       where: { clienteId },
-      orderBy: { createdAt: 'desc' }
+      include: {
+        cliente: {
+          select: { id: true, nomeFantasia: true, razaoSocial: true },
+        },
+        historico: {
+          include: {
+            usuario: { select: { id: true, nome: true, email: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        tarefas: {
+          select: { id: true, titulo: true, status: true, prioridade: true, prazo: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

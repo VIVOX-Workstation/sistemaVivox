@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
 import { ProducoesService } from './producoes.service';
 import { CreateProducoeDto } from './dto/create-producoe.dto';
 import { UpdateProducoeDto } from './dto/update-producoe.dto';
@@ -28,8 +28,11 @@ export class ProducoesController {
   }
 
   @Get()
-  findAll() {
-    return this.producoesService.findAll();
+  findAll(
+    @Query('clienteId') clienteId?: string,
+    @Query('servicoId') servicoId?: string,
+  ) {
+    return this.producoesService.findAll(clienteId, servicoId);
   }
 
   @Get(':id')

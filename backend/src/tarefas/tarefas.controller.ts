@@ -40,6 +40,7 @@ export class TarefasController {
     @Query('responsavelId') responsavelId?: string,
     @Query('clienteId') clienteId?: string,
     @Query('projetoId') projetoId?: string,
+    @Query('servicoId') servicoId?: string,
   ) {
     return this.tarefasService.findAll({
       search,
@@ -48,6 +49,7 @@ export class TarefasController {
       responsavelId,
       clienteId,
       projetoId,
+      servicoId,
     });
   }
 
@@ -73,8 +75,13 @@ export class TarefasController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTarefaDto: UpdateTarefaDto) {
-    return this.tarefasService.update(id, updateTarefaDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateTarefaDto: UpdateTarefaDto,
+    @Req() req: any,
+  ) {
+    const usuarioId = req.user?.userId || req.user?.id || req.user?.sub;
+    return this.tarefasService.update(id, updateTarefaDto, usuarioId);
   }
 
   @Delete(':id')

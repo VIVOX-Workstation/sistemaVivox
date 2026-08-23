@@ -30,7 +30,9 @@ function App() {
               <Route path="clientes" element={<ClientList />} />
               <Route path="cliente/novo" element={<ClientForm />} />
               <Route path="cliente/:id" element={<ClientProfile />} />
+              <Route path="clientes/:id" element={<ClientProfile />} />
               <Route path="cliente/:id/servicos/:servicoId/planejamento" element={<PlanejamentoServico />} />
+              <Route path="cliente/:id/servicos/:servicoId/planejamento/:itemId" element={<PlanejamentoServico />} />
               
               <Route path="analytics" element={<AnalyticsIndex />} />
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />

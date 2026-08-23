@@ -29,6 +29,7 @@ export interface Cliente {
   dataInicioContrato?: string; // ISO date string
   dataFimContrato?: string; // ISO date string
   logoUrl?: string;
+  bannerUrl?: string;
   observacoes?: string;
   ga4PropertyId?: string;
   gscSiteUrl?: string;
@@ -60,13 +61,24 @@ export interface HistoricoServico {
 
 export interface ServicoContratado {
   id: string;
-  cliente_id: string;
-  tipo_servico: TipoServico;
+  clienteId?: string;
+  cliente_id?: string;
+  cliente?: {
+    id: string;
+    nomeFantasia: string;
+    logoUrl?: string;
+  };
+  tipoServico?: TipoServico;
+  tipo_servico?: TipoServico;
   status: StatusServico;
-  data_contratacao: string; // ISO date string
-  data_entrega_renovacao?: string; // ISO date string
-  descricao_escopo: string;
-  historico: HistoricoServico[];
+  dataContratacao?: string; // ISO date string
+  data_contratacao?: string;
+  dataEntrega?: string;
+  data_entrega_renovacao?: string;
+  descricaoEscopo?: string;
+  descricao_escopo?: string;
+  historico?: any[];
+  tarefas?: any[];
 }
 
 export type TipoProducao = 'post' | 'video' | 'folder' | 'revista' | 'landing_page' | 'app' | 'foto';

@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import VivoxIntro from './VivoxIntro';
 import { FloatingAssistant } from './FloatingAssistant';
+import marcaImg from '../assets/marca.webp';
 import { 
   LayoutDashboard,
   Users, 
@@ -24,7 +25,17 @@ import { useAuth } from '../context/AuthContext';
 export function Layout() {
   const { signOut } = useAuth();
   const location = useLocation();
-  const isFullBleed = location.pathname.startsWith('/gp');
+  const isFullBleed = 
+    location.pathname.startsWith('/gp') || 
+    location.pathname.startsWith('/cliente') || 
+    location.pathname === '/analytics';
+
+  const isMarcaVisible =
+    location.pathname === '/' ||
+    location.pathname.startsWith('/cliente') ||
+    location.pathname.startsWith('/analytics') ||
+    location.pathname.startsWith('/gp');
+
   const [showIntro, setShowIntro] = useState(false);
 
   // Estado de recolhimento da barra lateral com persistência no localStorage
@@ -258,8 +269,20 @@ export function Layout() {
         </aside>
 
         {/* Conteúdo Principal (Expande para preencher o espaço restante) */}
-        <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#FAF7F2] min-w-0">
-          <div className={`flex-1 overflow-auto ${isFullBleed ? 'p-0 flex flex-col' : 'p-8'}`}>
+        <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#FAF7F2] min-w-0 relative">
+          {/* Marca D'água Vivox no canto inferior direito - camada de fundo z-0 */}
+          {isMarcaVisible && (
+            <div className="fixed -bottom-2 -right-2 pointer-events-none select-none z-0 overflow-hidden leading-none">
+              <img
+                src={marcaImg}
+                alt=""
+                aria-hidden="true"
+                className="w-56 sm:w-72 md:w-[360px] lg:w-[440px] xl:w-[500px] max-w-none object-contain opacity-[0.07] md:opacity-[0.09] pointer-events-none"
+              />
+            </div>
+          )}
+
+          <div className={`flex-1 overflow-auto relative z-10 ${isFullBleed ? 'p-0 flex flex-col' : 'p-8'}`}>
             <Outlet />
           </div>
         </main>

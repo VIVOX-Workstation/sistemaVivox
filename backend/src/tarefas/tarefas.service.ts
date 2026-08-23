@@ -24,8 +24,9 @@ export class TarefasService {
     responsavelId?: string;
     clienteId?: string;
     projetoId?: string;
+    servicoId?: string;
   }) {
-    const { search, status, prioridade, responsavelId, clienteId, projetoId } = params;
+    const { search, status, prioridade, responsavelId, clienteId, projetoId, servicoId } = params;
 
     const where: any = {};
 
@@ -41,6 +42,7 @@ export class TarefasService {
     if (responsavelId) where.responsavelId = responsavelId;
     if (clienteId) where.clienteId = clienteId;
     if (projetoId) where.projetoId = projetoId;
+    if (servicoId) where.servicoId = servicoId;
 
     return this.prisma.tarefa.findMany({
       where,
@@ -49,6 +51,7 @@ export class TarefasService {
         autor: { select: { id: true, nome: true, email: true } },
         cliente: { select: { id: true, nomeFantasia: true } },
         projeto: { select: { id: true, nome: true, cor: true } },
+        servico: { select: { id: true, tipoServico: true, status: true } },
         checklist: {
           select: { id: true, titulo: true, concluido: true, ordem: true },
           orderBy: { ordem: 'asc' },
@@ -158,8 +161,8 @@ export class TarefasService {
     });
   }
 
-  async update(id: string, dto: UpdateTarefaDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateTarefaDto, usuarioId?: string) {
+    const tarefaExistente = await this.findOne(id);
 
     const { checklist, prazo, dataInicio, dataConclusao, ...rest } = dto;
 
@@ -175,7 +178,7 @@ export class TarefasService {
     if (dataInicio !== undefined) data.dataInicio = dataInicio ? new Date(dataInicio) : null;
     if (conclDate !== undefined) data.dataConclusao = conclDate;
 
-    return this.prisma.tarefa.update({
+    const tarefaAtualizada = await this.prisma.tarefa.update({
       where: { id },
       data,
       include: {
@@ -183,9 +186,43 @@ export class TarefasService {
         autor: { select: { id: true, nome: true, email: true } },
         cliente: { select: { id: true, nomeFantasia: true } },
         projeto: { select: { id: true, nome: true, cor: true } },
+        servico: { select: { id: true, tipoServico: true, status: true } },
         checklist: { orderBy: { ordem: 'asc' } },
       },
     });
+
+    // Se a tarefa estiver vinculada a um serviço e foi concluída, registra no histórico do serviço
+    const servicoAlvoId = dto.servicoId || tarefaExistente.servicoId;
+    if (dto.status === 'CONCLUIDA' && tarefaExistente.status !== 'CONCLUIDA' && servicoAlvoId) {
+      try {
+        let nomeUsuario = 'Equipe Vivox';
+        let fallbackUserId = usuarioId || tarefaExistente.autorId || tarefaExistente.responsavelId;
+
+        if (usuarioId) {
+          const user = await this.prisma.user.findUnique({ where: { id: usuarioId } });
+          if (user?.nome) nomeUsuario = user.nome;
+        }
+
+        if (!fallbackUserId) {
+          const firstUser = await this.prisma.user.findFirst();
+          fallbackUserId = firstUser?.id || null;
+        }
+
+        if (fallbackUserId) {
+          await this.prisma.servicoHistorico.create({
+            data: {
+              servicoId: servicoAlvoId,
+              usuarioId: fallbackUserId,
+              acao: `Demanda "${tarefaExistente.titulo}" concluída no Vivox GP por ${nomeUsuario}.`,
+            },
+          });
+        }
+      } catch (err) {
+        this.logger.warn('Aviso: Não foi possível registrar histórico do serviço:', err);
+      }
+    }
+
+    return tarefaAtualizada;
   }
 
   async remove(id: string) {

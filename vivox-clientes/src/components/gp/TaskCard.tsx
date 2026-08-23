@@ -182,14 +182,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         </div>
 
-        {/* Cliente Vinculado (Se Houver) */}
-        {tarefa.cliente && (
-          <div className="flex items-center gap-1.5 text-[11px] text-[#625746] pt-0.5 truncate">
-            <Building2 className="w-3.5 h-3.5 text-[#8F8271] shrink-0" />
-            <span className="font-semibold text-[#8F8271]">Cliente:</span>
-            <span className="font-bold text-[#1E1A16] truncate">
-              {tarefa.cliente.nomeFantasia}
-            </span>
+        {/* Cliente Vinculado & Serviço Contratado (Se Houver) */}
+        {(tarefa.cliente || tarefa.servico) && (
+          <div className="flex items-center gap-1.5 text-[11px] text-[#625746] pt-0.5 flex-wrap">
+            {tarefa.cliente && (
+              <div className="flex items-center gap-1 truncate max-w-[140px]">
+                <Building2 className="w-3.5 h-3.5 text-[#8F8271] shrink-0" />
+                <span className="font-bold text-[#1E1A16] truncate">
+                  {tarefa.cliente.nomeFantasia}
+                </span>
+              </div>
+            )}
+
+            {tarefa.servico && (
+              <span
+                title={`Serviço: ${tarefa.servico.tipoServico}`}
+                className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#C7A15F]/15 text-[#8F6F2D] border border-[#C7A15F]/30 shrink-0"
+              >
+                {tarefa.servico.tipoServico === 'GERENCIAMENTO_REDES' ? '📱 Redes'
+                  : tarefa.servico.tipoServico === 'LANDING_PAGE' ? '🌐 LP'
+                  : tarefa.servico.tipoServico === 'VIDEO' ? '🎬 Vídeo'
+                  : tarefa.servico.tipoServico === 'TRAFEGO_PAGO' ? '📈 Tráfego'
+                  : tarefa.servico.tipoServico === 'IDENTIDADE_VISUAL' ? '🎨 Branding'
+                  : tarefa.servico.tipoServico?.replace(/_/g, ' ')}
+              </span>
+            )}
           </div>
         )}
       </div>

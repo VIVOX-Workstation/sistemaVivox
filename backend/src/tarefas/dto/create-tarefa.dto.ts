@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsDateString, IsNumber, IsArray } from 'class-validator';
-import { PrioridadeTarefa, StatusTarefa } from '@prisma/client';
+import { PrioridadeTarefa } from '@prisma/client';
 
 export class CreateTarefaDto {
   @IsString()

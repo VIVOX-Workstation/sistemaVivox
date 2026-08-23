@@ -13,8 +13,19 @@ export class ProducoesService {
     });
   }
 
-  findAll() {
-    return this.prisma.producao.findMany();
+  findAll(clienteId?: string, servicoId?: string) {
+    const where: any = {};
+    if (clienteId) where.clienteId = clienteId;
+    if (servicoId) where.servicoId = servicoId;
+
+    return this.prisma.producao.findMany({
+      where,
+      include: {
+        responsavel: { select: { id: true, nome: true, email: true } },
+        servico: { select: { id: true, tipoServico: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   findOne(id: string) {

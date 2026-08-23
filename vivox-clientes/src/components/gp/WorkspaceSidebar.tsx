@@ -36,24 +36,24 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
   return (
     <aside
-      className={`bg-white border-r border-slate-200 h-full flex flex-col transition-all duration-200 shrink-0 select-none z-10 ${
+      className={`bg-white border-r border-[#D8CBB8] h-full flex flex-col transition-all duration-200 shrink-0 select-none z-10 ${
         collapsed ? 'w-14' : 'w-60'
       }`}
     >
       {/* Topo da Sidebar de Workspaces */}
-      <div className="p-3.5 border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
+      <div className="p-3.5 border-b border-[#D8CBB8] flex items-center justify-between gap-2 shrink-0 bg-[#FFFDF8]">
         {!collapsed ? (
           <div className="flex items-center gap-2">
-            <FolderKanban className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-xs font-bold text-slate-800 tracking-tight">
+            <FolderKanban className="w-4 h-4 text-[#C7A15F]" />
+            <h3 className="text-xs font-bold text-[#1E1A16] tracking-tight">
               Workspaces
             </h3>
-            <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-bold text-[#8A6828] bg-[#C7A15F]/20 border border-[#C7A15F]/30 px-2 py-0.5 rounded-full">
               {workspaces.length}
             </span>
           </div>
         ) : (
-          <FolderKanban className="w-4 h-4 text-emerald-600 mx-auto" />
+          <FolderKanban className="w-4 h-4 text-[#C7A15F] mx-auto" />
         )}
 
         <div className="flex items-center gap-1">
@@ -61,7 +61,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
             <button
               onClick={onOpenCreateWorkspace}
               title="Criar novo workspace"
-              className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-[#8F8271] hover:text-[#1E1A16] hover:bg-[#FAF7F2] transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -70,7 +70,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           <button
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expandir workspaces' : 'Recolher workspaces'}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-[#8F8271] hover:text-[#1E1A16] hover:bg-[#FAF7F2] transition-colors cursor-pointer"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -78,26 +78,26 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       </div>
 
       {/* Lista de Workspaces */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-[#FAF7F2]">
         {/* Item: Visão Geral / Todos os Workspaces */}
         <button
           onClick={() => onSelectWorkspace(null)}
           title="Todos os Workspaces"
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             selectedWorkspaceId === null
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              ? 'bg-gradient-to-r from-[#241F1A] to-[#181512] text-[#F6F0E7] border border-[#C7A15F]/40 shadow-xs'
+              : 'text-[#625746] hover:bg-white hover:text-[#1E1A16]'
           }`}
         >
-          <Globe className="w-4 h-4 shrink-0" />
+          <Globe className={`w-4 h-4 shrink-0 ${selectedWorkspaceId === null ? 'text-[#C7A15F]' : 'text-[#8F8271]'}`} />
           {!collapsed && (
             <div className="flex-1 flex items-center justify-between truncate">
               <span className="truncate">Todos os Espaços</span>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                   selectedWorkspaceId === null
-                    ? 'bg-white/20 text-white'
-                    : 'bg-slate-100 text-slate-600'
+                    ? 'bg-[#C7A15F]/25 text-[#E8D7B8] border border-[#C7A15F]/30'
+                    : 'bg-white text-[#625746] border border-[#D8CBB8]'
                 }`}
               >
                 {totalTarefasGeral}
@@ -108,7 +108,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
         {/* Separador */}
         {!collapsed && (
-          <div className="pt-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="pt-3 px-3 text-[10px] font-bold text-[#8F8271] uppercase tracking-wider">
             Seus Espaços
           </div>
         )}
@@ -125,8 +125,8 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                 title={ws.nome}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200/80 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-[#FFFDF8] text-[#1E1A16] border border-[#C7A15F]/70 shadow-2xs font-bold'
+                    : 'text-[#625746] hover:bg-white hover:text-[#1E1A16]'
                 }`}
               >
                 <span className="text-sm shrink-0">{ws.icone || '📁'}</span>
@@ -138,10 +138,10 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                         {ws.nome}
                       </span>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                           isSelected
-                            ? 'bg-emerald-200/80 text-emerald-900'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-[#C7A15F]/20 text-[#8A6828]'
+                            : 'bg-black/5 text-[#8F8271]'
                         }`}
                       >
                         {tarefaCount}
@@ -149,9 +149,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                     </div>
 
                     {ws.cliente && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 truncate max-w-[130px] mt-0.5">
-                        <Building2 className="w-2.5 h-2.5 text-slate-400" />
-                        {ws.cliente.nomeFantasia}
+                      <span className="text-[10px] text-[#8F8271] flex items-center gap-1 truncate mt-0.5">
+                        <Building2 className="w-2.5 h-2.5 shrink-0 text-[#C7A15F]" />
+                        <span className="truncate">{ws.cliente.nomeFantasia}</span>
                       </span>
                     )}
                   </div>

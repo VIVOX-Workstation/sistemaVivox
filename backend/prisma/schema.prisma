@@ -177,6 +177,7 @@ model Cliente {
   dataInicioContrato DateTime?
   dataFimContrato    DateTime?
   logoUrl            String?
+  bannerUrl          String?
   observacoes        String?
   ga4PropertyId      String?
   gscSiteUrl         String?
