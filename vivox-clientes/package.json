@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "penpot:proxy": "node ../penpot_proxy.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

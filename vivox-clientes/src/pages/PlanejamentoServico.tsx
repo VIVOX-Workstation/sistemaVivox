@@ -79,6 +79,10 @@ const getPenpotBaseUrl = () => {
 const resolvePenpotUrl = (url?: string) => {
   const base = getPenpotBaseUrl();
   if (!url || !url.trim()) return base;
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    // Em desenvolvimento local, roteia através do proxy local na porta 9005
+    return url.replace(/http:\/\/[^/]+:9005/, 'http://localhost:9005');
+  }
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return url.replace('http://localhost:9005', base).replace('http://127.0.0.1:9005', base);
   }
