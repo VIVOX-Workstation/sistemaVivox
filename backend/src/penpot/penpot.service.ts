@@ -1,28 +1,50 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 
 @Injectable()
 export class PenpotService {
   private readonly logger = new Logger(PenpotService.name);
-  private pool: Pool;
 
-  constructor() {
+  private async getClient(): Promise<{ client: PoolClient; pool: Pool }> {
     const isProd = process.env.NODE_ENV === 'production';
-    const host = process.env.PENPOT_DB_HOST || (isProd ? '179.198.120.113' : 'localhost');
-    const port = Number(process.env.PENPOT_DB_PORT) || (isProd ? 5434 : 5432);
+    const envHost = process.env.PENPOT_DB_HOST;
+    const port = Number(process.env.PENPOT_DB_PORT) || 5434;
 
-    this.pool = new Pool({
-      host,
-      port,
-      user: process.env.PENPOT_DB_USER || 'penpot',
-      password: process.env.PENPOT_DB_PASSWORD || 'penpot',
-      database: process.env.PENPOT_DB_NAME || 'penpot',
-      connectionTimeoutMillis: 5000,
-    });
+    const candidateHosts = [
+      envHost,
+      '179.198.120.113',
+      'host.docker.internal',
+      '172.17.0.1',
+      'vivox-penpot-postgres',
+      'localhost',
+      '127.0.0.1',
+    ].filter((h): h is string => Boolean(h && h.trim()));
+
+    const uniqueHosts = Array.from(new Set(candidateHosts));
+
+    for (const host of uniqueHosts) {
+      try {
+        const pool = new Pool({
+          host,
+          port: host === 'vivox-penpot-postgres' ? 5432 : port,
+          user: process.env.PENPOT_DB_USER || 'penpot',
+          password: process.env.PENPOT_DB_PASSWORD || 'penpot',
+          database: process.env.PENPOT_DB_NAME || 'penpot',
+          connectionTimeoutMillis: 2500,
+        });
+        const client = await pool.connect();
+        this.logger.log(`Conectado ao PostgreSQL do Penpot via ${host}:${port}`);
+        return { client, pool };
+      } catch (err: any) {
+        this.logger.warn(`Tentativa de conexão com Penpot DB em ${host}:${port} falhou: ${err.message}`);
+      }
+    }
+
+    throw new Error('Não foi possível conectar ao banco de dados do Penpot em nenhum dos hosts candidatos');
   }
 
   async criarArquivo(titulo: string, nomeCliente?: string): Promise<{ fileId: string; projectId: string; url: string }> {
-    const client = await this.pool.connect();
+    const { client, pool } = await this.getClient();
     try {
       // 1. Busca a Organização/Time principal (ex: VIVOX, priorizando times não-default)
       let teamRes = await client.query(
@@ -119,6 +141,7 @@ export class PenpotService {
       throw err;
     } finally {
       client.release();
+      await pool.end().catch(() => {});
     }
   }
 }
