@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente } from '../types';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 export function AnalyticsIndex() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -222,7 +223,7 @@ export function AnalyticsIndex() {
                   <div className="w-12 h-12 rounded-2xl bg-[#FAF7F2] border border-[#E5D9C8] flex items-center justify-center overflow-hidden shadow-2xs group-hover:scale-105 transition-transform">
                     {cliente.logoUrl ? (
                       <img
-                        src={cliente.logoUrl}
+                        src={resolveMediaUrl(cliente.logoUrl)}
                         alt={cliente.nomeFantasia}
                         className="w-full h-full object-cover"
                       />

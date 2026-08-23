@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente } from '../types';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 export function ClientList() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -233,7 +234,7 @@ export function ClientList() {
               <div className="w-full h-32 md:h-36 relative overflow-hidden">
                 {cliente.bannerUrl ? (
                   <img
-                    src={cliente.bannerUrl}
+                    src={resolveMediaUrl(cliente.bannerUrl)}
                     alt={`Banner de ${cliente.nomeFantasia}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -273,7 +274,7 @@ export function ClientList() {
                   <div className="w-16 h-16 rounded-2xl bg-[#FAF2E4] border-4 border-[#FFFDF8] flex items-center justify-center overflow-hidden shadow-md group-hover:scale-105 transition-transform shrink-0 relative z-20">
                     {cliente.logoUrl ? (
                       <img
-                        src={cliente.logoUrl}
+                        src={resolveMediaUrl(cliente.logoUrl)}
                         alt={cliente.nomeFantasia}
                         className="w-full h-full object-cover"
                       />

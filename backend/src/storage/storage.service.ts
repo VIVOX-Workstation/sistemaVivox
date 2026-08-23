@@ -37,15 +37,11 @@ export class StorageService {
       
       let publicUrl = '';
       if (process.env.S3_PUBLIC_URL) {
-        // Usa a base fornecida explicitamente
-        publicUrl = `${process.env.S3_PUBLIC_URL}/${fileName}`;
+        publicUrl = `${process.env.S3_PUBLIC_URL.replace(/\/$/, '')}/${fileName}`;
       } else {
-        // Fallback seguro baseado em ambiente
-        if (process.env.NODE_ENV !== 'production' && endpoint.includes('minio')) {
-          publicUrl = `${endpoint.replace('minio', 'localhost')}/${this.bucket}/${fileName}`;
-        } else {
-          publicUrl = `${endpoint}/${this.bucket}/${fileName}`;
-        }
+        const isProd = process.env.NODE_ENV === 'production';
+        const defaultHost = isProd ? 'http://179.198.120.113:9000' : 'http://localhost:9000';
+        publicUrl = `${defaultHost}/${this.bucket}/${fileName}`;
       }
       
       return publicUrl;

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 import { 
   ArrowLeft, 
   Building2, 
@@ -393,7 +394,7 @@ export function ClientProfile() {
               <div className="w-full h-32 md:h-36 relative overflow-hidden group">
                 {cliente.bannerUrl ? (
                   <img
-                    src={cliente.bannerUrl}
+                    src={resolveMediaUrl(cliente.bannerUrl)}
                     alt={`Banner de ${cliente.nomeFantasia}`}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
@@ -429,7 +430,7 @@ export function ClientProfile() {
                   >
                     {cliente.logoUrl ? (
                       <img
-                        src={cliente.logoUrl}
+                        src={resolveMediaUrl(cliente.logoUrl)}
                         alt={cliente.nomeFantasia}
                         className="w-full h-full object-cover"
                       />
@@ -852,7 +853,7 @@ export function ClientProfile() {
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-2xl bg-[#FAF2E4] border border-[#E8D4B4] flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                 {logoUrlInput ? (
-                  <img src={logoUrlInput} alt="Preview" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(logoUrlInput)} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-xl font-bold text-[#8A6828]">
                     {cliente.nomeFantasia.charAt(0)}
@@ -892,7 +893,7 @@ export function ClientProfile() {
             <div className="space-y-2">
               <div className="w-full h-24 rounded-xl bg-gradient-to-r from-[#181512] via-[#2B2319] to-[#1E1A16] overflow-hidden flex items-center justify-center shadow-2xs">
                 {bannerUrlInput ? (
-                  <img src={bannerUrlInput} alt="Banner Preview" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(bannerUrlInput)} alt="Banner Preview" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-xs font-bold text-[#C7A15F]/60">
                     Nenhum banner personalizado configurado
