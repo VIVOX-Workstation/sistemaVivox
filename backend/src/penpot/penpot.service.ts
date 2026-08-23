@@ -150,27 +150,27 @@ export class PenpotService {
   async resetarUsuario(email: string) {
     const { client, pool } = await this.getClient();
     try {
-      // 1. Inspeciona todas as tabelas relacionadas a profile
-      const tables = await client.query(
-        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name ILIKE '%profile%'"
-      );
+      const p = await client.query('SELECT id, email FROM profile WHERE email = $1', [email]);
+      if (p.rows.length === 0) {
+        return { success: true, message: `O e-mail ${email} já está livre para cadastro! Pode criar sua conta em http://179.198.120.113:9005/#/auth/register` };
+      }
 
-      // 2. Inspeciona colunas de profile
-      const cols = await client.query(
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'profile'"
-      );
+      const profileId = p.rows[0].id;
 
-      // 3. Busca os dados atuais do perfil
-      const p = await client.query('SELECT * FROM profile WHERE email = $1', [email]);
+      // Remove todas as relações com o perfil
+      await client.query('DELETE FROM file_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM project_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM team_project_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM team_profile_rel WHERE profile_id = $1', [profileId]).catch(() => {});
+      await client.query('DELETE FROM profile WHERE id = $1', [profileId]);
 
+      this.logger.log(`Perfil ${email} resetado com sucesso no Penpot.`);
       return {
         success: true,
-        tables: tables.rows.map((t) => t.table_name),
-        columns: cols.rows.map((c) => c.column_name),
-        profile: p.rows[0],
+        message: `Conta ${email} resetada com sucesso! Você já pode acessar http://179.198.120.113:9005/#/auth/register e criar sua conta com a senha que preferir.`,
       };
     } catch (err: any) {
-      this.logger.error(`Erro ao inspecionar usuario: ${err.message}`);
+      this.logger.error(`Erro ao resetar usuario: ${err.message}`);
       return { success: false, error: err.message };
     } finally {
       client.release();
