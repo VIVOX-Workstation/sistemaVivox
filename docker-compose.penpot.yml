@@ -28,6 +28,17 @@ services:
       - "9005:8080"
     volumes:
       - penpot_assets:/opt/data/assets
+    command:
+      - /bin/bash
+      - -c
+      - |
+        mkdir -p /var/www/app/css
+        touch /var/www/app/css/ui.css
+        echo 'add_header X-Content-Type-Options "nosniff" always;' > /etc/nginx/nginx-security-headers.conf
+        echo 'add_header Referrer-Policy "strict-origin-when-cross-origin" always;' >> /etc/nginx/nginx-security-headers.conf
+        echo 'add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;' >> /etc/nginx/nginx-security-headers.conf
+        echo 'add_header Content-Security-Policy "frame-ancestors *;" always;' >> /etc/nginx/nginx-security-headers.conf
+        exec nginx -g "daemon off;"
     depends_on:
       - penpot-backend
       - penpot-exporter
