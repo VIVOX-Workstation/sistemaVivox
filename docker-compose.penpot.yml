@@ -1,6 +1,6 @@
 ## Penpot Docker Compose para Teste Local Sistema Vivox
 x-flags: &penpot-flags
-  PENPOT_FLAGS: disable-email-verification enable-prepl-server disable-secure-session-cookies allow-iframe allow-embed enable-login-with-password enable-registration demo-users
+  PENPOT_FLAGS: disable-email-verification enable-cors enable-prepl-server disable-secure-session-cookies allow-iframe allow-embed enable-login-with-password enable-registration demo-users
 
 x-uri: &penpot-public-uri
   PENPOT_PUBLIC_URI: ${PENPOT_PUBLIC_URI:-http://179.198.120.113:9005}
@@ -28,6 +28,12 @@ services:
       - "9005:8080"
     volumes:
       - penpot_assets:/opt/data/assets
+    command: >
+      /bin/sh -c "
+      find /etc/nginx/ -type f -exec sed -i 's/add_header X-Frame-Options/add_header X-Frame-Options-Disabled/g' {} + 2>/dev/null || true;
+      find /etc/nginx/ -type f -exec sed -i 's/SAMEORIGIN/ALLOWALL/g' {} + 2>/dev/null || true;
+      nginx -g 'daemon off;'
+      "
     depends_on:
       - penpot-backend
       - penpot-exporter
