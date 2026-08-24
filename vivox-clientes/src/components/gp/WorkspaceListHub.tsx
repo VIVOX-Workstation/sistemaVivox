@@ -14,7 +14,8 @@ import {
   MoreVertical,
   CheckCircle2,
   Clock,
-  Sparkles
+  Sparkles,
+  Ticket
 } from 'lucide-react';
 
 interface WorkspaceListHubProps {
@@ -93,7 +94,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
               <span className="w-4 h-4 rounded-full bg-[#C7A15F]/30 text-[#C7A15F] flex items-center justify-center text-xs font-black">
                 +
               </span>
-              <span>New Task / Workspace</span>
+              <span>New Workspace</span>
             </button>
           </div>
 
@@ -257,7 +258,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
             {/* Linha Topo: Avatar + Botão Seta ↗ */}
             <div className="flex items-start justify-between gap-3 relative z-10">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#3D3325] to-[#241F18] border border-[#C7A15F]/40 flex items-center justify-center text-xl shadow-inner group-hover:scale-105 transition-transform">
-                <Globe className="w-6 h-6 text-[#C7A15F]" />
+                <Ticket className="w-6 h-6 text-[#C7A15F]" />
               </div>
 
               {/* Botão Seta Circular ↗ no Canto */}
@@ -269,10 +270,10 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
             {/* Informações Centrais */}
             <div className="my-2 relative z-10">
               <h3 className="text-lg font-black text-[#F6F0E7] group-hover:text-[#C7A15F] transition-colors leading-tight">
-                Visão Geral
+                Chamados
               </h3>
               <p className="text-xs text-[#B9AEA0] font-medium line-clamp-1 mt-0.5">
-                Pipeline unificado de toda a agência
+                Central de Suporte & Atendimento
               </p>
             </div>
 

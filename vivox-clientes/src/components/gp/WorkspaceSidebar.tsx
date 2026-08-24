@@ -9,7 +9,8 @@ import {
   MoreVertical, 
   Edit2, 
   Trash2,
-  Building2
+  Building2,
+  Ticket
 } from 'lucide-react';
 
 interface WorkspaceSidebarProps {
@@ -79,20 +80,20 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
       {/* Lista de Workspaces */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-[#FAF7F2]">
-        {/* Item: Visão Geral / Todos os Workspaces */}
+        {/* Item: Chamados (Global Support Hub) */}
         <button
           onClick={() => onSelectWorkspace(null)}
-          title="Todos os Workspaces"
+          title="Chamados de Suporte"
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             selectedWorkspaceId === null
               ? 'bg-gradient-to-r from-[#241F1A] to-[#181512] text-[#F6F0E7] border border-[#C7A15F]/40 shadow-xs'
               : 'text-[#625746] hover:bg-white hover:text-[#1E1A16]'
           }`}
         >
-          <Globe className={`w-4 h-4 shrink-0 ${selectedWorkspaceId === null ? 'text-[#C7A15F]' : 'text-[#8F8271]'}`} />
+          <Ticket className={`w-4 h-4 shrink-0 ${selectedWorkspaceId === null ? 'text-[#C7A15F]' : 'text-[#8F8271]'}`} />
           {!collapsed && (
             <div className="flex-1 flex items-center justify-between truncate">
-              <span className="truncate">Todos os Espaços</span>
+              <span className="truncate">Chamados</span>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                   selectedWorkspaceId === null

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Tarefa, MetricasTarefas, StatusTarefa, Cliente, Projeto } from '../types';
 import { tarefasApi } from '../api/tarefas';
+import { chamadosApi, type Chamado, type StatusChamado } from '../api/chamados';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { KanbanBoard } from '../components/gp/KanbanBoard';
@@ -11,6 +12,8 @@ import { TaskModal } from '../components/gp/TaskModal';
 import { TaskFormModal } from '../components/gp/TaskFormModal';
 import { WorkspaceListHub } from '../components/gp/WorkspaceListHub';
 import { WorkspaceModal } from '../components/gp/WorkspaceModal';
+import { ChamadosBoard } from '../components/gp/ChamadosBoard';
+import { ChamadoModal } from '../components/gp/ChamadoModal';
 import { 
   Kanban, 
   ListTodo, 
@@ -50,6 +53,7 @@ export const VivoxGP: React.FC = () => {
 
   const [visao, setVisao] = useState<'kanban' | 'lista' | 'prazos'>('kanban');
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
+  const [chamados, setChamados] = useState<Chamado[]>([]);
   const [workspaces, setWorkspaces] = useState<Projeto[]>([]);
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +64,7 @@ export const VivoxGP: React.FC = () => {
   const [filtroPrioridade, setFiltroPrioridade] = useState<string>('');
   const [filtroStatusRapido, setFiltroStatusRapido] = useState<'todos' | 'em_andamento' | 'urgentes' | 'concluidas'>('todos');
   const [apenasMinhas, setApenasMinhas] = useState(false);
+  const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(null);
 
   // Auxiliares
   const [usuarios, setUsuarios] = useState<UserOption[]>([]);
@@ -86,8 +91,9 @@ export const VivoxGP: React.FC = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const [tarefasData, workspacesData, metricasData, usersRes, clientesRes] = await Promise.all([
+      const [tarefasData, chamadosData, workspacesData, metricasData, usersRes, clientesRes] = await Promise.all([
         tarefasApi.getTarefas(),
+        chamadosApi.getChamados().catch(() => []),
         tarefasApi.getProjetos().catch(() => []),
         tarefasApi.getMetricas().catch(() => null),
         api.get<UserOption[]>('/users').catch(() => ({ data: [] })),
@@ -95,6 +101,7 @@ export const VivoxGP: React.FC = () => {
       ]);
 
       setTarefas(tarefasData);
+      setChamados(chamadosData);
       setWorkspaces(workspacesData);
       setMetricas(metricasData);
       setUsuarios(usersRes.data || []);
@@ -155,6 +162,18 @@ export const VivoxGP: React.FC = () => {
       if (workspacesAtualizados.length > 0) setWorkspaces(workspacesAtualizados);
     } catch (err) {
       console.error('Erro ao atualizar status da tarefa:', err);
+      carregarDados();
+    }
+  };
+
+  const handleUpdateChamadoStatus = async (chamadoId: string, novoStatus: StatusChamado) => {
+    setChamados((prev) =>
+      prev.map((c) => (c.id === chamadoId ? { ...c, status: novoStatus } : c))
+    );
+    try {
+      await chamadosApi.updateChamado(chamadoId, { status: novoStatus });
+    } catch (err) {
+      console.error('Erro ao atualizar status do chamado:', err);
       carregarDados();
     }
   };
@@ -310,7 +329,7 @@ export const VivoxGP: React.FC = () => {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl lg:text-3xl font-black text-[#1E1A16] tracking-tight leading-none">
                   {selectedWorkspaceId === 'ALL'
-                    ? 'Operação Diária • Visão Geral'
+                    ? 'Central de Chamados'
                     : activeWorkspace?.nome || 'Operação Diária'}
                 </h1>
                 {activeWorkspace && (
@@ -332,58 +351,60 @@ export const VivoxGP: React.FC = () => {
           {/* Lado Direito: Seletor de Visões (Pipeline/Lista/Prazos) + Grandes Métricas Numéricas */}
           <div className="flex items-center gap-6 lg:gap-10 flex-wrap">
             {/* Seletor de Visões em Pílulas */}
-            <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-full p-1 flex items-center gap-1 shadow-2xs">
-              <button
-                onClick={() => setVisao('kanban')}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  visao === 'kanban'
-                    ? 'bg-[#181512] text-white shadow-xs'
-                    : 'text-[#625746] hover:text-[#1E1A16]'
-                }`}
-              >
-                Pipeline
-              </button>
+            {selectedWorkspaceId !== 'ALL' && (
+              <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-full p-1 flex items-center gap-1 shadow-2xs">
+                <button
+                  onClick={() => setVisao('kanban')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    visao === 'kanban'
+                      ? 'bg-[#181512] text-white shadow-xs'
+                      : 'text-[#625746] hover:text-[#1E1A16]'
+                  }`}
+                >
+                  Pipeline
+                </button>
 
-              <button
-                onClick={() => setVisao('lista')}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  visao === 'lista'
-                    ? 'bg-[#181512] text-white shadow-xs'
-                    : 'text-[#625746] hover:text-[#1E1A16]'
-                }`}
-              >
-                Lista
-              </button>
+                <button
+                  onClick={() => setVisao('lista')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    visao === 'lista'
+                      ? 'bg-[#181512] text-white shadow-xs'
+                      : 'text-[#625746] hover:text-[#1E1A16]'
+                  }`}
+                >
+                  Lista
+                </button>
 
-              <button
-                onClick={() => setVisao('prazos')}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  visao === 'prazos'
-                    ? 'bg-[#181512] text-white shadow-xs'
-                    : 'text-[#625746] hover:text-[#1E1A16]'
-                }`}
-              >
-                Prazos
-              </button>
-            </div>
+                <button
+                  onClick={() => setVisao('prazos')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    visao === 'prazos'
+                      ? 'bg-[#181512] text-white shadow-xs'
+                      : 'text-[#625746] hover:text-[#1E1A16]'
+                  }`}
+                >
+                  Prazos
+                </button>
+              </div>
+            )}
 
             {/* Números de Estatísticas em Destaque */}
             <div className="flex items-center gap-6 lg:gap-8">
               <div className="flex flex-col">
                 <span className="text-2xl font-black text-[#1E1A16] leading-none">
-                  {totalWorkspaceTarefas}
+                  {selectedWorkspaceId === 'ALL' ? chamados.length : totalWorkspaceTarefas}
                 </span>
                 <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">
-                  Tarefas do Espaço
+                  {selectedWorkspaceId === 'ALL' ? 'Chamados Totais' : 'Tarefas do Espaço'}
                 </span>
               </div>
 
               <div className="flex flex-col">
                 <span className="text-2xl font-black text-[#1E1A16] leading-none">
-                  {urgentesCount}
+                  {selectedWorkspaceId === 'ALL' ? chamados.filter(c => c.status === 'ABERTO').length : urgentesCount}
                 </span>
                 <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">
-                  Aguardando Atenção
+                  {selectedWorkspaceId === 'ALL' ? 'Em Aberto' : 'Aguardando Atenção'}
                 </span>
               </div>
 
@@ -397,16 +418,21 @@ export const VivoxGP: React.FC = () => {
               </div>
             </div>
 
-            {/* Botão Principal Nova Tarefa */}
+            {/* Botão Principal Nova Tarefa / Novo Chamado */}
             <button
               onClick={() => {
-                setCreateInitialStatus('A_FAZER');
-                setIsCreateModalOpen(true);
+                if (selectedWorkspaceId === 'ALL') {
+                  // Aqui futuramente poderia abrir um modal de novo chamado
+                  alert('Novo chamado em breve');
+                } else {
+                  setCreateInitialStatus('A_FAZER');
+                  setIsCreateModalOpen(true);
+                }
               }}
               className="px-4 py-2 rounded-full bg-[#C7A15F] hover:bg-[#B89455] text-[#1D160B] text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              Nova Tarefa
+              {selectedWorkspaceId === 'ALL' ? 'Novo Chamado' : 'Nova Tarefa'}
             </button>
           </div>
         </div>
@@ -534,7 +560,14 @@ export const VivoxGP: React.FC = () => {
 
       {/* Conteúdo Principal do Kanban / Lista / Prazos */}
       <main className="flex-1 w-full h-full overflow-hidden flex flex-col">
-        {visao === 'kanban' && (
+        {selectedWorkspaceId === 'ALL' ? (
+          <ChamadosBoard
+            chamados={chamados}
+            clientes={clientes}
+            onUpdateStatus={handleUpdateChamadoStatus}
+            onOpenChamado={setChamadoSelecionado}
+          />
+        ) : visao === 'kanban' ? (
           <KanbanBoard
             tarefas={tarefasFiltradas}
             workspaceId={selectedWorkspaceId}
@@ -543,9 +576,9 @@ export const VivoxGP: React.FC = () => {
             onQuickCreate={handleOpenCreateForStatus}
             onOpenWorkspaceHub={() => navigate('/gp')}
           />
-        )}
+        ) : null}
 
-        {visao === 'lista' && (
+        {visao === 'lista' && selectedWorkspaceId !== 'ALL' && (
           <div className="flex-1 overflow-y-auto p-6">
             <TaskListView
               tarefas={tarefasFiltradas}
@@ -556,7 +589,7 @@ export const VivoxGP: React.FC = () => {
           </div>
         )}
 
-        {visao === 'prazos' && (
+        {visao === 'prazos' && selectedWorkspaceId !== 'ALL' && (
           <TaskDeadlineView
             tarefas={tarefasFiltradas}
             onSelectTarefa={handleSelectTarefa}
@@ -571,6 +604,19 @@ export const VivoxGP: React.FC = () => {
           tarefaId={tarefaSelecionadaId}
           onClose={handleCloseTaskModal}
           onTaskUpdated={carregarDados}
+        />
+      )}
+
+      {/* Modal de Detalhes do Chamado */}
+      {chamadoSelecionado && (
+        <ChamadoModal
+          chamado={chamadoSelecionado}
+          clientes={clientes}
+          onClose={() => setChamadoSelecionado(null)}
+          onUpdate={(updatedChamado) => {
+            setChamados(prev => prev.map(c => c.id === updatedChamado.id ? updatedChamado : c));
+            setChamadoSelecionado(updatedChamado);
+          }}
         />
       )}
 

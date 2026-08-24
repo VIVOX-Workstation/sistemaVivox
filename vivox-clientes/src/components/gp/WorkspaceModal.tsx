@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Cliente } from '../../types';
 import { tarefasApi } from '../../api/tarefas';
 import { api } from '../../api/client';
@@ -99,7 +100,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E0D0B]/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
@@ -261,6 +262,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

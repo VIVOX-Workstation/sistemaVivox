@@ -28,7 +28,8 @@ import {
   Image as ImageIcon,
   UploadCloud,
   Link2,
-  Check
+  Check,
+  Ticket
 } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente, Contato, StatusCliente } from '../types';
@@ -343,6 +344,15 @@ export function ClientProfile() {
                 <CheckCircle2 className="w-3.5 h-3.5" /> Link Copiado!
               </span>
             )}
+
+            {/* Botão para Criar Chamado */}
+            <button
+              onClick={() => alert('Em breve: Modal de Criar Chamado')} // TODO: Integrar modal de chamado
+              className="px-4 py-2 rounded-full bg-gradient-to-r from-[#181512] to-[#2A241E] text-white text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer hover:scale-105 border border-[#C7A15F]/40"
+            >
+              <Ticket className="w-3.5 h-3.5 text-[#C7A15F]" />
+              <span>Criar Chamado</span>
+            </button>
 
             {/* Botão para Editar Dados Cadastrais */}
             <button

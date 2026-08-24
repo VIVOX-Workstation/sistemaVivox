@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { 
   Tarefa, 
   StatusTarefa, 
@@ -343,7 +344,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const checklistConcluidos = tarefa?.checklist?.filter((c) => c.concluido).length || 0;
   const checklistPercent = checklistTotal > 0 ? Math.round((checklistConcluidos / checklistTotal) * 100) : 0;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0E0D0B]/60 backdrop-blur-xs transition-opacity duration-300">
       {/* Drawer / Modal Estilo Bitrix24 com Cores do Sistema Vivox */}
       <div className="w-full max-w-[96vw] h-[92vh] max-h-[94vh] bg-[#FFFDF8] rounded-t-3xl border-t border-x border-[#D8CBB8] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ease-out">
@@ -938,6 +939,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

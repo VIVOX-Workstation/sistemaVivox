@@ -15,13 +15,14 @@ import { IaModule } from './ia/ia.module';
 import { HospedagemModule } from './hospedagem/hospedagem.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { PenpotModule } from './penpot/penpot.module';
+import { ChamadosModule } from './chamados/chamados.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, PenpotModule
+    PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, PenpotModule, ChamadosModule
   ],
   controllers: [AppController],
   providers: [AppService],

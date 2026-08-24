@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, Trash2, ArrowLeft, ArrowRight, Palette } from 'lucide-react';
 
 export interface KanbanColumnData {
@@ -81,7 +82,7 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E0D0B]/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 select-none">
         {/* Topo do Modal */}
@@ -253,6 +254,7 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

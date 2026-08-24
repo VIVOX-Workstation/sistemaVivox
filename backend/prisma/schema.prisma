@@ -155,6 +155,8 @@ model User {
   tarefasAtribuidas     Tarefa[]              @relation("TarefaResponsavel")
   projetosGerenciados   Projeto[]             @relation("ProjetoResponsavel")
   comentariosTarefas    TarefaComentario[]
+  chamadosProprietario  Chamado[]             @relation("ChamadoProprietario")
+  comentariosChamados   ChamadoComentario[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -196,6 +198,7 @@ model Cliente {
   ativosHospedagem    AtivoHospedagem[]
   projetos            Projeto[]
   tarefas             Tarefa[]
+  chamados            Chamado[]
 
   // Relações Analytics
   analyticsSnapshots AnalyticsSnapshot[]
@@ -260,6 +263,7 @@ model ServicoContratado {
   producoes       Producao[]
   planejamento    PlanejamentoServico?
   tarefas         Tarefa[]
+  chamados        Chamado[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -569,6 +573,7 @@ model Tarefa {
 
   checklist       TarefaChecklist[]
   comentarios     TarefaComentario[]
+  chamado         Chamado?
 
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -604,6 +609,60 @@ model TarefaComentario {
   createdAt DateTime @default(now())
 
   @@index([tarefaId])
+}
+
+// ============================================
+// MÓDULO: CHAMADOS (SUPORTE PÓS-ENTREGA)
+// ============================================
+
+enum StatusChamado {
+  ABERTO
+  EM_ANDAMENTO
+  RESOLVIDO
+}
+
+model Chamado {
+  id                String             @id @default(uuid())
+  clienteId         String
+  cliente           Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servicoId         String?
+  servico           ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+
+  // Ativo digital vinculado (ItemPlanejado vive como JSON em PlanejamentoServico, não é uma tabela própria)
+  itemPlanejadoId   String?
+  itemTitulo        String?
+
+  descricaoProblema String             @db.Text
+  status            StatusChamado      @default(ABERTO)
+  resolvidoEm       DateTime?
+
+  tarefaId          String?            @unique
+  tarefa            Tarefa?            @relation(fields: [tarefaId], references: [id], onDelete: SetNull)
+
+  proprietarioId    String?
+  proprietario      User?              @relation("ChamadoProprietario", fields: [proprietarioId], references: [id], onDelete: SetNull)
+  comentarios       ChamadoComentario[]
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([clienteId])
+  @@index([servicoId])
+  @@index([status])
+}
+
+model ChamadoComentario {
+  id              String   @id @default(uuid())
+  chamadoId       String
+  chamado         Chamado  @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
+  autorId         String?
+  autor           User?    @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  texto           String   @db.Text
+  isSystemMessage Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+
+  @@index([chamadoId])
 }
 
 
