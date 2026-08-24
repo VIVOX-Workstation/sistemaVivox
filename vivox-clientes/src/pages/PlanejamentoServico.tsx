@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { ServicoContratado, Tarefa, StatusTarefa } from '../types';
 import { api } from '../api/client';
 import { tarefasApi } from '../api/tarefas';
+import { chamadosApi } from '../api/chamados';
 import { TaskModal } from '../components/gp/TaskModal';
 import { TaskFormModal } from '../components/gp/TaskFormModal';
 import { Modal } from '../components/Modal';
@@ -36,7 +37,8 @@ import {
   Layout,
   FileCheck2,
   Milestone,
-  Maximize2
+  Maximize2,
+  AlertTriangle
 } from 'lucide-react';
 
 export interface EstruturaSecao {
@@ -128,6 +130,11 @@ export function PlanejamentoServico() {
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [initialTaskTitle, setInitialTaskTitle] = useState('');
   const [initialTaskDesc, setInitialTaskDesc] = useState('');
+
+  // Modal de Chamado (Suporte pós-entrega)
+  const [isChamadoModalOpen, setIsChamadoModalOpen] = useState(false);
+  const [chamadoDescricao, setChamadoDescricao] = useState('');
+  const [loadingChamado, setLoadingChamado] = useState(false);
 
   // Nome do tipo de serviço
   const tipoStr = servico?.tipoServico || servico?.tipo_servico || 'LANDING_PAGE';
@@ -417,6 +424,26 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
     }
   };
 
+  const handleAbrirChamado = async () => {
+    if (!itemAtivo || !servico || !chamadoDescricao.trim()) return;
+    setLoadingChamado(true);
+    try {
+      await chamadosApi.createChamado({
+        clienteId: clienteId!,
+        servicoId: servico.id,
+        itemPlanejadoId: itemAtivo.id,
+        itemTitulo: itemAtivo.titulo,
+        descricaoProblema: chamadoDescricao.trim(),
+      });
+      setIsChamadoModalOpen(false);
+      setChamadoDescricao('');
+    } catch (err) {
+      console.error('Erro ao abrir chamado:', err);
+    } finally {
+      setLoadingChamado(false);
+    }
+  };
+
   const handleExportarItemParaGP = () => {
     if (!itemAtivo) return;
     setInitialTaskTitle(`[${nomeFormatadoServico}] ${itemAtivo.titulo}`);
@@ -682,6 +709,15 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
 
             {/* Ações Rápidas da Peça */}
             <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                onClick={() => setIsChamadoModalOpen(true)}
+                title="Registrar um problema relatado pelo cliente após a entrega"
+                className="px-4 py-2.5 rounded-2xl bg-[#B83B32]/10 hover:bg-[#B83B32]/20 border border-[#B83B32]/30 text-xs font-bold text-[#B83B32] flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span>Registrar Chamado</span>
+              </button>
+
               <button
                 onClick={handleExportarItemParaGP}
                 className="px-4 py-2.5 rounded-2xl bg-[#FAF7F2] hover:bg-white border border-[#D8CBB8] hover:border-[#1E1A16] text-xs font-bold text-[#1E1A16] flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
@@ -1227,6 +1263,59 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
           </div>
         </form>
       </Modal>
+
+      {/* Modal Registrar Chamado (Suporte pós-entrega) */}
+      {itemAtivo && (
+        <Modal
+          isOpen={isChamadoModalOpen}
+          onClose={() => {
+            setIsChamadoModalOpen(false);
+            setChamadoDescricao('');
+          }}
+          title={`Registrar Chamado — ${itemAtivo.titulo}`}
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-[#8F8271]">
+              Descreva o problema relatado pelo cliente. Um chamado será registrado e uma demanda
+              urgente será criada automaticamente no Vivox GP para a equipe resolver.
+            </p>
+            <div>
+              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                Descrição do Problema
+              </label>
+              <textarea
+                rows={5}
+                required
+                placeholder="Ex: Cliente relatou que o formulário de contato não está enviando e-mails..."
+                value={chamadoDescricao}
+                onChange={(e) => setChamadoDescricao(e.target.value)}
+                className="w-full text-xs bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-3 outline-none focus:border-[#C7A15F] resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsChamadoModalOpen(false);
+                  setChamadoDescricao('');
+                }}
+                className="px-4 py-2 text-xs font-bold text-[#625746] hover:text-[#1E1A16]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={loadingChamado || !chamadoDescricao.trim()}
+                onClick={handleAbrirChamado}
+                className="px-5 py-2 bg-[#B83B32] hover:bg-[#9c322a] text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-50 flex items-center gap-2"
+              >
+                {loadingChamado ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                Registrar Chamado
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal Ficha Completa da Tarefa */}
       {selectedTaskId && (

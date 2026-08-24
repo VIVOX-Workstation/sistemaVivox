@@ -19,3 +19,7 @@ Thumbs.db
 
 # Estado local do Maestri (terminais de agentes recrutados)
 .maestri/
+
+# Scripts de teste locais
+/*.js
+/backend/*.js

@@ -222,6 +222,28 @@ export class TarefasService {
       }
     }
 
+    // Se a tarefa é originada de um Chamado, sincroniza o status do chamado
+    if (dto.status && dto.status !== tarefaExistente.status) {
+      try {
+        const statusChamado =
+          dto.status === 'CONCLUIDA' || dto.status === 'CANCELADA'
+            ? 'RESOLVIDO'
+            : dto.status === 'A_FAZER' || dto.status === 'BACKLOG'
+              ? 'ABERTO'
+              : 'EM_ANDAMENTO';
+
+        await this.prisma.chamado.update({
+          where: { tarefaId: id },
+          data: {
+            status: statusChamado,
+            resolvidoEm: statusChamado === 'RESOLVIDO' ? new Date() : null,
+          },
+        });
+      } catch (err) {
+        // Tarefa não é um chamado (não há Chamado com esse tarefaId) — ignora
+      }
+    }
+
     return tarefaAtualizada;
   }
 
