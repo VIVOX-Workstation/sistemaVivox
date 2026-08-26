@@ -196,6 +196,23 @@ export function Layout() {
               {!isSidebarCollapsed && <span className="truncate">Configurações</span>}
             </NavLink>
             
+            <NavLink
+              to="/educacional"
+              title={isSidebarCollapsed ? 'Vivox Educacional' : undefined}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                  isSidebarCollapsed ? 'justify-center' : ''
+                } ${
+                  isActive
+                    ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
+                    : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
+                }`
+              }
+            >
+              <GraduationCap className="w-4 h-4 text-[#C7A15F] shrink-0" />
+              {!isSidebarCollapsed && <span className="truncate">Vivox Educacional</span>}
+            </NavLink>
+            
             {!isSidebarCollapsed && (
               <div className="pt-4 px-3 pb-1 text-[9px] font-bold text-[#8F8271] uppercase tracking-[0.13em] truncate">
                 Em Breve
@@ -210,16 +227,6 @@ export function Layout() {
             >
               <CheckSquare className="w-4 h-4 text-[#6B6154] shrink-0" />
               {!isSidebarCollapsed && <span className="truncate">Vivox Revisão</span>}
-            </div>
-
-            <div
-              title={isSidebarCollapsed ? 'Vivox Educacional' : undefined}
-              className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-[#6B6154] cursor-not-allowed ${
-                isSidebarCollapsed ? 'justify-center' : ''
-              }`}
-            >
-              <GraduationCap className="w-4 h-4 text-[#6B6154] shrink-0" />
-              {!isSidebarCollapsed && <span className="truncate">Vivox Educacional</span>}
             </div>
 
             <div
