@@ -1,6 +1,8 @@
 import { api } from './client';
 
 export type StatusChamado = 'ABERTO' | 'EM_ANDAMENTO' | 'RESOLVIDO';
+export type CategoriaChamado = 'BUG' | 'AJUSTE' | 'DUVIDA' | 'ACESSO' | 'OUTRO';
+export type UrgenciaChamado = 'BAIXA' | 'MEDIA' | 'ALTA';
 
 export interface Chamado {
   id: string;
@@ -8,6 +10,11 @@ export interface Chamado {
   servicoId?: string | null;
   itemPlanejadoId?: string | null;
   itemTitulo?: string | null;
+  titulo?: string | null;
+  categoria?: CategoriaChamado | null;
+  urgencia?: UrgenciaChamado | null;
+  anexos: string[];
+  slaVencimento?: string | null;
   descricaoProblema: string;
   status: StatusChamado;
   resolvidoEm?: string | null;
@@ -34,6 +41,9 @@ export interface CreateChamadoPayload {
   servicoId?: string;
   itemPlanejadoId?: string;
   itemTitulo?: string;
+  titulo: string;
+  categoria: CategoriaChamado;
+  urgencia?: UrgenciaChamado;
   descricaoProblema: string;
 }
 
@@ -45,6 +55,15 @@ export const chamadosApi = {
 
   createChamado: async (payload: CreateChamadoPayload): Promise<Chamado> => {
     const response = await api.post<Chamado>('/chamados', payload);
+    return response.data;
+  },
+
+  uploadAnexo: async (chamadoId: string, file: File): Promise<Chamado> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<Chamado>(`/chamados/${chamadoId}/anexos`, formData, {
+      headers: { 'Content-Type': undefined }
+    });
     return response.data;
   },
 

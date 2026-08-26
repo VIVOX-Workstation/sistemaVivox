@@ -14,6 +14,7 @@ import { WorkspaceListHub } from '../components/gp/WorkspaceListHub';
 import { WorkspaceModal } from '../components/gp/WorkspaceModal';
 import { ChamadosBoard } from '../components/gp/ChamadosBoard';
 import { ChamadoModal } from '../components/gp/ChamadoModal';
+import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
 import { 
   Kanban, 
   ListTodo, 
@@ -73,6 +74,7 @@ export const VivoxGP: React.FC = () => {
   // Modais de Criação
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createInitialStatus, setCreateInitialStatus] = useState<StatusTarefa>('A_FAZER');
+  const [isNovoChamadoModalOpen, setIsNovoChamadoModalOpen] = useState(false);
 
   // Modais de Workspace
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
@@ -422,8 +424,7 @@ export const VivoxGP: React.FC = () => {
             <button
               onClick={() => {
                 if (selectedWorkspaceId === 'ALL') {
-                  // Aqui futuramente poderia abrir um modal de novo chamado
-                  alert('Novo chamado em breve');
+                  setIsNovoChamadoModalOpen(true);
                 } else {
                   setCreateInitialStatus('A_FAZER');
                   setIsCreateModalOpen(true);
@@ -640,6 +641,15 @@ export const VivoxGP: React.FC = () => {
             setEditingWorkspaceId(null);
           }}
           onSaved={carregarDados}
+        />
+      )}
+
+      {/* Modal de Novo Chamado */}
+      {isNovoChamadoModalOpen && (
+        <NovoChamadoModal
+          initialClienteId={queryClienteId}
+          onClose={() => setIsNovoChamadoModalOpen(false)}
+          onChamadoCreated={carregarDados}
         />
       )}
     </div>

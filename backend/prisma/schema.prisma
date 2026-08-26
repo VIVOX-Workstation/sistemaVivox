@@ -629,6 +629,20 @@ enum StatusChamado {
   RESOLVIDO
 }
 
+enum CategoriaChamado {
+  BUG
+  AJUSTE
+  DUVIDA
+  ACESSO
+  OUTRO
+}
+
+enum UrgenciaChamado {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
 model Chamado {
   id        String             @id @default(uuid())
   clienteId String
@@ -639,6 +653,14 @@ model Chamado {
   // Ativo digital vinculado (ItemPlanejado vive como JSON em PlanejamentoServico, não é uma tabela própria)
   itemPlanejadoId String?
   itemTitulo      String?
+
+  titulo    String?
+  categoria CategoriaChamado? @default(OUTRO)
+  urgencia  UrgenciaChamado?  @default(MEDIA)
+  anexos    String[]          @default([])
+
+  // SLA: prazo-limite de resolução, calculado na criação a partir da urgência
+  slaVencimento DateTime?
 
   descricaoProblema String        @db.Text
   status            StatusChamado @default(ABERTO)

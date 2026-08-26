@@ -8,18 +8,26 @@ import {
   Delete,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
   Req,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ChamadosService } from './chamados.service';
 import { CreateChamadoDto } from './dto/create-chamado.dto';
 import { UpdateChamadoDto } from './dto/update-chamado.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StatusChamado } from '@prisma/client';
+import { StorageService } from '../storage/storage.service';
 
 @Controller('chamados')
 @UseGuards(JwtAuthGuard)
 export class ChamadosController {
-  constructor(private readonly chamadosService: ChamadosService) {}
+  constructor(
+    private readonly chamadosService: ChamadosService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Get()
   findAll(
@@ -50,6 +58,19 @@ export class ChamadosController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.chamadosService.remove(id);
+  }
+
+  @Post(':id/anexos')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAnexo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado');
+    }
+    const fileUrl = await this.storageService.uploadFile(file, 'chamados');
+    return this.chamadosService.addAnexo(id, fileUrl);
   }
 
   // --- Comentários ---

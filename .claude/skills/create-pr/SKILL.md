@@ -1,17 +1,17 @@
 ---
 name: create-pr
-description: Create a pull request for SistemaVivox following this repo's fork-based workflow, branch naming, and PR body conventions. Use when the user asks to open/create a PR, ship a feature, or says "crie uma PR" / "abre um PR".
+description: Create a pull request for SistemaVivox following this repo's remote setup, branch naming, and PR body conventions. Use when the user asks to open/create a PR, ship a feature, or says "crie uma PR" / "abre um PR".
 user-invocable: true
 ---
 
 # SistemaVivox — Create Pull Request
 
-This repo uses a **fork-based** workflow, not a direct-push-to-org one. Two remotes exist:
+Two remotes exist, but this is **not** a fork-based workflow — verified 2026-08-25 that `kelson-cosme/sistemaVivox` is a plain independent repo on GitHub (`fork: false`, no `parent`/`source`), not an actual GitHub fork of the org repo. Cross-repo PRs between two unrelated repos fail (`No commits between ...`, `not all refs are readable`), so don't attempt one.
 
-- **`kelson`** → `https://github.com/kelson-cosme/sistemaVivox.git` — the personal fork. Local `main` tracks `kelson/main`. Feature branches get pushed here.
-- **`origin`** → `https://github.com/VIVOX-Workstation/sistemaVivox.git` — the org's upstream repo. PRs are opened **against this repo's `main` branch**, with the head being `kelson-cosme:<branch>`.
+- **`origin`** → `https://github.com/VIVOX-Workstation/sistemaVivox.git` — the real target. The user (`kelson-cosme`) has **admin** access here directly (confirmed via `gh api repos/VIVOX-Workstation/sistemaVivox --jq .permissions`). Push feature branches and open PRs **within this repo** (`base: main`, `head: <branch>`, no `owner:` prefix needed).
+- **`kelson`** → `https://github.com/kelson-cosme/sistemaVivox.git` — a separate personal repo that local `main` happens to track for pulls/day-to-day sync. Not part of the PR path — don't push feature branches here for PR purposes.
 
-Always confirm this pair with `git remote -v` before assuming it hasn't changed.
+Always confirm remotes with `git remote -v` and re-verify the permissions check above if either repo's setup might have changed.
 
 ## Steps
 
@@ -23,11 +23,11 @@ Always confirm this pair with `git remote -v` before assuming it hasn't changed.
 
 4. **Commit style** — matches existing history: `type(scope): description`, type in English (`feat`, `fix`, `chore`, `docs`, `refactor`), scope is the lowercase module/folder touched (`clientes`, `penpot`, `cursos`...), description can be in Portuguese or English (this repo mixes both freely). Group unrelated changes into separate commits when it's clean to do so; don't force one giant commit if the diff naturally splits (e.g. a schema/migration commit separate from the feature commit).
 
-5. **Push to the fork**: `git push -u kelson <branch>`.
+5. **Push to origin (the org repo)**: `git push -u origin <branch>`.
 
-6. **Open the PR against the org repo, from the fork**:
+6. **Open the PR within the org repo (same-repo, no owner prefix on `--head`)**:
    ```
-   gh pr create --repo VIVOX-Workstation/sistemaVivox --base main --head kelson-cosme:<branch> --title "type(scope): short title" --body "$(cat <<'EOF'
+   gh pr create --repo VIVOX-Workstation/sistemaVivox --base main --head <branch> --title "type(scope): short title" --body "$(cat <<'EOF'
    ## Summary
    - <what changed and why, 1-3 bullets>
 
@@ -46,4 +46,4 @@ Always confirm this pair with `git remote -v` before assuming it hasn't changed.
 
 - Only commit, push, or open a PR when the user has explicitly asked for it in this turn — never proactively bundle unrelated in-flight work into a PR without asking.
 - Never `--force` push, never skip hooks (`--no-verify`), never rewrite already-pushed history unless the user explicitly asks.
-- If `main` has diverged from `kelson/main` (someone else pushed), rebase or merge before pushing — don't force-overwrite.
+- If `main` has diverged from `origin/main` (someone else pushed), rebase or merge before pushing — don't force-overwrite.

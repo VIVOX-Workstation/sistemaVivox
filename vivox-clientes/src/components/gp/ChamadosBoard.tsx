@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import type { Chamado, StatusChamado } from '../../api/chamados';
 import type { Cliente } from '../../types';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
-import { 
+import { getSlaInfo } from '../../utils/slaHelpers';
+import {
   Building2,
   Clock,
   MoreVertical,
@@ -12,7 +13,9 @@ import {
   Search,
   Filter,
   User,
-  Hash
+  Hash,
+  AlertTriangle,
+  Gauge
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -63,7 +66,7 @@ export const ChamadosBoard: React.FC<ChamadosBoardProps> = ({
       const lowerSearch = searchTerm.toLowerCase();
       filtered = filtered.filter(c => {
         const cliente = clientes.find(cl => cl.id === c.clienteId);
-        const matchDesc = c.descricaoProblema?.toLowerCase().includes(lowerSearch);
+        const matchDesc = c.descricaoProblema?.toLowerCase().includes(lowerSearch) || c.titulo?.toLowerCase().includes(lowerSearch);
         const matchCliente = cliente?.nomeFantasia?.toLowerCase().includes(lowerSearch);
         const matchId = c.id.toLowerCase().includes(lowerSearch);
         return matchDesc || matchCliente || matchId;
@@ -77,6 +80,7 @@ export const ChamadosBoard: React.FC<ChamadosBoardProps> = ({
   const renderChamadoRow = (chamado: Chamado) => {
     const cliente = clientes.find(c => c.id === chamado.clienteId);
     const statusInfo = statusConfig[chamado.status];
+    const slaInfo = getSlaInfo(chamado);
     
     // Mock do criador (enquanto não temos no DB)
     const creatorName = cliente?.nomeFantasia || 'Equipe Vivox';
@@ -97,7 +101,7 @@ export const ChamadosBoard: React.FC<ChamadosBoardProps> = ({
         {/* Cliente / Assunto */}
         <div className="flex-1 min-w-[300px] pr-4 flex flex-col justify-center">
           <p className="text-[13px] font-bold text-[#1E1A16] line-clamp-1 group-hover:text-[#C7A15F] transition-colors">
-            {chamado.descricaoProblema || 'Sem descrição definida'}
+            {chamado.titulo || chamado.descricaoProblema || 'Sem descrição definida'}
           </p>
           <div className="flex items-center gap-2 mt-1">
             {cliente?.logoUrl ? (
@@ -127,6 +131,13 @@ export const ChamadosBoard: React.FC<ChamadosBoardProps> = ({
         <div className="w-[140px] shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-[#8F8271]">
           <Clock className="w-3.5 h-3.5 opacity-70" />
           {format(new Date(chamado.createdAt), "dd MMM, yyyy", { locale: ptBR })}
+        </div>
+
+        {/* SLA */}
+        <div className="w-[130px] shrink-0 flex items-center justify-center">
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-center ${slaInfo.color}`}>
+            {slaInfo.label}
+          </span>
         </div>
 
         {/* Status */}
@@ -191,8 +202,66 @@ export const ChamadosBoard: React.FC<ChamadosBoardProps> = ({
   const abertos = filteredChamados.filter(c => c.status === 'ABERTO');
   const emAndamento = filteredChamados.filter(c => c.status === 'EM_ANDAMENTO');
 
+  // Dashboard de informações (SLA e volume) sobre a base completa de chamados, não a filtrada
+  const stats = useMemo(() => {
+    const ativos = chamados.filter(c => c.status !== 'RESOLVIDO');
+    const atrasados = ativos.filter(c => getSlaInfo(c).estado === 'atrasado');
+    const vencendo = ativos.filter(c => getSlaInfo(c).estado === 'vencendo');
+    const resolvidos = chamados.filter(c => c.status === 'RESOLVIDO');
+    const resolvidosNoPrazo = resolvidos.filter(c => getSlaInfo(c).estado === 'resolvido_no_prazo');
+    const pctNoPrazo = resolvidos.length > 0 ? Math.round((resolvidosNoPrazo.length / resolvidos.length) * 100) : null;
+
+    return {
+      totalAtivos: ativos.length,
+      atrasados: atrasados.length,
+      vencendo: vencendo.length,
+      resolvidos: resolvidos.length,
+      pctNoPrazo,
+    };
+  }, [chamados]);
+
   return (
     <div className="flex-1 w-full h-full flex flex-col bg-[#FFFDF8] overflow-hidden">
+      {/* Dashboard de Informações (SLA / Volume) */}
+      <div className="flex items-center gap-8 px-8 py-5 bg-white border-b border-[#F6F2EA] overflow-x-auto">
+        <div className="flex flex-col shrink-0">
+          <span className="text-2xl font-black text-[#1E1A16] leading-none">{stats.totalAtivos}</span>
+          <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">Chamados Ativos</span>
+        </div>
+        <div className="w-px h-8 bg-[#F6F2EA] shrink-0" />
+        <div className="flex flex-col shrink-0">
+          <span className={`text-2xl font-black leading-none ${stats.atrasados > 0 ? 'text-[#FF5B5B]' : 'text-[#1E1A16]'}`}>
+            {stats.atrasados}
+          </span>
+          <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Atrasados (SLA)
+          </span>
+        </div>
+        <div className="w-px h-8 bg-[#F6F2EA] shrink-0" />
+        <div className="flex flex-col shrink-0">
+          <span className={`text-2xl font-black leading-none ${stats.vencendo > 0 ? 'text-[#FFA800]' : 'text-[#1E1A16]'}`}>
+            {stats.vencendo}
+          </span>
+          <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5 flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Vencendo em Breve
+          </span>
+        </div>
+        <div className="w-px h-8 bg-[#F6F2EA] shrink-0" />
+        <div className="flex flex-col shrink-0">
+          <span className="text-2xl font-black text-[#1E1A16] leading-none">{stats.resolvidos}</span>
+          <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">Resolvidos (Total)</span>
+        </div>
+        <div className="w-px h-8 bg-[#F6F2EA] shrink-0" />
+        <div className="flex flex-col shrink-0">
+          <span className="text-2xl font-black text-[#24C16E] leading-none">
+            {stats.pctNoPrazo !== null ? `${stats.pctNoPrazo}%` : '—'}
+          </span>
+          <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5 flex items-center gap-1">
+            <Gauge className="w-3 h-3" /> Resolvidos no Prazo
+          </span>
+        </div>
+      </div>
+
       {/* Top Header Controls (Inspired by the new design) */}
       <div className="flex flex-col gap-4 px-8 pt-8 pb-4 bg-white border-b border-[#F6F2EA]">
         <div className="flex items-center justify-between gap-6">
@@ -250,6 +319,7 @@ export const ChamadosBoard: React.FC<ChamadosBoardProps> = ({
           <div className="flex-1 min-w-[300px]">Cliente / Assunto</div>
           <div className="w-[160px] shrink-0">Criado Por</div>
           <div className="w-[140px] shrink-0">Data</div>
+          <div className="w-[130px] shrink-0 text-center">Prazo</div>
           <div className="w-[130px] shrink-0 text-center">Status</div>
           <div className="w-[50px] shrink-0 text-right"></div>
         </div>
