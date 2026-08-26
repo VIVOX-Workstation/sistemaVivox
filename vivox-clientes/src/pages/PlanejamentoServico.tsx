@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { ServicoContratado, Tarefa, StatusTarefa } from '../types';
 import { api } from '../api/client';
 import { tarefasApi } from '../api/tarefas';
-import { chamadosApi } from '../api/chamados';
+import { chamadosApi, type CategoriaChamado, type UrgenciaChamado } from '../api/chamados';
 import { TaskModal } from '../components/gp/TaskModal';
 import { TaskFormModal } from '../components/gp/TaskFormModal';
 import { Modal } from '../components/Modal';
@@ -133,7 +133,11 @@ export function PlanejamentoServico() {
 
   // Modal de Chamado (Suporte pós-entrega)
   const [isChamadoModalOpen, setIsChamadoModalOpen] = useState(false);
+  const [chamadoTitulo, setChamadoTitulo] = useState('');
   const [chamadoDescricao, setChamadoDescricao] = useState('');
+  const [chamadoCategoria, setChamadoCategoria] = useState<CategoriaChamado>('BUG');
+  const [chamadoUrgencia, setChamadoUrgencia] = useState<UrgenciaChamado>('MEDIA');
+  const [chamadoAnexos, setChamadoAnexos] = useState<File[]>([]);
   const [loadingChamado, setLoadingChamado] = useState(false);
 
   // Nome do tipo de serviço
@@ -425,18 +429,32 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
   };
 
   const handleAbrirChamado = async () => {
-    if (!itemAtivo || !servico || !chamadoDescricao.trim()) return;
+    if (!itemAtivo || !servico || !chamadoTitulo.trim() || !chamadoDescricao.trim()) return;
     setLoadingChamado(true);
     try {
-      await chamadosApi.createChamado({
+      const chamado = await chamadosApi.createChamado({
         clienteId: clienteId!,
         servicoId: servico.id,
         itemPlanejadoId: itemAtivo.id,
         itemTitulo: itemAtivo.titulo,
+        titulo: chamadoTitulo.trim(),
+        categoria: chamadoCategoria,
+        urgencia: chamadoUrgencia,
         descricaoProblema: chamadoDescricao.trim(),
       });
+
+      for (const file of chamadoAnexos) {
+        await chamadosApi.uploadAnexo(chamado.id, file).catch((err) =>
+          console.error('Erro ao enviar anexo do chamado:', err)
+        );
+      }
+
       setIsChamadoModalOpen(false);
+      setChamadoTitulo('');
       setChamadoDescricao('');
+      setChamadoCategoria('BUG');
+      setChamadoUrgencia('MEDIA');
+      setChamadoAnexos([]);
     } catch (err) {
       console.error('Erro ao abrir chamado:', err);
     } finally {
@@ -1270,7 +1288,11 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
           isOpen={isChamadoModalOpen}
           onClose={() => {
             setIsChamadoModalOpen(false);
+            setChamadoTitulo('');
             setChamadoDescricao('');
+            setChamadoCategoria('BUG');
+            setChamadoUrgencia('MEDIA');
+            setChamadoAnexos([]);
           }}
           title={`Registrar Chamado — ${itemAtivo.titulo}`}
         >
@@ -1279,6 +1301,19 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               Descreva o problema relatado pelo cliente. Um chamado será registrado e uma demanda
               urgente será criada automaticamente no Vivox GP para a equipe resolver.
             </p>
+            <div>
+              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                Título / Assunto
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ex: Erro ao acessar o e-mail corporativo"
+                value={chamadoTitulo}
+                onChange={(e) => setChamadoTitulo(e.target.value)}
+                className="w-full text-xs bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-3 outline-none focus:border-[#C7A15F]"
+              />
+            </div>
             <div>
               <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                 Descrição do Problema
@@ -1292,12 +1327,63 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                 className="w-full text-xs bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-3 outline-none focus:border-[#C7A15F] resize-none"
               />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                  Categoria
+                </label>
+                <select
+                  value={chamadoCategoria}
+                  onChange={(e) => setChamadoCategoria(e.target.value as CategoriaChamado)}
+                  className="w-full text-xs font-semibold py-2.5 px-3 bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F]"
+                >
+                  <option value="BUG">Bug / Erro</option>
+                  <option value="AJUSTE">Ajuste / Melhoria</option>
+                  <option value="DUVIDA">Dúvida</option>
+                  <option value="ACESSO">Acesso / Login</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                  Urgência
+                </label>
+                <select
+                  value={chamadoUrgencia}
+                  onChange={(e) => setChamadoUrgencia(e.target.value as UrgenciaChamado)}
+                  className="w-full text-xs font-semibold py-2.5 px-3 bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F]"
+                >
+                  <option value="BAIXA">Baixa</option>
+                  <option value="MEDIA">Média</option>
+                  <option value="ALTA">Alta</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                Anexos (opcional)
+              </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*,.log,.txt,.pdf"
+                onChange={(e) => setChamadoAnexos(Array.from(e.target.files || []))}
+                className="w-full text-xs bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-2.5 outline-none focus:border-[#C7A15F] file:mr-3 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-[#E5D9C8] file:text-[#1E1A16] file:text-xs file:font-bold"
+              />
+              {chamadoAnexos.length > 0 && (
+                <p className="text-[11px] text-[#8F8271] mt-1">{chamadoAnexos.length} arquivo(s) selecionado(s)</p>
+              )}
+            </div>
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => {
                   setIsChamadoModalOpen(false);
+                  setChamadoTitulo('');
                   setChamadoDescricao('');
+                  setChamadoCategoria('BUG');
+                  setChamadoUrgencia('MEDIA');
+                  setChamadoAnexos([]);
                 }}
                 className="px-4 py-2 text-xs font-bold text-[#625746] hover:text-[#1E1A16]"
               >
@@ -1305,7 +1391,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               </button>
               <button
                 type="button"
-                disabled={loadingChamado || !chamadoDescricao.trim()}
+                disabled={loadingChamado || !chamadoTitulo.trim() || !chamadoDescricao.trim()}
                 onClick={handleAbrirChamado}
                 className="px-5 py-2 bg-[#B83B32] hover:bg-[#9c322a] text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-50 flex items-center gap-2"
               >
