@@ -4,6 +4,7 @@ import { TarefasService } from '../tarefas/tarefas.service';
 import { CreateChamadoDto } from './dto/create-chamado.dto';
 import { UpdateChamadoDto } from './dto/update-chamado.dto';
 import { StatusChamado } from '@prisma/client';
+import { calcularSlaVencimento } from './sla.util';
 
 const CHAMADO_INCLUDE = {
   cliente: { select: { id: true, nomeFantasia: true } },
@@ -47,11 +48,13 @@ export class ChamadosService {
   }
 
   async create(dto: CreateChamadoDto, autorId?: string) {
+    const prioridadeTarefa = dto.urgencia === 'ALTA' ? 'URGENTE' : dto.urgencia === 'BAIXA' ? 'BAIXA' : 'MEDIA';
+
     const tarefa = await this.tarefasService.create(
       {
-        titulo: `🐛 Chamado: ${dto.itemTitulo || 'Suporte pós-entrega'}`,
+        titulo: `🐛 Chamado: ${dto.titulo}`,
         descricao: dto.descricaoProblema,
-        prioridade: 'URGENTE',
+        prioridade: prioridadeTarefa,
         status: 'A_FAZER',
         tags: ['chamado'],
         clienteId: dto.clienteId,
@@ -60,12 +63,18 @@ export class ChamadosService {
       autorId,
     );
 
+    const agora = new Date();
+
     const chamado = await this.prisma.chamado.create({
       data: {
         clienteId: dto.clienteId,
         servicoId: dto.servicoId,
         itemPlanejadoId: dto.itemPlanejadoId,
         itemTitulo: dto.itemTitulo,
+        titulo: dto.titulo,
+        categoria: dto.categoria,
+        urgencia: dto.urgencia,
+        slaVencimento: calcularSlaVencimento(dto.urgencia, agora),
         descricaoProblema: dto.descricaoProblema,
         tarefaId: tarefa.id,
         proprietarioId: autorId, // O criador é o proprietário inicial caso seja usuário interno
@@ -85,6 +94,15 @@ export class ChamadosService {
     }
 
     return chamado;
+  }
+
+  async addAnexo(id: string, url: string) {
+    const chamado = await this.findOne(id);
+    return this.prisma.chamado.update({
+      where: { id },
+      data: { anexos: { push: url } },
+      include: CHAMADO_INCLUDE,
+    });
   }
 
   async update(id: string, dto: UpdateChamadoDto, autorId?: string) {
