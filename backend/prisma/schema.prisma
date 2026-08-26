@@ -12,6 +12,11 @@ datasource db {
 
 // --- ENUMS COMPARTILHADOS ---
 
+enum Role {
+  ADMIN
+  COLABORADOR
+}
+
 enum StatusCliente {
   ATIVO
   PAUSADO
@@ -143,6 +148,7 @@ model User {
   nome  String
   email String @unique
   senha String
+  role  Role   @default(COLABORADOR)
 
   // Relações
   clientes              Cliente[]             @relation("ResponsavelInterno")
@@ -157,6 +163,8 @@ model User {
   comentariosTarefas    TarefaComentario[]
   chamadosProprietario  Chamado[]             @relation("ChamadoProprietario")
   comentariosChamados   ChamadoComentario[]
+  cursosCriados         Curso[]               @relation("CursoAutor")
+  progressoAulas        AulaProgresso[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -167,26 +175,26 @@ model User {
 // ============================================
 
 model Cliente {
-  id                 String        @id @default(uuid())
-  nomeFantasia       String
-  razaoSocial        String?
-  cnpjCpf            String
-  segmento           String
-  responsavelId      String?
-  responsavel        User?         @relation("ResponsavelInterno", fields: [responsavelId], references: [id])
-  contatos           Json // [{ nome, cargo, telefone, email, whatsapp }]
-  status             StatusCliente
-  dataInicioContrato DateTime?
-  dataFimContrato    DateTime?
-  email              String?
-  telefone           String?
-  localizacao        String?
-  loginsSenhas       String?       @db.Text
-  logoUrl            String?
-  bannerUrl          String?
-  observacoes        String?
-  ga4PropertyId      String?
-  gscSiteUrl         String?
+  id                    String        @id @default(uuid())
+  nomeFantasia          String
+  razaoSocial           String?
+  cnpjCpf               String
+  segmento              String
+  responsavelId         String?
+  responsavel           User?         @relation("ResponsavelInterno", fields: [responsavelId], references: [id])
+  contatos              Json // [{ nome, cargo, telefone, email, whatsapp }]
+  status                StatusCliente
+  dataInicioContrato    DateTime?
+  dataFimContrato       DateTime?
+  email                 String?
+  telefone              String?
+  localizacao           String?
+  loginsSenhas          String?       @db.Text
+  logoUrl               String?
+  bannerUrl             String?
+  observacoes           String?
+  ga4PropertyId         String?
+  gscSiteUrl            String?
   openpanelProjectId    String?
   openpanelClientId     String?
   openpanelClientSecret String?
@@ -201,13 +209,13 @@ model Cliente {
   chamados            Chamado[]
 
   // Relações Analytics
-  analyticsSnapshots AnalyticsSnapshot[]
-  publicacoes        Publicacao[]
-  avaliacoesGmb      AvaliacaoGmb[]
-  oportunidades      Oportunidade[]
-  reunioes           Reuniao[]
-  fontesContexto     FonteContexto[]
-  documentosVetoriais DocumentoVetorial[]
+  analyticsSnapshots   AnalyticsSnapshot[]
+  publicacoes          Publicacao[]
+  avaliacoesGmb        AvaliacaoGmb[]
+  oportunidades        Oportunidade[]
+  reunioes             Reuniao[]
+  fontesContexto       FonteContexto[]
+  documentosVetoriais  DocumentoVetorial[]
   inteligenciasMercado InteligenciaMercado[]
 
   createdAt DateTime @default(now())
@@ -226,15 +234,15 @@ model FonteContexto {
 }
 
 model DocumentoVetorial {
-  id        String   @id @default(uuid())
+  id        String                       @id @default(uuid())
   clienteId String
-  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  conteudo  String   @db.Text
-  tipo      String   @default("TEXTO") // TEXTO, LINK, ARQUIVO, TENDENCIA_SEMANA
+  cliente   Cliente                      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  conteudo  String                       @db.Text
+  tipo      String                       @default("TEXTO") // TEXTO, LINK, ARQUIVO, TENDENCIA_SEMANA
   titulo    String?
   vetor     Unsupported("vector(1536)")?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime                     @default(now())
+  updatedAt DateTime                     @updatedAt
 
   @@index([clienteId]) // B-Tree index para isolamento de tenant
 }
@@ -244,8 +252,8 @@ model InteligenciaMercado {
   clienteId  String
   cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   resumo     String   @db.Text
-  tendencias Json     // Array de tendências estruturadas: { titulo, descricao, impacto }
-  fontes     Json     // URLs usadas como base pela Tavily: [{ title, url }]
+  tendencias Json // Array de tendências estruturadas: { titulo, descricao, impacto }
+  fontes     Json // URLs usadas como base pela Tavily: [{ title, url }]
   data       DateTime @default(now())
 }
 
@@ -471,34 +479,34 @@ model HistoricoServico {
 // ============================================
 
 model AtivoHospedagem {
-  id                   String           @id @default(uuid())
-  clienteId            String
-  cliente              Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  
-  titulo               String           // ex: "LP Implante Capilar", "Site Institucional"
-  url                  String           // ex: "https://drcliente.com.br/capilar"
-  
+  id        String  @id @default(uuid())
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  titulo String // ex: "LP Implante Capilar", "Site Institucional"
+  url    String // ex: "https://drcliente.com.br/capilar"
+
   // Dados de Servidor / VPS
-  provedorVps          String?          // ex: "VPS Vivox Hetzner #1", "Hostinger", "Coolify"
-  ipServidor           String?          // ex: "179.198.120.113"
-  dataRenovacaoVps     DateTime?        // Próximo vencimento da VPS/Hospedagem
-  cicloVps             CicloRenovacao   @default(ANUAL)
-  custoVps             Decimal?         // Custo que a Vivox paga (opcional)
-  valorCobrado         Decimal?         // Valor que a Vivox cobra do cliente
-  
+  provedorVps      String? // ex: "VPS Vivox Hetzner #1", "Hostinger", "Coolify"
+  ipServidor       String? // ex: "179.198.120.113"
+  dataRenovacaoVps DateTime? // Próximo vencimento da VPS/Hospedagem
+  cicloVps         CicloRenovacao @default(ANUAL)
+  custoVps         Decimal? // Custo que a Vivox paga (opcional)
+  valorCobrado     Decimal? // Valor que a Vivox cobra do cliente
+
   // Dados de Domínio & DNS
-  dominio              String?          // ex: "drcliente.com.br"
-  registradorDominio   String?          // ex: "Registro.br", "GoDaddy", "Cloudflare"
-  dataExpiracaoDominio DateTime?        // Data que expira o domínio no registrador
-  dnsProvedor          String?          // ex: "Cloudflare", "Registro.br"
-  
+  dominio              String? // ex: "drcliente.com.br"
+  registradorDominio   String? // ex: "Registro.br", "GoDaddy", "Cloudflare"
+  dataExpiracaoDominio DateTime? // Data que expira o domínio no registrador
+  dnsProvedor          String? // ex: "Cloudflare", "Registro.br"
+
   // Status & Notas
-  status               StatusHospedagem @default(ATIVO)
-  sslAtivo             Boolean          @default(true)
-  observacoes          String?          @db.Text
-  
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  status      StatusHospedagem @default(ATIVO)
+  sslAtivo    Boolean          @default(true)
+  observacoes String?          @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([clienteId])
 }
@@ -524,59 +532,59 @@ enum StatusTarefa {
 }
 
 model Projeto {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   nome          String
-  descricao     String?   @db.Text
-  cor           String?   @default("#C7A15F")
-  icone         String?   @default("folder")
+  descricao     String?  @db.Text
+  cor           String?  @default("#C7A15F")
+  icone         String?  @default("folder")
   clienteId     String?
-  cliente       Cliente?  @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  cliente       Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   responsavelId String?
-  responsavel   User?     @relation("ProjetoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  responsavel   User?    @relation("ProjetoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
   tarefas       Tarefa[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([clienteId])
   @@index([responsavelId])
 }
 
 model Tarefa {
-  id              String            @id @default(uuid())
-  titulo          String
-  descricao       String?           @db.Text
-  status          String            @default("A_FAZER")
-  prioridade      PrioridadeTarefa  @default(MEDIA)
-  prazo           DateTime?
-  dataInicio      DateTime?
-  dataConclusao   DateTime?
-  horasEstimadas  Float?
-  horasGastas     Float?            @default(0)
-  tags            String[]          @default([])
-  ordem           Int               @default(0)
+  id             String           @id @default(uuid())
+  titulo         String
+  descricao      String?          @db.Text
+  status         String           @default("A_FAZER")
+  prioridade     PrioridadeTarefa @default(MEDIA)
+  prazo          DateTime?
+  dataInicio     DateTime?
+  dataConclusao  DateTime?
+  horasEstimadas Float?
+  horasGastas    Float?           @default(0)
+  tags           String[]         @default([])
+  ordem          Int              @default(0)
 
   // Relações
-  autorId         String?
-  autor           User?             @relation("TarefaCriador", fields: [autorId], references: [id], onDelete: SetNull)
-  responsavelId   String?
-  responsavel     User?             @relation("TarefaResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
-  
-  clienteId       String?
-  cliente         Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
-  
-  projetoId       String?
-  projeto         Projeto?          @relation(fields: [projetoId], references: [id], onDelete: SetNull)
-  
-  servicoId       String?
-  servico         ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+  autorId       String?
+  autor         User?   @relation("TarefaCriador", fields: [autorId], references: [id], onDelete: SetNull)
+  responsavelId String?
+  responsavel   User?   @relation("TarefaResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
 
-  checklist       TarefaChecklist[]
-  comentarios     TarefaComentario[]
-  chamado         Chamado?
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
 
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  projetoId String?
+  projeto   Projeto? @relation(fields: [projetoId], references: [id], onDelete: SetNull)
+
+  servicoId String?
+  servico   ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+
+  checklist   TarefaChecklist[]
+  comentarios TarefaComentario[]
+  chamado     Chamado?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([responsavelId])
@@ -585,12 +593,12 @@ model Tarefa {
 }
 
 model TarefaChecklist {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   tarefaId  String
-  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  tarefa    Tarefa  @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
   titulo    String
-  concluido Boolean  @default(false)
-  ordem     Int      @default(0)
+  concluido Boolean @default(false)
+  ordem     Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -599,12 +607,12 @@ model TarefaChecklist {
 }
 
 model TarefaComentario {
-  id        String   @id @default(uuid())
-  tarefaId  String
-  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
-  autorId   String
-  autor     User     @relation(fields: [autorId], references: [id], onDelete: Cascade)
-  texto     String   @db.Text
+  id       String @id @default(uuid())
+  tarefaId String
+  tarefa   Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  autorId  String
+  autor    User   @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  texto    String @db.Text
 
   createdAt DateTime @default(now())
 
@@ -622,29 +630,29 @@ enum StatusChamado {
 }
 
 model Chamado {
-  id                String             @id @default(uuid())
-  clienteId         String
-  cliente           Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  servicoId         String?
-  servico           ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+  id        String             @id @default(uuid())
+  clienteId String
+  cliente   Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servicoId String?
+  servico   ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
 
   // Ativo digital vinculado (ItemPlanejado vive como JSON em PlanejamentoServico, não é uma tabela própria)
-  itemPlanejadoId   String?
-  itemTitulo        String?
+  itemPlanejadoId String?
+  itemTitulo      String?
 
-  descricaoProblema String             @db.Text
-  status            StatusChamado      @default(ABERTO)
+  descricaoProblema String        @db.Text
+  status            StatusChamado @default(ABERTO)
   resolvidoEm       DateTime?
 
-  tarefaId          String?            @unique
-  tarefa            Tarefa?            @relation(fields: [tarefaId], references: [id], onDelete: SetNull)
+  tarefaId String? @unique
+  tarefa   Tarefa? @relation(fields: [tarefaId], references: [id], onDelete: SetNull)
 
-  proprietarioId    String?
-  proprietario      User?              @relation("ChamadoProprietario", fields: [proprietarioId], references: [id], onDelete: SetNull)
-  comentarios       ChamadoComentario[]
+  proprietarioId String?
+  proprietario   User?               @relation("ChamadoProprietario", fields: [proprietarioId], references: [id], onDelete: SetNull)
+  comentarios    ChamadoComentario[]
 
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([clienteId])
   @@index([servicoId])
@@ -652,17 +660,84 @@ model Chamado {
 }
 
 model ChamadoComentario {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   chamadoId       String
-  chamado         Chamado  @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
+  chamado         Chamado @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
   autorId         String?
-  autor           User?    @relation(fields: [autorId], references: [id], onDelete: SetNull)
-  texto           String   @db.Text
-  isSystemMessage Boolean  @default(false)
-  
-  createdAt       DateTime @default(now())
+  autor           User?   @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  texto           String  @db.Text
+  isSystemMessage Boolean @default(false)
+
+  createdAt DateTime @default(now())
 
   @@index([chamadoId])
 }
 
+// ============================================
+// MÓDULO: VIVOX EDUCACIONAL
+// ============================================
 
+model Curso {
+  id        String   @id @default(uuid())
+  titulo    String
+  descricao String?  @db.Text
+  capaUrl   String?
+  capaPosX  Int?     @default(50)
+  capaPosY  Int?     @default(50)
+  publicado Boolean  @default(false)
+  ordem     Int      @default(0)
+  autorId   String?
+  autor     User?    @relation("CursoAutor", fields: [autorId], references: [id], onDelete: SetNull)
+  modulos   Modulo[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([autorId])
+}
+
+model Modulo {
+  id        String   @id @default(uuid())
+  cursoId   String
+  curso     Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  titulo    String
+  ordem     Int      @default(0)
+  aulas     Aula[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cursoId])
+}
+
+model Aula {
+  id         String          @id @default(uuid())
+  moduloId   String
+  modulo     Modulo          @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  titulo     String
+  descricao  String?         @db.Text
+  capaUrl    String?
+  capaPosX   Int?            @default(50)
+  capaPosY   Int?            @default(50)
+  videoUrl   String
+  duracaoSeg Int?
+  ordem      Int             @default(0)
+  progresso  AulaProgresso[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([moduloId])
+}
+
+model AulaProgresso {
+  id          String    @id @default(uuid())
+  aulaId      String
+  aula        Aula      @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concluidaEm DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([aulaId, userId])
+  @@index([aulaId])
+  @@index([userId])
+}

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Aula" ADD COLUMN     "capaPosX" INTEGER DEFAULT 50,
+ADD COLUMN     "capaPosY" INTEGER DEFAULT 50,
+ADD COLUMN     "capaUrl" TEXT;
