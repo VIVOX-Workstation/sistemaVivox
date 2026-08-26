@@ -2,6 +2,7 @@ import { Injectable, ConflictException, ForbiddenException } from '@nestjs/commo
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -52,11 +53,11 @@ export class UsersService {
   }
 
   findAll() {
-    return this.prisma.user.findMany({ select: { id: true, nome: true, email: true } });
+    return this.prisma.user.findMany({ select: { id: true, nome: true, email: true, role: true } });
   }
 
   findOne(id: string) {
-    return this.prisma.user.findUnique({ where: { id }, select: { id: true, nome: true, email: true } });
+    return this.prisma.user.findUnique({ where: { id }, select: { id: true, nome: true, email: true, role: true } });
   }
 
   findByEmail(email: string) {
@@ -73,5 +74,12 @@ export class UsersService {
 
   remove(id: string) {
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  updateRole(id: string, role: Role) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { role },
+    });
   }
 }

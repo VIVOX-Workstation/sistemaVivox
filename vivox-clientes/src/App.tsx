@@ -9,12 +9,21 @@ import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { PlanejamentoServico } from './pages/PlanejamentoServico';
 import { Configuracoes } from './pages/Configuracoes';
 import { VivoxGP } from './pages/VivoxGP';
+import { EducacionalHome } from './pages/EducacionalHome';
+import { EducacionalCurso } from './pages/EducacionalCurso';
+import { EducacionalAdmin } from './pages/EducacionalAdmin';
+import { EducacionalCursoEditor } from './pages/EducacionalCursoEditor';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function PrivateRoute() {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return user?.role === 'ADMIN' ? <>{children}</> : <Navigate to="/educacional" replace />;
 }
 
 function App() {
@@ -40,6 +49,12 @@ function App() {
               <Route path="gp/tarefa/:tarefaId" element={<VivoxGP />} />
               <Route path="gp/workspace/:workspaceId" element={<VivoxGP />} />
               <Route path="gp/workspace/:workspaceId/tarefa/:tarefaId" element={<VivoxGP />} />
+              
+              <Route path="educacional" element={<EducacionalHome />} />
+              <Route path="educacional/curso/:id" element={<EducacionalCurso />} />
+              <Route path="educacional/admin" element={<AdminRoute><EducacionalAdmin /></AdminRoute>} />
+              <Route path="educacional/admin/:cursoId" element={<AdminRoute><EducacionalCursoEditor /></AdminRoute>} />
+              
               <Route path="configuracoes" element={<Configuracoes />} />
               
               <Route path="*" element={<Navigate to="/" replace />} />

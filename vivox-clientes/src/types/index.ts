@@ -506,4 +506,53 @@ export interface MetricasTarefas {
   horasGastasTotal: number;
 }
 
+// --- TIPAGENS VIVOX EDUCACIONAL ---
+export interface AulaProgresso {
+  id: string;
+  aulaId: string;
+  usuarioId: string;
+  concluidoEm: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
+export interface Aula {
+  id: string;
+  moduloId: string;
+  titulo: string;
+  descricao?: string;
+  videoUrl: string;
+  duracaoSeg?: number;
+  ordem: number;
+  capaUrl?: string;
+  capaPosX?: number;
+  capaPosY?: number;
+  createdAt: string;
+  updatedAt: string;
+  progresso?: AulaProgresso;
+}
+
+export interface Modulo {
+  id: string;
+  cursoId: string;
+  titulo: string;
+  ordem: number;
+  aulas: Aula[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Curso {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  capaUrl?: string;
+  capaPosX?: number;
+  capaPosY?: number;
+  publicado: boolean;
+  ordem: number;
+  modulos: Modulo[];
+  progressoPercentual?: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Curso" ADD COLUMN     "capaPosX" INTEGER DEFAULT 50,
+ADD COLUMN     "capaPosY" INTEGER DEFAULT 50;

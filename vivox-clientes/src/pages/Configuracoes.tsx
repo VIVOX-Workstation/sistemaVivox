@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Settings, Users, UserPlus, CheckCircle2, ShieldAlert, Edit2, KeyRound } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 
 interface User {
   id: string;
   nome: string;
   email: string;
+  role: 'ADMIN' | 'COLABORADOR';
   createdAt: string;
 }
 
 export function Configuracoes() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingForm, setLoadingForm] = useState(false);
@@ -46,6 +49,15 @@ export function Configuracoes() {
       console.error('Erro ao carregar usuários:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: 'ADMIN' | 'COLABORADOR') => {
+    try {
+      await api.patch(`/users/${userId}/role`, { role: newRole });
+      loadUsers(); // refresh the list
+    } catch (err) {
+      console.error('Erro ao alterar cargo', err);
     }
   };
 
@@ -155,6 +167,7 @@ export function Configuracoes() {
                   <tr className="bg-[#FAF6F0] border-b border-[#E5D9C8]">
                     <th className="px-4 py-3 font-semibold text-[#847663] text-xs">Usuário</th>
                     <th className="px-4 py-3 font-semibold text-[#847663] text-xs hidden md:table-cell">E-mail</th>
+                    <th className="px-4 py-3 font-semibold text-[#847663] text-xs">Papel</th>
                     <th className="px-4 py-3 font-semibold text-[#847663] text-xs">Criado em</th>
                     <th className="px-4 py-3 font-semibold text-[#847663] text-xs text-right">Ações</th>
                   </tr>
@@ -171,6 +184,24 @@ export function Configuracoes() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-[#625746] hidden md:table-cell">{user.email}</td>
+                      <td className="px-4 py-3 text-xs text-[#625746]">
+                        {currentUser?.role === 'ADMIN' && currentUser.id !== user.id ? (
+                          <select 
+                            value={user.role || 'COLABORADOR'} 
+                            onChange={(e) => handleRoleChange(user.id, e.target.value as 'ADMIN' | 'COLABORADOR')}
+                            className="bg-white border border-[#D8CBB8] rounded px-2 py-1 text-xs text-[#1E1A16] focus:outline-none focus:border-[#B89455]"
+                          >
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="COLABORADOR">COLABORADOR</option>
+                          </select>
+                        ) : (
+                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            user.role === 'ADMIN' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#F6F0E7] text-[#8F8271]'
+                          }`}>
+                            {user.role || 'COLABORADOR'}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-[#625746]">{formatarDataBR(user.createdAt)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
