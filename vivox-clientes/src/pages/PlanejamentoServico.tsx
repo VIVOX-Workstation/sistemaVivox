@@ -7,6 +7,7 @@ import { chamadosApi, type CategoriaChamado, type UrgenciaChamado } from '../api
 import { TaskModal } from '../components/gp/TaskModal';
 import { TaskFormModal } from '../components/gp/TaskFormModal';
 import { Modal } from '../components/Modal';
+import { QuadroColaborativo } from '../components/QuadroColaborativo';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -24,7 +25,7 @@ import {
   ChevronRight,
   Smartphone,
   Globe,
-  Palette,
+  PenTool,
   Code2,
   Trash2,
   Edit3,
@@ -37,7 +38,6 @@ import {
   Layout,
   FileCheck2,
   Milestone,
-  Maximize2,
   AlertTriangle
 } from 'lucide-react';
 
@@ -61,37 +61,11 @@ export interface ItemPlanejado {
   prazo?: string;
   linkFigma?: string;
   linkFinal?: string;
-  penpotUrl?: string;
   copyTexto?: string;
   estrutura: EstruturaSecao[];
   etapas: EtapaProducao[];
   createdAt: string;
 }
-
-const getPenpotBaseUrl = () => {
-  if (import.meta.env.VITE_PENPOT_URL) {
-    return import.meta.env.VITE_PENPOT_URL;
-  }
-  // Usa o hostname via sslip.io (em vez do IP puro) para que o iframe fique no
-  // mesmo "site" do app: IPs nus são sempre um site isolado para o navegador,
-  // o que faz o cookie de sessão do Penpot (SameSite=Lax) ser bloqueado dentro
-  // do iframe após o login, gerando "Algo errado aconteceu".
-  return 'http://179.198.120.113.sslip.io:9005';
-};
-
-const resolvePenpotUrl = (url?: string) => {
-  const base = getPenpotBaseUrl();
-  if (!url || !url.trim()) return base;
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    // Em desenvolvimento local, roteia através do proxy local na porta 9005
-    return url.replace(/http:\/\/[^/]+:9005/, 'http://localhost:9005');
-  }
-  // Em produção, migra URLs antigas salvas com o IP puro para o hostname sslip.io
-  return url
-    .replace('http://localhost:9005', base)
-    .replace('http://127.0.0.1:9005', base)
-    .replace('http://179.198.120.113:9005', base);
-};
 
 export function PlanejamentoServico() {
   const { id: clienteId, servicoId, itemId: paramItemId } = useParams<{
@@ -110,8 +84,8 @@ export function PlanejamentoServico() {
   // Item selecionado via rota de URL
   const selectedItemId = paramItemId || null;
 
-  // Aba dentro do item selecionado: 'estrutura' | 'copy' | 'etapas' | 'links' | 'penpot'
-  const [abaItem, setAbaItem] = useState<'estrutura' | 'copy' | 'etapas' | 'links' | 'penpot'>('estrutura');
+  // Aba dentro do item selecionado: 'estrutura' | 'copy' | 'etapas' | 'links' | 'quadro'
+  const [abaItem, setAbaItem] = useState<'estrutura' | 'copy' | 'etapas' | 'links' | 'quadro'>('estrutura');
 
   // Modal Novo Item / Peça
   const [isNovoItemModalOpen, setIsNovoItemModalOpen] = useState(false);
@@ -123,7 +97,6 @@ export function PlanejamentoServico() {
   // IA Loading states
   const [loadingIaEstrutura, setLoadingIaEstrutura] = useState(false);
   const [loadingIaCopy, setLoadingIaCopy] = useState(false);
-  const [loadingPenpotCreation, setLoadingPenpotCreation] = useState(false);
 
   // Modais de Tarefas GP
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -226,7 +199,6 @@ export function PlanejamentoServico() {
           prazo: item.prazo || '',
           linkFigma: item.linkFigma || '',
           linkFinal: item.linkFinal || '',
-          penpotUrl: item.penpotUrl || '',
           copyTexto: item.copyTexto || '',
           estrutura: Array.isArray(item.estrutura)
             ? item.estrutura
@@ -282,27 +254,12 @@ export function PlanejamentoServico() {
     e.preventDefault();
     if (!novoItemTitulo.trim()) return;
 
-    let penpotFileUrl = getPenpotBaseUrl();
-    try {
-      const clientName = nomeCliente || servico?.cliente?.nomeFantasia || 'Cliente';
-      const penpotRes = await api.post<{ url: string }>('/penpot/criar-arquivo', {
-        titulo: novoItemTitulo.trim(),
-        clienteNome: clientName,
-      });
-      if (penpotRes.data?.url) {
-        penpotFileUrl = penpotRes.data.url;
-      }
-    } catch (err) {
-      console.warn('Não foi possível gerar URL do Penpot automaticamente:', err);
-    }
-
     const novo: ItemPlanejado = {
       id: `item-${Date.now()}`,
       titulo: novoItemTitulo.trim(),
       descricao: novoItemDescricao.trim(),
       status: 'BRIEFING',
       prazo: novoItemPrazo || new Date(Date.now() + 20 * 86400000).toISOString().split('T')[0],
-      penpotUrl: penpotFileUrl,
       copyTexto: '',
       estrutura: [
         { id: 's1', titulo: '1. Abertura / Capa', descricao: 'Apresentação principal da peça.' },
@@ -325,25 +282,6 @@ export function PlanejamentoServico() {
     setNovoItemDescricao('');
     setNovoItemPrazo('');
     navigate(`/cliente/${clienteId}/servicos/${servicoId}/planejamento/${novo.id}`);
-  };
-
-  const handleGerarPranchetaPenpot = async () => {
-    if (!itemAtivo) return;
-    setLoadingPenpotCreation(true);
-    try {
-      const clientName = nomeCliente || servico?.cliente?.nomeFantasia || 'Cliente';
-      const penpotRes = await api.post<{ url: string }>('/penpot/criar-arquivo', {
-        titulo: itemAtivo.titulo,
-        clienteNome: clientName,
-      });
-      if (penpotRes.data?.url) {
-        atualizarItemAtivo({ penpotUrl: penpotRes.data.url });
-      }
-    } catch (err) {
-      console.error('Erro ao gerar prancheta Penpot:', err);
-    } finally {
-      setLoadingPenpotCreation(false);
-    }
   };
 
   const handleDeletarItem = (id: string, e: React.MouseEvent) => {
@@ -807,15 +745,15 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             </button>
 
             <button
-              onClick={() => setAbaItem('penpot')}
+              onClick={() => setAbaItem('quadro')}
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                abaItem === 'penpot'
+                abaItem === 'quadro'
                   ? 'bg-[#181512] text-white shadow-xs'
                   : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
               }`}
             >
-              <Palette className="w-4 h-4 text-[#C7A15F]" />
-              <span>5. 🎨 Estúdio Penpot (Figma)</span>
+              <PenTool className="w-4 h-4 text-[#C7A15F]" />
+              <span>5. ✏️ Quadro Colaborativo</span>
             </button>
           </div>
 
@@ -1103,117 +1041,9 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             </div>
           )}
 
-          {/* ABA ITEM 5: ESTÚDIO PENPOT (FIGMA OPEN-SOURCE) */}
-          {abaItem === 'penpot' && (
-            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-5 shadow-xs space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#247A4A] animate-pulse" />
-                    <h3 className="text-sm font-black text-[#1E1A16] uppercase tracking-wider">
-                      Estúdio de Design Integrado (Penpot)
-                    </h3>
-                    <span className="text-[10px] font-bold bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/40 px-2 py-0.5 rounded-full">
-                      {typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? 'Produção • Integrado' : 'Local • Porta 9005'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#8F8271] mt-0.5">
-                    Prancheta e layout dedicado para: <strong className="text-[#1E1A16]">{itemAtivo.titulo}</strong>
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={handleGerarPranchetaPenpot}
-                    disabled={loadingPenpotCreation}
-                    title="Cria automaticamente um arquivo dedicado no Penpot para esta peça"
-                    className="px-3.5 py-1.5 rounded-xl bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 text-[#8F6F2D] border border-[#C7A15F]/40 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
-                  >
-                    {loadingPenpotCreation ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C7A15F]" />
-                    ) : (
-                      <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    )}
-                    <span>⚡ Gerar Prancheta Automática</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const iframe = document.getElementById('penpot-frame') as HTMLIFrameElement;
-                      if (iframe) {
-                        iframe.src = resolvePenpotUrl(itemAtivo.penpotUrl);
-                      }
-                    }}
-                    title="Recarregar o canvas do Penpot"
-                    className="px-3 py-1.5 rounded-xl bg-white border border-[#D8CBB8] hover:border-[#1E1A16] text-[#1E1A16] text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                  >
-                    <span>Recarregar</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const iframe = document.getElementById('penpot-frame');
-                      if (iframe) {
-                        if (iframe.requestFullscreen) {
-                          iframe.requestFullscreen();
-                        }
-                      }
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-[#D8CBB8] hover:border-[#1E1A16] text-[#1E1A16] text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    <span>Tela Cheia</span>
-                  </button>
-
-                  <a
-                    href={resolvePenpotUrl(itemAtivo.penpotUrl)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3.5 py-1.5 rounded-xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
-                  >
-                    <span>Abrir em Nova Aba</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Barra de Vinculação Direta do Arquivo */}
-              <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 flex-1">
-                  <span className="font-bold text-[#625746] shrink-0 flex items-center gap-1">
-                    <LinkIcon className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    Arquivo Vinculado:
-                  </span>
-                  <input
-                    type="url"
-                    placeholder={`Cole aqui a URL direta do arquivo no Penpot (ex: ${getPenpotBaseUrl()}/#/workspace/...)`}
-                    value={itemAtivo.penpotUrl || ''}
-                    onChange={(e) => atualizarItemAtivo({ penpotUrl: e.target.value })}
-                    className="w-full bg-white border border-[#D8CBB8] rounded-xl px-3 py-1.5 outline-none focus:border-[#C7A15F] font-mono text-[11px]"
-                  />
-                </div>
-
-                {itemAtivo.penpotUrl && (
-                  <button
-                    onClick={() => atualizarItemAtivo({ penpotUrl: '' })}
-                    className="text-[#8F8271] hover:text-[#B83B32] text-[11px] font-bold underline cursor-pointer"
-                  >
-                    Resetar URL
-                  </button>
-                )}
-              </div>
-
-              {/* Iframe do Penpot com URL direta do arquivo */}
-              <div className="relative w-full rounded-2xl overflow-hidden border border-[#D8CBB8] bg-[#1E1E1E] shadow-inner" style={{ height: '780px' }}>
-                <iframe
-                  id="penpot-frame"
-                  src={resolvePenpotUrl(itemAtivo.penpotUrl)}
-                  title="Penpot Studio"
-                  className="w-full h-full border-0"
-                  allow="clipboard-read; clipboard-write; fullscreen"
-                />
-              </div>
-            </div>
+          {/* ABA ITEM 5: QUADRO COLABORATIVO (EXCALIDRAW NATIVO) */}
+          {abaItem === 'quadro' && (
+            <QuadroColaborativo itemId={itemAtivo.id} itemTitulo={itemAtivo.titulo} />
           )}
         </div>
       )}

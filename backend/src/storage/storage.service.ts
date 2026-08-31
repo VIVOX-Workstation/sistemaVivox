@@ -35,19 +35,36 @@ export class StorageService {
       
       const endpoint = process.env.S3_ENDPOINT || '';
       
-      let publicUrl = '';
-      if (process.env.S3_PUBLIC_URL) {
-        publicUrl = `${process.env.S3_PUBLIC_URL.replace(/\/$/, '')}/${fileName}`;
-      } else {
-        const isProd = process.env.NODE_ENV === 'production';
-        const defaultHost = isProd ? 'http://179.198.120.113:9000' : 'http://localhost:9000';
-        publicUrl = `${defaultHost}/${this.bucket}/${fileName}`;
-      }
-      
-      return publicUrl;
+      return this.getFileUrl(fileName);
     } catch (err) {
       this.logger.error('Erro ao fazer upload para o Storage', err);
       throw new InternalServerErrorException('Erro ao fazer upload para o Storage');
+    }
+  }
+  async uploadRawFile(key: string, buffer: Buffer, mimetype: string): Promise<string> {
+    try {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: mimetype,
+        })
+      );
+      return this.getFileUrl(key);
+    } catch (err) {
+      this.logger.error('Erro ao fazer upload raw para o Storage', err);
+      throw new InternalServerErrorException('Erro ao fazer upload raw para o Storage');
+    }
+  }
+
+  getFileUrl(key: string): string {
+    if (process.env.S3_PUBLIC_URL) {
+      return `${process.env.S3_PUBLIC_URL.replace(/\/$/, '')}/${key}`;
+    } else {
+      const isProd = process.env.NODE_ENV === 'production';
+      const defaultHost = isProd ? 'http://179.198.120.113:9000' : 'http://localhost:9000';
+      return `${defaultHost}/${this.bucket}/${key}`;
     }
   }
 }

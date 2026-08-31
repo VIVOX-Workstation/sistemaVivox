@@ -419,7 +419,7 @@ export function OverviewTab({ cliente, onChange, onNavigateTab }: Props) {
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-xs font-black text-[#1E1A16] truncate">Planejamento de Entregas</h4>
-                  <p className="text-[10px] text-[#8F8271] truncate">Todas as peças sincronizadas no Penpot</p>
+                  <p className="text-[10px] text-[#8F8271] truncate">Todas as peças com quadro colaborativo</p>
                 </div>
               </div>
               <Pin className="w-3.5 h-3.5 text-[#8F8271] shrink-0" />
