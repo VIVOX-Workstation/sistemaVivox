@@ -6,10 +6,10 @@ user-invocable: true
 
 # SistemaVivox — Create Pull Request
 
-Two remotes exist, but this is **not** a fork-based workflow — verified 2026-08-25 that `kelson-cosme/sistemaVivox` is a plain independent repo on GitHub (`fork: false`, no `parent`/`source`), not an actual GitHub fork of the org repo. Cross-repo PRs between two unrelated repos fail (`No commits between ...`, `not all refs are readable`), so don't attempt one.
+Two remotes exist, and this is **not** a fork-based workflow — verified 2026-08-25 that `kelson-cosme/sistemaVivox` is a plain independent repo on GitHub (`fork: false`, no `parent`/`source`), not an actual GitHub fork of the org repo. Cross-repo PRs between two unrelated repos fail (`No commits between ...`, `not all refs are readable`), so don't attempt one — each repo gets its own separate PR instead (see step 6b).
 
-- **`origin`** → `https://github.com/VIVOX-Workstation/sistemaVivox.git` — the real target. The user (`kelson-cosme`) has **admin** access here directly (confirmed via `gh api repos/VIVOX-Workstation/sistemaVivox --jq .permissions`). Push feature branches and open PRs **within this repo** (`base: main`, `head: <branch>`, no `owner:` prefix needed).
-- **`kelson`** → `https://github.com/kelson-cosme/sistemaVivox.git` — a separate personal repo that local `main` happens to track for pulls/day-to-day sync. Not part of the PR path — don't push feature branches here for PR purposes.
+- **`origin`** → `https://github.com/VIVOX-Workstation/sistemaVivox.git` — the team-visibility repo. The user (`kelson-cosme`) has **admin** access here directly (confirmed via `gh api repos/VIVOX-Workstation/sistemaVivox --jq .permissions`). This is where the team reviews and merges PRs. Push feature branches and open PRs **within this repo** (`base: main`, `head: <branch>`, no `owner:` prefix needed).
+- **`kelson`** → `https://github.com/kelson-cosme/sistemaVivox.git` — a separate personal repo. **This is what actually matters for production**: confirmed via a Coolify deployment log (2026-08-26) that the Coolify app clones from `kelson-cosme/sistemaVivox:main` — merging into `origin`'s `main` does **not** trigger a deploy by itself. The two repos are NOT kept in sync automatically; `kelson-cosme/sistemaVivox` has its own independent commit/PR history (it even has its own PR #1, separate from `origin`'s PR #1, both merging the same feature at different times).
 
 Always confirm remotes with `git remote -v` and re-verify the permissions check above if either repo's setup might have changed.
 
@@ -41,6 +41,8 @@ Always confirm remotes with `git remote -v` and re-verify the permissions check 
    Keep the title under ~70 chars; put detail in the body, not the title.
 
 7. **Report back** the PR URL from the `gh pr create` output.
+
+6b. **Replicate to `kelson` once the `origin` PR is merged** — this is the step that actually reaches production, per the user's explicit decision (2026-08-26): after the team-visibility PR merges in `origin`, push the same branch to `kelson` too (`git push kelson <branch>`) and open a second PR there (`gh pr create --repo kelson-cosme/sistemaVivox --base main --head <branch> --title "..." --body "..."`, same title/body convention). Don't skip this — merging only in `origin` silently leaves production on the old code. The user merges this second PR themselves to trigger the Coolify deploy. Do not assume this step happened automatically; check `gh pr view <n> --repo kelson-cosme/sistemaVivox --json state,mergedAt` if unsure whether a given change ever reached the deploy-triggering repo.
 
 ## Guardrails
 
