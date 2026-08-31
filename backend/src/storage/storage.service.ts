@@ -63,7 +63,7 @@ export class StorageService {
       return `${process.env.S3_PUBLIC_URL.replace(/\/$/, '')}/${key}`;
     } else {
       const isProd = process.env.NODE_ENV === 'production';
-      const defaultHost = isProd ? 'http://179.198.120.113:9000' : 'http://localhost:9000';
+      const defaultHost = isProd ? 'https://minio.vivoxmarketing.com.br' : 'http://localhost:9000';
       return `${defaultHost}/${this.bucket}/${key}`;
     }
   }
