@@ -43,6 +43,14 @@ services:
       tail -f /dev/null;
       "
 
+  excalidraw-room:
+    image: excalidraw/excalidraw-room:latest
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    environment:
+      CORS_ORIGIN: "*"
+
 volumes:
   redis_data:
   minio_data:
