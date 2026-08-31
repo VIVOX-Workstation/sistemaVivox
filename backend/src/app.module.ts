@@ -14,7 +14,7 @@ import { PlanejamentoServicoModule } from './planejamento-servico/planejamento-s
 import { IaModule } from './ia/ia.module';
 import { HospedagemModule } from './hospedagem/hospedagem.module';
 import { TarefasModule } from './tarefas/tarefas.module';
-import { PenpotModule } from './penpot/penpot.module';
+import { QuadrosModule } from './quadros/quadros.module';
 import { ChamadosModule } from './chamados/chamados.module';
 import { CursosModule } from './cursos/cursos.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -22,7 +22,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, PenpotModule, ChamadosModule, CursosModule
+    PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, QuadrosModule, ChamadosModule, CursosModule
   ],
   controllers: [AppController],
   providers: [AppService],

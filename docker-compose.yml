@@ -69,6 +69,15 @@ services:
       exit 0;
       "
 
+  excalidraw-room:
+    image: excalidraw/excalidraw-room:latest
+    container_name: vivox-excalidraw-room
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    environment:
+      CORS_ORIGIN: "*"
+
 volumes:
   postgres_data:
   redis_data:

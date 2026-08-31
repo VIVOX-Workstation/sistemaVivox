@@ -763,3 +763,14 @@ model AulaProgresso {
   @@index([aulaId])
   @@index([userId])
 }
+
+// ============================================
+// MÓDULO: EXCALIDRAW COLAB
+// ============================================
+
+model QuadroSala {
+  roomId    String   @id
+  elements  Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
