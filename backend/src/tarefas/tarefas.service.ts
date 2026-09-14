@@ -739,32 +739,30 @@ Gere o checklist em formato JSON:
 
     const PRIORIDADES_VALIDAS = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'];
     const usuariosCriados: string[] = [];
-    const userCache = new Map<string, string>();
 
-    const resolveUsuario = async (
-      ref: { id?: string; nome?: string; email?: string } | null | undefined,
+    // Pré-carrega usuários/clientes/serviços existentes UMA vez só, em vez de
+    // consultar por tarefa — com milhares de tarefas, N+1 consultas sequenciais
+    // (uma por responsável/autor/observador/cliente/serviço, por linha) estourava
+    // o timeout de proxy em produção (erro 524, que o navegador mostra como CORS
+    // porque a resposta de timeout não tem os headers da aplicação).
+    const [todosUsuarios, todosClientes, todosServicos] = await Promise.all([
+      this.prisma.user.findMany({ select: { id: true, email: true } }),
+      this.prisma.cliente.findMany({ select: { id: true } }),
+      this.prisma.servicoContratado.findMany({ select: { id: true } }),
+    ]);
+    const idsUsuariosValidos = new Set(todosUsuarios.map((u) => u.id));
+    const usuarioPorEmail = new Map(todosUsuarios.map((u) => [u.email.toLowerCase(), u.id]));
+    const idsClientesValidos = new Set(todosClientes.map((c) => c.id));
+    const idsServicosValidos = new Set(todosServicos.map((s) => s.id));
+
+    // Evita duas tarefas do mesmo lote concorrente criarem, em paralelo, um
+    // placeholder duplicado para o mesmo usuário ausente.
+    const criacoesEmAndamento = new Map<string, Promise<string | null>>();
+
+    const criarUsuarioPlaceholder = async (
+      nome: string,
+      email: string | undefined,
     ): Promise<string | null> => {
-      if (!ref) return null;
-
-      // 1) Mesmo banco/instância: se o usuário original ainda existir, usa direto.
-      if (ref.id) {
-        const existente = await this.prisma.user.findUnique({ where: { id: ref.id } });
-        if (existente) return existente.id;
-      }
-
-      // 2) Reconstrói por email, que é estável entre exportações.
-      const email = ref.email?.trim().toLowerCase();
-      if (email) {
-        if (userCache.has(email)) return userCache.get(email)!;
-        const existente = await this.prisma.user.findUnique({ where: { email } });
-        if (existente) {
-          userCache.set(email, existente.id);
-          return existente.id;
-        }
-      }
-
-      // 3) Não existe mais em lugar nenhum: cria um usuário placeholder.
-      const nome = ref.nome?.trim() || email || 'Usuário importado';
       const hashSuffix = Math.random().toString(36).substring(2, 8);
       const slug = nome.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
       const emailGerado = email || `${slug || 'user'}.backup${hashSuffix}@importado.vivox.local`;
@@ -774,23 +772,48 @@ Gere o checklist em formato JSON:
         const novo = await this.prisma.user.create({
           data: { nome, email: emailGerado, senha: hashedPassword, role: 'COLABORADOR' },
         });
-        if (email) userCache.set(email, novo.id);
+        idsUsuariosValidos.add(novo.id);
+        usuarioPorEmail.set(emailGerado, novo.id);
         if (!usuariosCriados.includes(nome)) usuariosCriados.push(nome);
         return novo.id;
       } catch (e: any) {
         if (e.code === 'P2002') {
-          const existente = await this.prisma.user.findUnique({ where: { email: emailGerado } });
-          if (existente) return existente.id;
+          const existente = usuarioPorEmail.get(emailGerado);
+          if (existente) return existente;
         }
         this.logger.error(`Erro criando usuário placeholder do backup: ${nome}`, e);
         return null;
       }
     };
 
+    const resolveUsuario = async (
+      ref: { id?: string; nome?: string; email?: string } | null | undefined,
+    ): Promise<string | null> => {
+      if (!ref) return null;
+
+      // 1) Mesmo banco/instância: se o usuário original ainda existir, usa direto.
+      if (ref.id && idsUsuariosValidos.has(ref.id)) return ref.id;
+
+      // 2) Reconstrói por email, que é estável entre exportações.
+      const email = ref.email?.trim().toLowerCase();
+      if (email && usuarioPorEmail.has(email)) return usuarioPorEmail.get(email)!;
+
+      // 3) Não existe mais em lugar nenhum: cria um usuário placeholder — mas só
+      // uma vez por email, mesmo se várias tarefas do lote pedirem em paralelo.
+      const nome = ref.nome?.trim() || email || 'Usuário importado';
+      const chave = email || `nome:${nome}`;
+      let criacao = criacoesEmAndamento.get(chave);
+      if (!criacao) {
+        criacao = criarUsuarioPlaceholder(nome, email);
+        criacoesEmAndamento.set(chave, criacao);
+      }
+      return criacao;
+    };
+
     let criadas = 0;
     let ignoradas = 0;
 
-    for (const t of tarefasExportadas) {
+    const importarUmaTarefa = async (t: any) => {
       try {
         const responsavelId = await resolveUsuario(t?.responsavel);
         const autorId = await resolveUsuario(t?.autor);
@@ -805,16 +828,8 @@ Gere o checklist em formato JSON:
 
         // Cliente/serviço só são reaproveitados se ainda existirem neste banco
         // (mesma instância) — não é possível reconstruí-los apenas pelo id.
-        let clienteId: string | undefined;
-        if (t?.clienteId) {
-          const cliente = await this.prisma.cliente.findUnique({ where: { id: t.clienteId } });
-          if (cliente) clienteId = cliente.id;
-        }
-        let servicoId: string | undefined;
-        if (t?.servicoId) {
-          const servico = await this.prisma.servicoContratado.findUnique({ where: { id: t.servicoId } });
-          if (servico) servicoId = servico.id;
-        }
+        const clienteId = t?.clienteId && idsClientesValidos.has(t.clienteId) ? t.clienteId : undefined;
+        const servicoId = t?.servicoId && idsServicosValidos.has(t.servicoId) ? t.servicoId : undefined;
 
         const baseData = {
           titulo: t?.titulo || 'Sem título',
@@ -867,6 +882,14 @@ Gere o checklist em formato JSON:
         this.logger.error(`Erro ao importar tarefa do backup "${t?.titulo}":`, err);
         ignoradas++;
       }
+    };
+
+    // Processa em lotes concorrentes (em vez de um-a-um sequencial) pra manter
+    // o tempo total baixo mesmo em workspaces com milhares de tarefas.
+    const CONCORRENCIA = 15;
+    for (let i = 0; i < tarefasExportadas.length; i += CONCORRENCIA) {
+      const lote = tarefasExportadas.slice(i, i + CONCORRENCIA);
+      await Promise.all(lote.map((t) => importarUmaTarefa(t)));
     }
 
     return { totalLinhas: tarefasExportadas.length, criadas, ignoradas, usuariosCriados };
