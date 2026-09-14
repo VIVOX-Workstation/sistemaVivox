@@ -9,7 +9,7 @@ export const getApiBaseUrl = (): string => {
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3000';
     }
-    return 'http://179.198.120.113:3000';
+    return 'https://api.vivoxmarketing.com.br';
   }
   return 'http://localhost:3000';
 };

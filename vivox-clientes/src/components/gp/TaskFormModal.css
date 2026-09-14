@@ -1,0 +1,116 @@
+.task-create-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(30 26 22 / 45%);
+  backdrop-filter: blur(4px);
+}
+
+.task-create-dialog {
+  width: 580px;
+  max-width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: #fffdf8;
+  color: #1E1A16;
+  box-shadow: 0 24px 80px rgb(30 26 22 / 24%);
+  scrollbar-width: thin;
+  scrollbar-color: #D8CBB8 transparent;
+  font-size: 13px;
+}
+
+.task-create-dialog form { padding: 22px 24px 0; }
+.task-create-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.task-create-dialog button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #625746;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+.task-create-dialog button:hover { background: #F2EEE7; color: #1E1A16; }
+.task-create-dialog button:disabled { opacity: .5; cursor: not-allowed; }
+.task-create-dialog svg { flex-shrink: 0; }
+.task-create-dialog :is(input, select, textarea) {
+  min-width: 0;
+  width: 100%;
+  color: #1E1A16;
+  background: #FAF8F4;
+  font-size: 13px;
+  border: 1px solid #D8CBB8;
+  border-radius: 6px;
+  padding: 8px;
+  transition: border-color 150ms, background-color 150ms;
+}
+.task-create-dialog :is(input, select, textarea):hover { border-color: #C5B59D; }
+.task-create-dialog :is(input, select, textarea):focus { border-color: #C7A15F; background: #fffdf8; }
+.task-create-dialog :is(input, textarea)::placeholder { color: #938777; opacity: 1; }
+.task-create-dialog :is(input, select, textarea, button):focus-visible {
+  outline: 2px solid #c7a15f;
+  outline-offset: 2px;
+}
+.task-create-heading { display: flex; align-items: center; gap: 4px; }
+.task-create-heading .task-create-title {
+  flex: 1;
+  width: 0;
+  padding: 7px 10px;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.task-create-heading .task-create-icon { padding: 7px; }
+.task-create-heading .is-urgent { color: #B83B32; background: #fef3f2; }
+.task-create-dialog .task-create-description {
+  display: block;
+  padding: 10px;
+  margin: 12px 0;
+  resize: vertical;
+  min-height: 54px;
+  line-height: 1.6;
+}
+.task-create-row { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 12px; margin: 4px 0; }
+.task-create-row > label { color: #847663; font-size: 12px; }
+.task-create-inline-control { display: flex; align-items: center; gap: 5px; min-width: 0; color: #847663; }
+.task-create-inline-control:hover { background: #FAF8F4; border-radius: 6px; }
+.task-create-tools { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid #E7E1D7; padding-top: 16px; margin-top: 18px; }
+.task-create-tools button { border: 1px solid #E7E1D7; max-width: 100%; }
+.task-create-tools button[aria-expanded='true'] { background: #F2EEE7; border-color: #D8CBB8; }
+.task-create-project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.task-create-extra { margin-top: 16px; padding: 14px; background: #FAF8F4; border: 1px solid #E7E1D7; border-radius: 10px; }
+.task-create-extra label { display: block; margin-bottom: 6px; font-size: 12px; color: #625746; }
+.task-create-extra :is(input, select) { background: #fffdf8; border-color: #DED7CC; }
+.task-create-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.task-create-full { grid-column: 1 / -1; }
+.task-create-checklist-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.task-create-checklist-heading label { margin: 0; }
+.task-create-checklist { list-style: none; padding: 0; margin: 8px 0; }
+.task-create-checklist li { display: flex; align-items: center; gap: 8px; padding: 3px 0; color: #625746; }
+.task-create-checklist li span { flex: 1; overflow-wrap: anywhere; min-width: 0; }
+.task-create-checklist li button:hover { color: #B83B32; }
+.task-create-add-item { display: flex; gap: 8px; }
+.task-create-add-item button { border: 1px solid #DED7CC; background: #fffdf8; }
+.task-create-error { margin-top: 16px; color: #B83B32; padding: 10px; background: #fef3f2; border-radius: 8px; }
+.task-create-footer { position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px; padding: 20px 0 22px; background: #fffdf8; margin-top: 2px; }
+.task-create-footer .task-create-primary { background: #c7a15f; color: #201a10; font-weight: 600; padding: 10px 16px; }
+.task-create-footer .task-create-primary:hover { background: #b89455; }
+.task-create-footer .task-create-details-toggle { margin-left: auto; color: #847663; font-size: 11px; padding-right: 0; }
+
+@media (max-width: 540px) {
+  .task-create-overlay { padding: 12px; }
+  .task-create-dialog form { padding: 18px 16px 0; }
+  .task-create-row { grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }
+  .task-create-grid { grid-template-columns: minmax(0, 1fr); }
+  .task-create-footer { flex-wrap: wrap; }
+  .task-create-footer .task-create-details-toggle { margin-left: 0; }
+  .task-create-heading .task-create-title { font-size: 20px; }
+}

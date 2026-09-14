@@ -350,7 +350,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C7A15F] animate-pulse"></span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
+            <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
               Desempenho de Redes Sociais • @{cliente.nomeFantasia.toLowerCase().replace(/\s+/g, '')}
             </span>
           </div>
@@ -387,11 +387,11 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* Seguidores */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Seguidores</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Seguidores</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">
             {metricas.seguidores.toLocaleString('pt-BR')}
           </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.novosSeguidores} ({metricas.varSeguidores}%)</span>
           </div>
@@ -399,11 +399,11 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* Alcance de Contas */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Contas Alcançadas</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Contas Alcançadas</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">
             {metricas.alcance.toLocaleString('pt-BR')}
           </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.varAlcance}%</span>
           </div>
@@ -411,11 +411,11 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* Impressões */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Impressões Totais</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Impressões Totais</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">
             {metricas.impressoes.toLocaleString('pt-BR')}
           </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.varImpressoes}%</span>
           </div>
@@ -423,11 +423,11 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* Interações */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Interações Totais</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Interações Totais</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">
             {metricas.interacoes.toLocaleString('pt-BR')}
           </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.varInteracoes}%</span>
           </div>
@@ -435,9 +435,9 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* Taxa de Engajamento */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Taxa Engajamento</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Taxa Engajamento</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">{metricas.taxaEngajamento}%</h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.varTaxaEngajamento}%</span>
           </div>
@@ -445,9 +445,9 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* Cliques na Bio */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Cliques na Bio</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Cliques na Bio</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">{metricas.cliquesBio}</h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.varCliquesBio}%</span>
           </div>
@@ -455,11 +455,11 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* Visitas ao Perfil */}
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[11px] font-semibold text-[#847663]">Visitas ao Perfil</span>
+          <span className="text-[12.5px] font-semibold text-[#847663]">Visitas ao Perfil</span>
           <h3 className="text-xl font-black text-[#1E1A16] mt-2">
             {metricas.visitasPerfil.toLocaleString('pt-BR')}
           </h3>
-          <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-[#247A4A]">
+          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#247A4A]">
             <TrendingUp className="w-3 h-3" />
             <span>+{metricas.varVisitasPerfil}%</span>
           </div>
@@ -477,7 +477,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                 Evolução Diária de Alcance (Contas Alcançadas)
               </h3>
             </div>
-            <div className="flex items-center gap-3 text-[11px] font-mono text-[#847663]">
+            <div className="flex items-center gap-3 text-[12.5px] font-mono text-[#847663]">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-[#B89455]"></span> Dia com Reels
               </span>
@@ -494,7 +494,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                 <div key={index} className="flex-1 flex flex-col items-center h-full justify-end group relative">
                   {/* Tooltip */}
                   <span
-                    className={`text-[9px] font-bold mb-1 transition-opacity ${
+                    className={`text-[11px] font-bold mb-1 transition-opacity ${
                       d.reels ? 'text-[#8A6828] opacity-100' : 'text-[#847663] opacity-0 group-hover:opacity-100'
                     }`}
                   >
@@ -515,7 +515,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             })}
           </div>
 
-          <div className="flex justify-between text-[9px] text-[#847663] font-mono pt-2">
+          <div className="flex justify-between text-[11px] text-[#847663] font-mono pt-2">
             {timelineAlcance.map((d, index) => (
               <span key={index} className="truncate max-w-[32px] text-center">
                 {d.dia}
@@ -530,7 +530,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
               Alcance por Formato (Pizza)
             </h3>
-            <span className="text-[10px] text-[#8A6828] font-bold">Distribuição MTD</span>
+            <span className="text-[12px] text-[#8A6828] font-bold">Distribuição MTD</span>
           </div>
 
           {/* Gráfico Donut / Pizza em SVG */}
@@ -598,16 +598,16 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
               {/* Centro do Donut */}
               <div className="absolute flex flex-col items-center justify-center text-center">
-                <span className="text-[9px] font-bold text-[#847663] uppercase">Top Formato</span>
+                <span className="text-[11px] font-bold text-[#847663] uppercase">Top Formato</span>
                 <span className="text-base font-black text-[#1E1A16] leading-none mt-0.5">58.4%</span>
-                <span className="text-[8px] font-bold text-[#8A6828] mt-0.5">Reels</span>
+                <span className="text-[10px] font-bold text-[#8A6828] mt-0.5">Reels</span>
               </div>
             </div>
 
             {/* Legenda de Fatias da Pizza */}
             <div className="space-y-1.5 flex-1">
               {formatosDesempenho.map((f, i) => (
-                <div key={i} className="flex items-center justify-between text-[11px]">
+                <div key={i} className="flex items-center justify-between text-[12.5px]">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: f.cor }} />
                     <span className="font-semibold text-[#1E1A16] truncate max-w-[95px]">{f.formato.split(' ')[0]}</span>
@@ -618,7 +618,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             </div>
           </div>
 
-          <div className="pt-2.5 border-t border-[#EEE7DC] text-[11px] text-[#625746] bg-[#FAF6F0] p-2 rounded-lg flex items-center justify-between">
+          <div className="pt-2.5 border-t border-[#EEE7DC] text-[12.5px] text-[#625746] bg-[#FAF6F0] p-2 rounded-lg flex items-center justify-between">
             <span>Engajamento Médio dos Reels:</span>
             <strong className="text-[#247A4A] font-bold">6.8%</strong>
           </div>
@@ -642,12 +642,12 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           <div className="flex items-center gap-3 text-xs">
             <div className="flex items-center gap-1.5 bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-1 rounded-lg">
               <Flame className="w-3.5 h-3.5 text-[#B83B32] fill-current" />
-              <span className="text-[#847663] text-[11px]">Atual:</span>
+              <span className="text-[#847663] text-[12.5px]">Atual:</span>
               <strong className="text-[#8A6828]">{yearHeatmap.currentStreak} dias</strong>
             </div>
             <div className="flex items-center gap-1.5 bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-1 rounded-lg">
               <Trophy className="w-3.5 h-3.5 text-[#8A6828]" />
-              <span className="text-[#847663] text-[11px]">Recorde:</span>
+              <span className="text-[#847663] text-[12.5px]">Recorde:</span>
               <strong className="text-[#8A6828]">{yearHeatmap.longestStreak} dias</strong>
             </div>
           </div>
@@ -657,7 +657,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         <div className="overflow-x-auto pb-1">
           <div className="min-w-[760px] max-w-full">
             {/* RÓTULOS DOS MESES (Jan a Dez) */}
-            <div className="flex text-[10px] font-semibold text-[#847663] pl-7 pb-1.5 justify-between">
+            <div className="flex text-[12px] font-semibold text-[#847663] pl-7 pb-1.5 justify-between">
               {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((m, i) => (
                 <span key={i} className="w-[8%] text-left">
                   {m}
@@ -668,7 +668,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             {/* GRID DOS QUADRADINHOS ESTILO GITHUB COM PALETA VIVOX */}
             <div className="flex gap-[3px] items-start">
               {/* Todos os 7 dias da semana: Dom, Seg, Ter, Qua, Qui, Sex, Sáb */}
-              <div className="flex flex-col gap-[3px] text-[8px] font-bold text-[#847663] pr-1.5 w-6 shrink-0 select-none">
+              <div className="flex flex-col gap-[3px] text-[10px] font-bold text-[#847663] pr-1.5 w-6 shrink-0 select-none">
                 <span className="h-[10px] flex items-center leading-none">Dom</span>
                 <span className="h-[10px] flex items-center leading-none">Seg</span>
                 <span className="h-[10px] flex items-center leading-none">Ter</span>
@@ -713,7 +713,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                               isTopRow ? 'top-full mt-2' : 'bottom-full mb-2'
                             } ${horizontalPos} hidden group-hover:flex flex-col z-[100] pointer-events-none drop-shadow-2xl`}
                           >
-                            <div className="bg-[#14120E] text-[#FAF7F2] text-[10px] py-1.5 px-2.5 rounded-md shadow-2xl whitespace-nowrap border border-[#2B261F]">
+                            <div className="bg-[#14120E] text-[#FAF7F2] text-[12px] py-1.5 px-2.5 rounded-md shadow-2xl whitespace-nowrap border border-[#2B261F]">
                               <strong className="text-[#C7A15F] block">{day.dataLabel}</strong>
                               <span className="text-[#FAF7F2]">{day.detalhes}</span>
                             </div>
@@ -727,12 +727,12 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             </div>
 
             {/* RODAPÉ: "Saiba como contabilizamos as publicações" + LEGENDA "Menos [ ▢ ▢ ▢ ▢ ▢ ] Mais" */}
-            <div className="flex items-center justify-between text-[11px] text-[#847663] pt-3 mt-2 border-t border-[#EEE7DC]">
+            <div className="flex items-center justify-between text-[12.5px] text-[#847663] pt-3 mt-2 border-t border-[#EEE7DC]">
               <span className="hover:text-[#8A6828] cursor-pointer transition-colors">
                 Saiba como contabilizamos as postagens
               </span>
 
-              <div className="flex items-center gap-1.5 text-[10px]">
+              <div className="flex items-center gap-1.5 text-[12px]">
                 <span>Menos</span>
                 <span className="w-[10px] h-[10px] rounded-[2px] bg-[#EEE7DC] border border-[#E2D8C9]" title="0 posts" />
                 <span className="w-[10px] h-[10px] rounded-[2px] bg-[#D8CBB8] border border-[#C5B5A0]" title="1 post" />
@@ -752,7 +752,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                 </span>
                 <button
                   onClick={() => setSelectedDay(null)}
-                  className="text-[10px] text-[#847663] hover:text-[#1E1A16] font-semibold"
+                  className="text-[12px] text-[#847663] hover:text-[#1E1A16] font-semibold"
                 >
                   [fechar]
                 </button>
@@ -781,7 +781,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
               <button
                 key={tipo}
                 onClick={() => setFiltroTipo(tipo)}
-                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-colors ${
+                className={`px-3 py-1 rounded-md text-[12px] font-bold transition-colors ${
                   filtroTipo === tipo
                     ? 'bg-[#B89455] text-[#1D160B] shadow-2xs'
                     : 'text-[#625746] hover:text-[#1E1A16]'
@@ -804,10 +804,10 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                 {/* Header do Post com Ranking #1, #2 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4] text-[10px] font-bold flex items-center justify-center">
+                    <span className="w-6 h-6 rounded-full bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4] text-[12px] font-bold flex items-center justify-center">
                       #{idx + 1}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-[#14120E] text-[#C7A15F] flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#14120E] text-[#C7A15F] flex items-center gap-1">
                       {post.tipo === 'REELS' ? (
                         <Play className="w-2.5 h-2.5 fill-current" />
                       ) : post.tipo === 'CARROSSEL' ? (
@@ -818,11 +818,11 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                       {post.tipo}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#847663] font-mono">{post.data}</span>
+                  <span className="text-[12px] text-[#847663] font-mono">{post.data}</span>
                 </div>
 
                 {/* Badge Destaque */}
-                <span className="inline-block text-[10px] font-bold text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded">
+                <span className="inline-block text-[12px] font-bold text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded">
                   {post.destaque}
                 </span>
 
@@ -831,7 +831,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                   {post.titulo}
                 </h4>
 
-                <span className="text-[10px] text-[#625746] font-medium block">
+                <span className="text-[12px] text-[#625746] font-medium block">
                   Tema: <strong className="text-[#1E1A16]">{post.tema}</strong>
                 </span>
               </div>
@@ -840,19 +840,19 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
               <div className="space-y-2 pt-2 border-t border-[#E5D9C8]">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#FFFDF8] p-2 rounded-lg border border-[#D8CBB8]">
-                    <span className="text-[9px] text-[#847663] block">Contas Alcançadas</span>
-                    <span className="font-bold text-[#1E1A16] text-[11px]">
+                    <span className="text-[11px] text-[#847663] block">Contas Alcançadas</span>
+                    <span className="font-bold text-[#1E1A16] text-[12.5px]">
                       {post.alcance.toLocaleString('pt-BR')}
                     </span>
                   </div>
                   <div className="bg-[#FFFDF8] p-2 rounded-lg border border-[#D8CBB8]">
-                    <span className="text-[9px] text-[#847663] block">Taxa Engajamento</span>
-                    <span className="font-bold text-[#247A4A] text-[11px]">{post.taxaEngajamento}%</span>
+                    <span className="text-[11px] text-[#847663] block">Taxa Engajamento</span>
+                    <span className="font-bold text-[#247A4A] text-[12.5px]">{post.taxaEngajamento}%</span>
                   </div>
                 </div>
 
                 {/* Interações sociais */}
-                <div className="flex items-center justify-between text-[10px] text-[#625746] pt-1 px-1">
+                <div className="flex items-center justify-between text-[12px] text-[#625746] pt-1 px-1">
                   <span className="flex items-center gap-1" title="Curtidas">
                     <Heart className="w-3 h-3 text-[#B83B32] fill-current" /> {post.curtidas}
                   </span>

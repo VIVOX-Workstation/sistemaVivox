@@ -90,7 +90,7 @@ export function AnalyticsIndex() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Monitorados</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
                   ↑{comOpenPanel}
                 </span>
               </div>
@@ -103,7 +103,7 @@ export function AnalyticsIndex() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">OpenPanel</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#247A4A]/20 text-[#247A4A] border border-[#247A4A]/30">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#247A4A]/20 text-[#247A4A] border border-[#247A4A]/30">
                   ● Ativo
                 </span>
               </div>
@@ -116,7 +116,7 @@ export function AnalyticsIndex() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Ativos</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#FFA800]/20 text-[#B45309] border border-[#FFA800]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#FFA800]/20 text-[#B45309] border border-[#FFA800]/40">
                   ⚡ 100%
                 </span>
               </div>
@@ -147,7 +147,7 @@ export function AnalyticsIndex() {
                       setSearch('');
                       setOpenSearch(false);
                     }}
-                    className="text-[10px] text-[#8F8271] hover:text-[#1E1A16] font-bold ml-1 cursor-pointer"
+                    className="text-[12px] text-[#8F8271] hover:text-[#1E1A16] font-bold ml-1 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -234,11 +234,11 @@ export function AnalyticsIndex() {
 
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {temOpenPanel ? (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/35">
+                      <span className="text-[12px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/35">
                         OpenPanel
                       </span>
                     ) : (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#8F8271]/15 text-[#625746] border border-[#8F8271]/30">
+                      <span className="text-[12px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#8F8271]/15 text-[#625746] border border-[#8F8271]/30">
                         Padrão
                       </span>
                     )}
@@ -262,12 +262,12 @@ export function AnalyticsIndex() {
 
                 {/* Rodapé: Responsável & Status */}
                 <div className="pt-3 border-t border-[#EFE8DC] flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[#8F8271] text-[11px] font-semibold flex items-center gap-1">
+                  <span className="text-[#8F8271] text-[12.5px] font-semibold flex items-center gap-1">
                     <UserCheck className="w-3 h-3 text-[#C7A15F] shrink-0" />
                     <span className="truncate max-w-[120px]">{cliente.responsavel?.nome || 'Equipe'}</span>
                   </span>
 
-                  <span className="text-[11px] font-bold text-[#8A6828] group-hover:underline flex items-center gap-1">
+                  <span className="text-[12.5px] font-bold text-[#8A6828] group-hover:underline flex items-center gap-1">
                     <span>Acessar</span>
                   </span>
                 </div>

@@ -71,7 +71,7 @@ export const ExecutiveReportTab: React.FC<ExecutiveReportTabProps> = ({ cliente 
               <h2 className="text-base font-bold text-[#F6F0E7] tracking-tight">
                 Relatório Executivo Analítico (IA)
               </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#24201A] text-[#C7A15F] border border-[#3E3529]">
+              <span className="text-[12px] font-bold px-2 py-0.5 rounded bg-[#24201A] text-[#C7A15F] border border-[#3E3529]">
                 {cliente ? `Cliente: ${cliente.nomeFantasia}` : 'Visão Global da Agência'}
               </span>
             </div>

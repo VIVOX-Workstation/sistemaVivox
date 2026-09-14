@@ -109,7 +109,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
             <h3 className="text-sm font-black text-[#1E1A16] uppercase tracking-wider">
               {workspaceId ? 'Editar Workspace' : 'Criar Novo Workspace'}
             </h3>
-            <span className="text-[11px] text-[#8F8271]">
+            <span className="text-[12.5px] text-[#8F8271]">
               Espaço de trabalho com Kanban próprio
             </span>
           </div>
@@ -125,7 +125,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Nome e Ícone */}
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Nome do Workspace <span className="text-[#B83B32]">*</span>
             </label>
             <div className="flex gap-2">
@@ -150,7 +150,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
             {/* Sugestões de Emojis */}
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <span className="text-[10px] text-[#8F8271] font-medium mr-1">Ícone:</span>
+              <span className="text-[12px] text-[#8F8271] font-medium mr-1">Ícone:</span>
               {ICONES_SUGERIDOS.map((emoji) => (
                 <button
                   key={emoji}
@@ -168,7 +168,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
           {/* Descrição */}
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Descrição / Finalidade
             </label>
             <textarea
@@ -182,7 +182,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
           {/* Cor de Destaque */}
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1.5">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1.5">
               <Palette className="w-3.5 h-3.5 text-[#8F8271]" />
               Cor de Destaque
             </label>
@@ -204,7 +204,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
           {/* Cliente e Responsável */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
                 <Building2 className="w-3.5 h-3.5 text-[#8F8271]" />
                 Vincular a Cliente (Opcional)
               </label>
@@ -223,7 +223,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
                 <UserIcon className="w-3.5 h-3.5 text-[#8F8271]" />
                 Líder / Responsável
               </label>

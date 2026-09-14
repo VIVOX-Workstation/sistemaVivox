@@ -1,17 +1,18 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Tarefa, StatusTarefa, PrioridadeTarefa } from '../../types';
-import { 
-  CheckCircle2, 
-  Circle, 
-  Building2, 
-  Calendar, 
-  Clock, 
-  AlertCircle, 
-  CheckSquare, 
-  Flame, 
-  User as UserIcon, 
-  Trash2, 
-  ExternalLink 
+import {
+  CheckCircle2,
+  Circle,
+  Building2,
+  Calendar,
+  Clock,
+  AlertCircle,
+  CheckSquare,
+  Flame,
+  User as UserIcon,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 
 interface TaskListViewProps {
@@ -21,36 +22,50 @@ interface TaskListViewProps {
   onDeleteTarefa: (tarefaId: string) => void;
 }
 
+// Colunas em grid: mantidas fora do componente para não recriar a string a cada render.
+const GRID_COLS = '44px minmax(240px,3fr) minmax(140px,1fr) minmax(150px,1fr) 110px 120px 110px 140px';
+
 export const TaskListView: React.FC<TaskListViewProps> = ({
   tarefas,
   onSelectTarefa,
   onUpdateStatus,
   onDeleteTarefa,
 }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const getItemKey = useCallback((index: number) => tarefas[index].id, [tarefas]);
+
+  const virtualizer = useVirtualizer({
+    count: tarefas.length,
+    getScrollElement: () => scrollRef.current,
+    getItemKey,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
+
   const getPrioridadeBadge = (prioridade: PrioridadeTarefa) => {
     switch (prioridade) {
       case 'URGENTE':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#B83B32]/15 text-[#B83B32] border border-[#B83B32]/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-bold bg-[#B83B32]/15 text-[#B83B32] border border-[#B83B32]/30">
             <Flame className="w-2.5 h-2.5 text-[#B83B32]" />
             Urgente
           </span>
         );
       case 'ALTA':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#D97706]/15 text-[#D97706] border border-[#D97706]/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-bold bg-[#D97706]/15 text-[#D97706] border border-[#D97706]/30">
             Alta
           </span>
         );
       case 'MEDIA':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-medium bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/30">
             Média
           </span>
         );
       case 'BAIXA':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[#8F8271]/15 text-[#625746] border border-[#D8CBB8]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-medium bg-[#8F8271]/15 text-[#625746] border border-[#D8CBB8]">
             Baixa
           </span>
         );
@@ -92,7 +107,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
     if (isAtrasada) {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B83B32]">
+        <span className="inline-flex items-center gap-1 text-[12.5px] font-bold text-[#B83B32]">
           <AlertCircle className="w-3.5 h-3.5" />
           {dataFormatada}
         </span>
@@ -100,7 +115,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     }
     if (isHoje) {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#D97706]">
+        <span className="inline-flex items-center gap-1 text-[12.5px] font-bold text-[#D97706]">
           <Clock className="w-3.5 h-3.5" />
           Hoje
         </span>
@@ -115,43 +130,53 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   };
 
   return (
-    <div className="w-full bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl overflow-hidden shadow-xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-[#D8CBB8] bg-[#F6F0E7] text-[11px] font-bold uppercase tracking-wider text-[#8F8271]">
-              <th className="py-3 px-4 w-12 text-center">Status</th>
-              <th className="py-3 px-4">Tarefa</th>
-              <th className="py-3 px-4">Cliente</th>
-              <th className="py-3 px-4">Responsável</th>
-              <th className="py-3 px-4">Prioridade</th>
-              <th className="py-3 px-4">Prazo</th>
-              <th className="py-3 px-4">Subtarefas</th>
-              <th className="py-3 px-4 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E5D9C8] text-xs">
-            {tarefas.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="py-12 text-center text-[#8F8271]">
-                  Nenhuma tarefa encontrada.
-                </td>
-              </tr>
-            ) : (
-              tarefas.map((tarefa) => {
+    <div className="w-full h-full flex flex-col bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl overflow-hidden shadow-xs">
+      {tarefas.length === 0 ? (
+        <div className="py-12 text-center text-[#8F8271] text-xs">Nenhuma tarefa encontrada.</div>
+      ) : (
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto" style={{ overflowAnchor: 'none' }}>
+          <div style={{ minWidth: 954 }}>
+            {/* Cabeçalho fixo (sticky), rola horizontalmente junto com as linhas */}
+            <div
+              className="sticky top-0 z-10 grid border-b border-[#D8CBB8] bg-[#F6F0E7] text-[12.5px] font-bold uppercase tracking-wider text-[#8F8271]"
+              style={{ gridTemplateColumns: GRID_COLS }}
+            >
+              <div className="py-3 px-4 text-center">Status</div>
+              <div className="py-3 px-4">Tarefa</div>
+              <div className="py-3 px-4">Cliente</div>
+              <div className="py-3 px-4">Responsável</div>
+              <div className="py-3 px-4">Prioridade</div>
+              <div className="py-3 px-4">Prazo</div>
+              <div className="py-3 px-4">Subtarefas</div>
+              <div className="py-3 px-4 text-right">Ações</div>
+            </div>
+
+            <div style={{ height: virtualizer.getTotalSize(), width: '100%', position: 'relative' }}>
+              {virtualizer.getVirtualItems().map((row) => {
+                const tarefa = tarefas[row.index];
                 const isConcluida = tarefa.status === 'CONCLUIDA';
                 const statusInfo = getStatusLabel(tarefa.status);
                 const checklistTotal = tarefa.checklist?.length || 0;
                 const checklistConcluidos = tarefa.checklist?.filter((c) => c.concluido).length || 0;
 
                 return (
-                  <tr
-                    key={tarefa.id}
-                    className="hover:bg-[#FAF7F2] transition-colors group cursor-pointer"
+                  <div
+                    key={row.key}
+                    ref={virtualizer.measureElement}
+                    data-index={row.index}
                     onClick={() => onSelectTarefa(tarefa)}
+                    className="grid items-center border-b border-[#E5D9C8] hover:bg-[#FAF7F2] transition-colors group cursor-pointer text-xs"
+                    style={{
+                      gridTemplateColumns: GRID_COLS,
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${row.start}px)`,
+                    }}
                   >
-                    <td
-                      className="py-3 px-4 text-center"
+                    <div
+                      className="py-3 px-4 flex items-center justify-center"
                       onClick={(e) => {
                         e.stopPropagation();
                         onUpdateStatus(tarefa.id, isConcluida ? 'A_FAZER' : 'CONCLUIDA');
@@ -167,12 +192,12 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           <Circle className="w-4 h-4 text-[#D8CBB8] hover:text-[#C7A15F]" />
                         )}
                       </button>
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col">
+                    <div className="py-3 px-4 min-w-0">
+                      <div className="flex flex-col min-w-0">
                         <span
-                          className={`font-semibold text-xs leading-snug ${
+                          className={`font-semibold text-xs leading-snug truncate ${
                             isConcluida
                               ? 'line-through text-[#8F8271]'
                               : 'text-[#1E1A16] group-hover:text-[#8F6F2D]'
@@ -181,31 +206,31 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           {tarefa.titulo}
                         </span>
                         {tarefa.descricao && (
-                          <span className="text-[11px] text-[#8F8271] line-clamp-1 mt-0.5">
+                          <span className="text-[12.5px] text-[#8F8271] line-clamp-1 mt-0.5">
                             {tarefa.descricao}
                           </span>
                         )}
                       </div>
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4">
+                    <div className="py-3 px-4 min-w-0">
                       {tarefa.cliente ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#EEE7DC] text-[#4A4032] border border-[#D8CBB8] truncate max-w-[150px]">
-                          <Building2 className="w-3 h-3 text-[#8F8271]" />
-                          {tarefa.cliente.nomeFantasia}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[12.5px] font-medium bg-[#EEE7DC] text-[#4A4032] border border-[#D8CBB8] truncate max-w-full">
+                          <Building2 className="w-3 h-3 text-[#8F8271] shrink-0" />
+                          <span className="truncate">{tarefa.cliente.nomeFantasia}</span>
                         </span>
                       ) : (
                         <span className="text-[#8F8271] text-xs">—</span>
                       )}
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4">
+                    <div className="py-3 px-4 min-w-0">
                       {tarefa.responsavel ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#24201A] text-[#C7A15F] border border-[#C7A15F]/40 flex items-center justify-center text-[9px] font-bold shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-6 h-6 shrink-0 rounded-full bg-[#24201A] text-[#C7A15F] border border-[#C7A15F]/40 flex items-center justify-center text-[11px] font-bold shadow-2xs">
                             {tarefa.responsavel.nome.slice(0, 2).toUpperCase()}
                           </div>
-                          <span className="text-xs font-medium text-[#1E1A16] truncate max-w-[120px]">
+                          <span className="text-xs font-medium text-[#1E1A16] truncate">
                             {tarefa.responsavel.nome}
                           </span>
                         </div>
@@ -214,13 +239,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           <UserIcon className="w-3.5 h-3.5" /> Não atribuído
                         </span>
                       )}
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4">{getPrioridadeBadge(tarefa.prioridade)}</td>
+                    <div className="py-3 px-4">{getPrioridadeBadge(tarefa.prioridade)}</div>
 
-                    <td className="py-3 px-4">{formatPrazo(tarefa.prazo, tarefa.status)}</td>
+                    <div className="py-3 px-4">{formatPrazo(tarefa.prazo, tarefa.status)}</div>
 
-                    <td className="py-3 px-4">
+                    <div className="py-3 px-4">
                       {checklistTotal > 0 ? (
                         <span className="inline-flex items-center gap-1.5 text-xs text-[#625746] font-medium">
                           <CheckSquare className="w-3.5 h-3.5 text-[#C7A15F]" />
@@ -229,47 +254,45 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       ) : (
                         <span className="text-xs text-[#8F8271]">—</span>
                       )}
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <select
-                          value={tarefa.status}
-                          onChange={(e) => onUpdateStatus(tarefa.id, e.target.value as StatusTarefa)}
-                          className={`text-[11px] py-1 px-2.5 rounded-lg border font-semibold outline-none cursor-pointer ${statusInfo.color}`}
-                        >
-                          <option value="BACKLOG">Backlog</option>
-                          <option value="A_FAZER">A Fazer</option>
-                          <option value="EM_ANDAMENTO">Em Andamento</option>
-                          <option value="EM_REVISAO">Em Revisão</option>
-                          <option value="CONCLUIDA">Concluída</option>
-                          <option value="CANCELADA">Cancelada</option>
-                        </select>
+                    <div className="py-3 px-4 flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={tarefa.status}
+                        onChange={(e) => onUpdateStatus(tarefa.id, e.target.value as StatusTarefa)}
+                        className={`text-[12.5px] py-1 px-2.5 rounded-lg border font-semibold outline-none cursor-pointer ${statusInfo.color}`}
+                      >
+                        <option value="BACKLOG">Backlog</option>
+                        <option value="A_FAZER">A Fazer</option>
+                        <option value="EM_ANDAMENTO">Em Andamento</option>
+                        <option value="EM_REVISAO">Em Revisão</option>
+                        <option value="CONCLUIDA">Concluída</option>
+                        <option value="CANCELADA">Cancelada</option>
+                      </select>
 
-                        <button
-                          onClick={() => onSelectTarefa(tarefa)}
-                          title="Abrir detalhes"
-                          className="p-1.5 text-[#8F8271] hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded-md transition-colors cursor-pointer"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </button>
+                      <button
+                        onClick={() => onSelectTarefa(tarefa)}
+                        title="Abrir detalhes"
+                        className="p-1.5 text-[#8F8271] hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded-md transition-colors cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
 
-                        <button
-                          onClick={() => onDeleteTarefa(tarefa.id)}
-                          title="Excluir tarefa"
-                          className="p-1.5 text-[#8F8271] hover:text-[#B83B32] hover:bg-[#B83B32]/10 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      <button
+                        onClick={() => onDeleteTarefa(tarefa.id)}
+                        title="Excluir tarefa"
+                        className="p-1.5 text-[#8F8271] hover:text-[#B83B32] hover:bg-[#B83B32]/10 rounded-md transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -23,3 +23,8 @@ Thumbs.db
 # Scripts de teste locais
 /*.js
 /backend/*.js
+
+# Arquivos temporários e dados locais
+dados/
+coolify*.txt
+dsada.txt

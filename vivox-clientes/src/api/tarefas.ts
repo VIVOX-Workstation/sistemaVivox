@@ -16,7 +16,7 @@ export interface CreateTarefaPayload {
   descricao?: string;
   status?: StatusTarefa;
   prioridade?: PrioridadeTarefa;
-  prazo?: string;
+  prazo?: string | null;
   dataInicio?: string;
   horasEstimadas?: number;
   horasGastas?: number;
@@ -33,9 +33,60 @@ export interface UpdateTarefaPayload extends Partial<CreateTarefaPayload> {
   ordem?: number;
 }
 
+export interface ColunaFiltros {
+  status: string;
+  projetoId?: string;
+  search?: string;
+  prioridade?: PrioridadeTarefa;
+  responsavelId?: string;
+  clienteId?: string;
+  servicoId?: string;
+  skip?: number;
+  take?: number;
+}
+
+export interface ColunaResultado {
+  items: Tarefa[];
+  total: number;
+}
+
+export interface ResumoEtapasFiltros {
+  projetoId?: string;
+  search?: string;
+  prioridade?: PrioridadeTarefa;
+  responsavelId?: string;
+  clienteId?: string;
+  servicoId?: string;
+}
+
+export interface ResumoEtapas {
+  contadoresPorEtapa: Record<string, number>;
+  total: number;
+  emAndamento: number;
+  concluidas: number;
+  urgentes: number;
+}
+
 export const tarefasApi = {
   getTarefas: async (filtros?: TarefaFiltros): Promise<Tarefa[]> => {
     const response = await api.get<Tarefa[]>('/tarefas', { params: filtros });
+    return response.data;
+  },
+
+  // Busca paginada de uma única etapa/coluna do Kanban, usada para carregar
+  // cada coluna sob demanda em vez de trazer o workspace inteiro de uma vez.
+  getColuna: async (filtros: ColunaFiltros): Promise<ColunaResultado> => {
+    const response = await api.get<ColunaResultado>('/tarefas/coluna', { params: filtros });
+    return response.data;
+  },
+
+  getResumoEtapas: async (filtros?: ResumoEtapasFiltros): Promise<ResumoEtapas> => {
+    const response = await api.get<ResumoEtapas>('/tarefas/resumo-etapas', { params: filtros });
+    return response.data;
+  },
+
+  moverEtapa: async (statusOrigem: string, statusDestino: string, projetoId?: string): Promise<{ movidas: number }> => {
+    const response = await api.patch('/tarefas/mover-etapa', { statusOrigem, statusDestino, projetoId });
     return response.data;
   },
 
@@ -79,8 +130,13 @@ export const tarefasApi = {
     return response.data;
   },
 
-  addComentario: async (tarefaId: string, texto: string): Promise<any> => {
-    const response = await api.post(`/tarefas/${tarefaId}/comentarios`, { texto });
+  addComentario: async (tarefaId: string, texto: string, sistema?: boolean): Promise<any> => {
+    const response = await api.post(`/tarefas/${tarefaId}/comentarios`, { texto, sistema });
+    return response.data;
+  },
+
+  setObservadores: async (tarefaId: string, observadorIds: string[]): Promise<Tarefa> => {
+    const response = await api.patch<Tarefa>(`/tarefas/${tarefaId}/observadores`, { observadorIds });
     return response.data;
   },
 
@@ -92,6 +148,22 @@ export const tarefasApi = {
     });
     return response.data;
   },
+
+  importarBitrix: async (file: File, projetoId?: string, etapa?: string): Promise<{ totalLinhas: number, criadas: number, atualizadas: number, ignoradasDuplicadas: number, usuariosCriados: string[] }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (projetoId) {
+      formData.append('projetoId', projetoId);
+    }
+    if (etapa) {
+      formData.append('etapa', etapa);
+    }
+    const response = await api.post('/tarefas/importar-bitrix', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
 
   gerarChecklistIa: async (payload: { titulo: string; descricao?: string; clienteId?: string }): Promise<string[]> => {
     const response = await api.post<string[]>('/tarefas/gerar-checklist-ia', payload);

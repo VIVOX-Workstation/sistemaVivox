@@ -418,6 +418,7 @@ export interface TarefaComentario {
     email: string;
   };
   texto: string;
+  sistema?: boolean;
   createdAt: string;
 }
 
@@ -490,6 +491,11 @@ export interface Tarefa {
   };
   checklist: TarefaChecklist[];
   comentarios?: TarefaComentario[];
+  observadores?: {
+    id: string;
+    nome: string;
+    email: string;
+  }[];
   _count?: {
     checklist: number;
     comentarios: number;

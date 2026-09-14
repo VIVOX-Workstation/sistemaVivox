@@ -108,7 +108,7 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
           <div className="bg-[#FAF7F2] rounded-[11px] border border-dashed border-[#D8CBB8] p-6 text-center">
             <BarChart3 className="w-8 h-8 text-[#847663] mx-auto mb-2 opacity-70" />
             <p className="text-[#1E1A16] font-medium text-xs">Nenhum snapshot de redes sociais registrado para este cliente ainda.</p>
-            <p className="text-[11px] text-[#847663] mt-0.5">Os dados de redes sociais são integrados via relatórios do Instagram e Reportei.</p>
+            <p className="text-[12.5px] text-[#847663] mt-0.5">Os dados de redes sociais são integrados via relatórios do Instagram e Reportei.</p>
           </div>
         )}
       </div>
@@ -124,13 +124,13 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
           <div className="bg-[#FAF7F2] p-4 rounded-[11px] border border-[#D8CBB8] h-full">
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-[#847663] uppercase tracking-wider mb-1 block">Padrão Visual & Identidade</label>
+                <label className="text-[12px] font-bold text-[#847663] uppercase tracking-wider mb-1 block">Padrão Visual & Identidade</label>
                 <p className="text-xs text-[#1E1A16] bg-[#FFFDF8] p-3 rounded-lg border border-[#D8CBB8] shadow-2xs">
                   O cliente tem mantido uma consistência de paleta, mas as fontes das artes poderiam ter mais peso. A leitura no mobile está levemente prejudicada.
                 </p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#847663] uppercase tracking-wider mb-1 block">O que deu mais certo?</label>
+                <label className="text-[12px] font-bold text-[#847663] uppercase tracking-wider mb-1 block">O que deu mais certo?</label>
                 <p className="text-xs text-[#1E1A16] bg-[#FFFDF8] p-3 rounded-lg border border-[#D8CBB8] shadow-2xs">
                   Vídeos curtos estilo "Bastidores" e "Dicas Rápidas" superaram as artes estáticas em 300% de alcance orgânico.
                 </p>
@@ -162,12 +162,12 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
                 <div key={idx} className="bg-[#FFFDF8] p-4 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-all flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4] text-[10px] font-bold flex items-center justify-center shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4] text-[12px] font-bold flex items-center justify-center shrink-0">
                         #{idx + 1}
                       </span>
                       <h4 className="font-bold text-[#1E1A16] text-xs">{t.titulo}</h4>
                     </div>
-                    <span className="text-[10px] font-bold text-[#8A6828] bg-[#FAF2E4] px-2 py-0.5 rounded-full border border-[#E8D4B4] shrink-0">
+                    <span className="text-[12px] font-bold text-[#8A6828] bg-[#FAF2E4] px-2 py-0.5 rounded-full border border-[#E8D4B4] shrink-0">
                       {t.formato || 'Reels / Post'}
                     </span>
                   </div>
@@ -178,14 +178,14 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
 
                   {t.gancho && (
                     <div className="ml-7 bg-[#FAF6F0] border border-[#E5D9C8] rounded-lg p-2">
-                      <span className="text-[9px] font-bold text-[#8A6828] uppercase tracking-wider block mb-0.5">
+                      <span className="text-[11px] font-bold text-[#8A6828] uppercase tracking-wider block mb-0.5">
                         Gancho Recomendado (Hook):
                       </span>
                       <p className="text-xs text-[#1E1A16] italic font-medium">"{t.gancho}"</p>
                     </div>
                   )}
 
-                  <div className="ml-7 flex items-center justify-between text-[11px] pt-1 border-t border-[#EEE7DC]">
+                  <div className="ml-7 flex items-center justify-between text-[12.5px] pt-1 border-t border-[#EEE7DC]">
                     <span className="text-[#847663]">Impacto: {t.impacto}</span>
                     <span className="font-bold text-[#247A4A] flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" /> Alta Demanda
@@ -246,11 +246,11 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-[#1E1A16] text-sm">{op.servicoSugerido.replace(/_/g, ' ')}</span>
                     {op.origem === 'calculada' ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#1A73E8] border border-[#1A73E8]/30" title="Sugestão gerada automaticamente com base nos serviços faltantes">
+                      <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#1A73E8] border border-[#1A73E8]/30" title="Sugestão gerada automaticamente com base nos serviços faltantes">
                         Calculada / Sugerida
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F4EA] text-[#137333] border border-[#137333]/30" title="Oportunidade real persistida no banco de dados">
+                      <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-[#E6F4EA] text-[#137333] border border-[#137333]/30" title="Oportunidade real persistida no banco de dados">
                         Persistida
                       </span>
                     )}
@@ -258,7 +258,7 @@ export function AnalyticsTab({ cliente, onClienteUpdated }: Props) {
                   <p className="text-xs text-[#625746] mb-4">{op.justificativa}</p>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-[#EEE7DC]">
-                  <span className="text-[10px] font-bold text-[#847663] bg-[#FAF2E4] px-2 py-1 rounded">Status: {op.status}</span>
+                  <span className="text-[12px] font-bold text-[#847663] bg-[#FAF2E4] px-2 py-1 rounded">Status: {op.status}</span>
                 </div>
               </div>
             ))}

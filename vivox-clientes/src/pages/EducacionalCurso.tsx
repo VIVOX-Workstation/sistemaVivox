@@ -274,7 +274,7 @@ export function EducacionalCurso() {
                                 {aulaIndex + 1}. {aula.titulo}
                               </div>
                               {aula.duracaoSeg ? (
-                                <div className="text-[10px] font-semibold text-[#8F8271] mt-0.5">
+                                <div className="text-[12px] font-semibold text-[#8F8271] mt-0.5">
                                   {Math.floor(aula.duracaoSeg / 60)} min
                                 </div>
                               ) : null}

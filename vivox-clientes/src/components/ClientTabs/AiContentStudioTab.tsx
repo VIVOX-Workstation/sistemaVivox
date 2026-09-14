@@ -140,7 +140,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
               <h2 className="text-base font-bold text-[#F6F0E7] tracking-tight">
                 Estúdio de Criação de Marketing (IA)
               </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#24201A] text-[#C7A15F] border border-[#3E3529]">
+              <span className="text-[12px] font-bold px-2 py-0.5 rounded bg-[#24201A] text-[#C7A15F] border border-[#3E3529]">
                 Especialista: {cliente.nomeFantasia}
               </span>
             </div>
@@ -184,7 +184,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
                     <div>
                       <div className="text-xs font-bold mt-1.5 leading-tight">{opt.title}</div>
                       <div
-                        className={`text-[10px] mt-0.5 line-clamp-2 ${
+                        className={`text-[12px] mt-0.5 line-clamp-2 ${
                           tipo === opt.id ? 'text-[#8F8271]' : 'text-[#847663]'
                         }`}
                       >
@@ -214,7 +214,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-[#1E1A16] block mb-1">
+                  <label className="text-[12.5px] font-bold text-[#1E1A16] block mb-1">
                     Objetivo Estratégico
                   </label>
                   <input
@@ -227,7 +227,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-[#1E1A16] block mb-1">
+                  <label className="text-[12.5px] font-bold text-[#1E1A16] block mb-1">
                     Especificação de Formato
                   </label>
                   <input
@@ -241,7 +241,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#1E1A16] block mb-1">
+                <label className="text-[12.5px] font-bold text-[#1E1A16] block mb-1">
                   Instruções Extras / Observações (Opcional)
                 </label>
                 <textarea
@@ -339,7 +339,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
                   <p className="text-xs font-bold text-[#1E1A16]">
                     O Agente Especialista está redigindo o conteúdo...
                   </p>
-                  <p className="text-[11px] text-[#847663]">
+                  <p className="text-[12.5px] text-[#847663]">
                     Aplicando diretrizes de marca, ganchos de conversão e tom de voz.
                   </p>
                 </div>
@@ -351,7 +351,7 @@ export const AiContentStudioTab: React.FC<AiContentStudioTabProps> = ({ cliente 
                 <div className="text-center py-16 text-[#847663] space-y-2">
                   <Wand2 className="w-8 h-8 text-[#C7A15F] mx-auto opacity-75" />
                   <p className="text-xs font-semibold text-[#1E1A16]">Nenhum conteúdo gerado ainda.</p>
-                  <p className="text-[11px] max-w-sm mx-auto">
+                  <p className="text-[12.5px] max-w-sm mx-auto">
                     Selecione o formato ao lado, digite o tema desejado e clique em "Gerar Conteúdo com Especialista IA".
                   </p>
                 </div>

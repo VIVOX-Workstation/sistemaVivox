@@ -164,7 +164,7 @@ export const ChamadoModal: React.FC<ChamadoModalProps> = ({
                 <span className="text-sm font-black text-[#8F8271] uppercase tracking-wider flex items-center gap-1">
                   <Hash className="w-4 h-4" /> {ticketNum}
                 </span>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border flex items-center gap-1.5 shadow-2xs ${statusInfo.color}`}>
+                <span className={`px-2.5 py-1 rounded-full text-[12px] font-black uppercase tracking-wider border flex items-center gap-1.5 shadow-2xs ${statusInfo.color}`}>
                   <StatusIcon className="w-3 h-3" />
                   {statusInfo.label}
                 </span>
@@ -182,19 +182,19 @@ export const ChamadoModal: React.FC<ChamadoModalProps> = ({
               </p>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {chamado.categoria && (
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#E5D9C8] text-[#625746] flex items-center gap-1.5">
+                  <span className="px-2.5 py-1 rounded-full text-[12px] font-black uppercase tracking-wider bg-[#E5D9C8] text-[#625746] flex items-center gap-1.5">
                     <Tag className="w-3 h-3" />
                     {categoriaLabels[chamado.categoria] || chamado.categoria}
                   </span>
                 )}
                 {chamado.urgencia && (
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${urgenciaConfig[chamado.urgencia]?.color}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-[12px] font-black uppercase tracking-wider flex items-center gap-1.5 ${urgenciaConfig[chamado.urgencia]?.color}`}>
                     <Flame className="w-3 h-3" />
                     {urgenciaConfig[chamado.urgencia]?.label}
                   </span>
                 )}
                 {slaInfo.estado !== 'sem_sla' && (
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${slaInfo.color}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-[12px] font-black uppercase tracking-wider ${slaInfo.color}`}>
                     {slaInfo.label}
                   </span>
                 )}
@@ -252,7 +252,7 @@ export const ChamadoModal: React.FC<ChamadoModalProps> = ({
               <p className="text-sm text-[#625746] whitespace-pre-wrap">{chamado.descricaoProblema}</p>
             )}
             {chamado.slaVencimento && (
-              <div className="flex items-center gap-4 text-[11px] font-bold text-[#8F8271]">
+              <div className="flex items-center gap-4 text-[12.5px] font-bold text-[#8F8271]">
                 <span>
                   Prazo SLA: {format(new Date(chamado.slaVencimento), "dd MMM, yyyy 'às' HH:mm", { locale: ptBR })}
                 </span>
@@ -263,7 +263,7 @@ export const ChamadoModal: React.FC<ChamadoModalProps> = ({
             )}
             {chamado.anexos.length > 0 && (
               <div>
-                <span className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                <span className="text-[12.5px] font-bold text-[#8F8271] uppercase tracking-wider flex items-center gap-1.5 mb-2">
                   <Paperclip className="w-3.5 h-3.5" />
                   Anexos
                 </span>
@@ -313,7 +313,7 @@ export const ChamadoModal: React.FC<ChamadoModalProps> = ({
                       {isSystem ? (
                         <div className="flex flex-col gap-1">
                           <p className="text-sm font-bold text-[#625746]">{comentario.texto}</p>
-                          <span className="text-[10px] font-bold text-[#8F8271] flex items-center gap-1">
+                          <span className="text-[12px] font-bold text-[#8F8271] flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {format(new Date(comentario.createdAt), "dd MMM, HH:mm", { locale: ptBR })}
                           </span>
@@ -325,7 +325,7 @@ export const ChamadoModal: React.FC<ChamadoModalProps> = ({
                               <User className="w-3 h-3 text-[#C7A15F]" />
                               {comentario.autor?.nome || 'Usuário'}
                             </span>
-                            <span className="text-[10px] font-bold text-[#8F8271]">
+                            <span className="text-[12px] font-bold text-[#8F8271]">
                               {format(new Date(comentario.createdAt), "dd MMM, HH:mm", { locale: ptBR })}
                             </span>
                           </div>

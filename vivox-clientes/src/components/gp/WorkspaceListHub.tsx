@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Projeto, Tarefa } from '../../types';
-import { 
+import { Skeleton } from '../ui/skeleton';
+import {
   Plus, 
   Search, 
   ArrowUpRight, 
@@ -21,15 +22,38 @@ import {
 interface WorkspaceListHubProps {
   workspaces: Projeto[];
   tarefas: Tarefa[];
+  loading?: boolean;
   onSelectWorkspace: (id: string | null) => void;
   onOpenCreateWorkspace: () => void;
   onOpenEditWorkspace: (workspace: Projeto) => void;
   onDeleteWorkspace: (id: string) => void;
 }
 
+const WorkspaceCardSkeleton: React.FC = () => (
+  <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-[28px] p-5 shadow-xs flex flex-col justify-between min-h-[220px]">
+    <div className="flex items-start justify-between gap-3">
+      <Skeleton className="w-12 h-12 rounded-2xl" />
+      <Skeleton className="w-9 h-9 rounded-full" />
+    </div>
+    <div className="my-2 space-y-2.5">
+      <Skeleton className="h-4 w-3/5" />
+      <Skeleton className="h-3 w-4/5" />
+    </div>
+    <div className="pt-3 border-t border-[#E5D9C8] flex items-center justify-between gap-2">
+      <Skeleton className="h-5 w-20 rounded-full" />
+      <div className="flex items-center gap-1">
+        <Skeleton className="w-2 h-2 rounded-full" />
+        <Skeleton className="w-2 h-2 rounded-full" />
+        <Skeleton className="w-2 h-2 rounded-full" />
+      </div>
+    </div>
+  </div>
+);
+
 export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
   workspaces,
   tarefas,
+  loading = false,
   onSelectWorkspace,
   onOpenCreateWorkspace,
   onOpenEditWorkspace,
@@ -107,7 +131,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Demandas</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
                   ↑{workspaces.length}
                 </span>
               </div>
@@ -120,7 +144,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Em Curso</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#FFA800]/20 text-[#B45309] border border-[#FFA800]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#FFA800]/20 text-[#B45309] border border-[#FFA800]/40">
                   ⚡{urgentes}
                 </span>
               </div>
@@ -133,7 +157,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Finalizadas</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#24C16E]/20 text-[#15803D] border border-[#24C16E]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#24C16E]/20 text-[#15803D] border border-[#24C16E]/40">
                   ✓
                 </span>
               </div>
@@ -245,6 +269,13 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
         {/* ========================================================================= */}
         {/* GRID DE CARDS NEO-ORGANIC NO ESTILO EXATO DA REFERÊNCIA                   */}
         {/* ========================================================================= */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <WorkspaceCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
           {/* Card 1 Especial: 'Todos os Workspaces / Pipeline Global' com Degradê Vivox */}
           <div
@@ -280,7 +311,7 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
             {/* Rodapé: Tags em Pílula + Indicador de Pontos de Status */}
             <div className="pt-3 border-t border-[#C7A15F]/20 flex items-center justify-between gap-2 relative z-10">
               <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#C7A15F]/20 text-[#E8D7B8] border border-[#C7A15F]/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[12px] font-bold bg-[#C7A15F]/20 text-[#E8D7B8] border border-[#C7A15F]/30">
                   {totalTarefas} tarefas
                 </span>
               </div>
@@ -377,10 +408,10 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
                 {/* Rodapé: Tags em Pílula + Indicador de Pontos de Status */}
                 <div className="pt-3 border-t border-[#E5D9C8] flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EEE7DC] text-[#4A4032] border border-[#D8CBB8] truncate">
+                    <span className="px-2.5 py-0.5 rounded-full text-[12px] font-bold bg-[#EEE7DC] text-[#4A4032] border border-[#D8CBB8] truncate">
                       {ws.cliente ? ws.cliente.nomeFantasia : 'Interno'}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FAF7F2] text-[#8F8271] border border-[#E5D9C8]">
+                    <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-[#FAF7F2] text-[#8F8271] border border-[#E5D9C8]">
                       {totalWs} {totalWs === 1 ? 'task' : 'tasks'}
                     </span>
                   </div>
@@ -423,12 +454,13 @@ export const WorkspaceListHub: React.FC<WorkspaceListHubProps> = ({
               <h4 className="text-sm font-bold text-[#1E1A16] group-hover:text-[#8F6F2D] transition-colors">
                 Novo Workspace
               </h4>
-              <p className="text-[11px] text-[#8F8271] mt-0.5">
+              <p className="text-[12.5px] text-[#8F8271] mt-0.5">
                 Criar espaço para cliente ou setor
               </p>
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -19,7 +19,7 @@ export function CardHeader({ className, children }: { className?: string; childr
 
 export function CardTitle({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <h3 className={cn('text-[12px] font-[650] leading-[1.3] text-[var(--vivox-text)] tracking-tight', className)}>
+    <h3 className={cn('text-[13.5px] font-[650] leading-[1.3] text-[var(--vivox-text)] tracking-tight', className)}>
       {children}
     </h3>
   );

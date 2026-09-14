@@ -266,7 +266,7 @@ export function StrategyMindMap({ fontes, aiTreeData }: Props) {
       </div>
       
       {/* Dica de controle no rodapé */}
-      <div className="absolute bottom-3 left-4 text-[10px] text-[#A89880] font-mono tracking-wider uppercase pointer-events-none flex items-center gap-2">
+      <div className="absolute bottom-3 left-4 text-[12px] text-[#A89880] font-mono tracking-wider uppercase pointer-events-none flex items-center gap-2">
         <Sparkles className="w-3 h-3 text-[#C7A15F]" />
         Arraste com o mouse para orbitar • Role o scroll para zoom
       </div>

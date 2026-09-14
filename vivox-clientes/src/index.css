@@ -3,6 +3,26 @@
 @import "./design-system/vivox-tokens.css";
 @import "./design-system/vivox-components.css";
 
+/* --- Skeleton (loading placeholders) ------------- */
+@keyframes vivox-skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.vivox-skeleton {
+  background-image: linear-gradient(90deg, #E5D9C8 25%, #F2EADD 37%, #E5D9C8 63%);
+  background-size: 400px 100%;
+  animation: vivox-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+html {
+  font-size: 106.25%; /* Bumps base size from 16px to ~17px for subtle global scaling */
+}
+
 body {
   background-color: var(--vivox-background);
   color: var(--vivox-text);

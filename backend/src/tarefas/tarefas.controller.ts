@@ -18,6 +18,7 @@ import { CreateTarefaDto } from './dto/create-tarefa.dto';
 import { UpdateTarefaDto } from './dto/update-tarefa.dto';
 import { AddChecklistItemDto, UpdateChecklistItemDto } from './dto/checklist.dto';
 import { AddComentarioDto } from './dto/comentario.dto';
+import { SetObservadoresDto } from './dto/observadores.dto';
 import { GerarChecklistIaDto } from './dto/gerar-checklist-ia.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -58,6 +59,65 @@ export class TarefasController {
     return this.tarefasService.getMetricas();
   }
 
+  @Get('coluna')
+  findColuna(
+    @Query('status') status: string,
+    @Query('projetoId') projetoId?: string,
+    @Query('search') search?: string,
+    @Query('prioridade') prioridade?: PrioridadeTarefa,
+    @Query('responsavelId') responsavelId?: string,
+    @Query('clienteId') clienteId?: string,
+    @Query('servicoId') servicoId?: string,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+  ) {
+    if (!status) {
+      throw new BadRequestException('O parâmetro "status" (etapa) é obrigatório');
+    }
+    return this.tarefasService.findColuna({
+      status,
+      projetoId,
+      search,
+      prioridade,
+      responsavelId,
+      clienteId,
+      servicoId,
+      skip: skip !== undefined ? parseInt(skip, 10) : undefined,
+      take: take !== undefined ? parseInt(take, 10) : undefined,
+    });
+  }
+
+  @Get('resumo-etapas')
+  getResumoEtapas(
+    @Query('projetoId') projetoId?: string,
+    @Query('search') search?: string,
+    @Query('prioridade') prioridade?: PrioridadeTarefa,
+    @Query('responsavelId') responsavelId?: string,
+    @Query('clienteId') clienteId?: string,
+    @Query('servicoId') servicoId?: string,
+  ) {
+    return this.tarefasService.getResumoEtapas({
+      projetoId,
+      search,
+      prioridade,
+      responsavelId,
+      clienteId,
+      servicoId,
+    });
+  }
+
+  @Patch('mover-etapa')
+  moverEtapa(
+    @Body('projetoId') projetoId: string | undefined,
+    @Body('statusOrigem') statusOrigem: string,
+    @Body('statusDestino') statusDestino: string,
+  ) {
+    if (!statusOrigem || !statusDestino) {
+      throw new BadRequestException('statusOrigem e statusDestino são obrigatórios');
+    }
+    return this.tarefasService.moverEtapa({ projetoId, statusOrigem, statusDestino });
+  }
+
   @Post('gerar-checklist-ia')
   gerarChecklistIa(@Body() dto: GerarChecklistIaDto) {
     return this.tarefasService.gerarChecklistIa(dto);
@@ -81,7 +141,8 @@ export class TarefasController {
     @Req() req: any,
   ) {
     const usuarioId = req.user?.userId || req.user?.id || req.user?.sub;
-    return this.tarefasService.update(id, updateTarefaDto, usuarioId);
+    const role = req.user?.role;
+    return this.tarefasService.update(id, updateTarefaDto, usuarioId, role);
   }
 
   @Delete(':id')
@@ -120,6 +181,11 @@ export class TarefasController {
     return this.tarefasService.addComentario(id, autorId, dto);
   }
 
+  @Patch(':id/observadores')
+  setObservadores(@Param('id') id: string, @Body() dto: SetObservadoresDto) {
+    return this.tarefasService.setObservadores(id, dto.observadorIds);
+  }
+
   @Post(':id/anexo')
   @UseInterceptors(FileInterceptor('file'))
   async uploadAnexo(
@@ -134,5 +200,18 @@ export class TarefasController {
     const fileUrl = await this.storageService.uploadFile(file, 'tarefas');
     const texto = `📎 Anexo: [${file.originalname}](${fileUrl})`;
     return this.tarefasService.addComentario(id, autorId, { texto });
+  }
+
+  @Post('importar-bitrix')
+  @UseInterceptors(FileInterceptor('file'))
+  async importarBitrix(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('projetoId') projetoId?: string,
+    @Body('etapa') etapa?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado');
+    }
+    return this.tarefasService.importarBitrix(file.buffer, projetoId, etapa);
   }
 }

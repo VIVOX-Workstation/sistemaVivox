@@ -223,11 +223,11 @@ export function FloatingAssistant(props: FloatingAssistantProps) {
                   ? `Especialista: ${clientName || 'Cliente'}`
                   : 'Vivox Master AI'}
               </h3>
-              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#24201A] text-[#C7A15F] border border-[#3A3327]">
+              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[#24201A] text-[#C7A15F] border border-[#3A3327]">
                 {isClientMode ? 'Marketing & Criação' : 'Operações & Relatórios'}
               </span>
             </div>
-            <p className="text-[10px] text-[#8F8271]">
+            <p className="text-[12px] text-[#8F8271]">
               {isClientMode
                 ? 'Conectado ao briefing e inteligência da marca'
                 : 'Visão executiva global da agência'}
@@ -321,20 +321,20 @@ export function FloatingAssistant(props: FloatingAssistantProps) {
                         ),
                         table: ({ node, ...props }) => (
                           <div className="overflow-x-auto my-2 rounded-lg border border-[#3E3529]">
-                            <table className="w-full text-left border-collapse text-[11px]" {...props} />
+                            <table className="w-full text-left border-collapse text-[12.5px]" {...props} />
                           </div>
                         ),
                         thead: ({ node, ...props }) => (
                           <thead className="bg-[#24201A] text-[#C7A15F] border-b border-[#3E3529]" {...props} />
                         ),
                         th: ({ node, ...props }) => (
-                          <th className="p-2 font-bold text-[10px] uppercase tracking-wider" {...props} />
+                          <th className="p-2 font-bold text-[12px] uppercase tracking-wider" {...props} />
                         ),
                         td: ({ node, ...props }) => (
                           <td className="p-2 border-t border-[#2D261E] bg-[#14120E]/40 text-[#E5DCce]" {...props} />
                         ),
                         code: ({ node, ...props }) => (
-                          <code className="bg-[#0E0D0B] text-[#C7A15F] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[#2D261E]" {...props} />
+                          <code className="bg-[#0E0D0B] text-[#C7A15F] px-1.5 py-0.5 rounded text-[12px] font-mono border border-[#2D261E]" {...props} />
                         ),
                         blockquote: ({ node, ...props }) => (
                           <blockquote className="border-l-2 border-[#C7A15F] pl-2.5 my-1 text-[#8F8271] italic text-xs" {...props} />
@@ -348,7 +348,7 @@ export function FloatingAssistant(props: FloatingAssistantProps) {
 
                 {/* Ações da Mensagem (Copiar e Enviar pro Kanban) */}
                 {m.role === 'assistant' && m.content && (
-                  <div className="mt-2.5 pt-2 border-t border-[#29231A] flex items-center justify-between gap-2 text-[10px] text-[#8F8271]">
+                  <div className="mt-2.5 pt-2 border-t border-[#29231A] flex items-center justify-between gap-2 text-[12px] text-[#8F8271]">
                     <span>{m.timestamp || ''}</span>
                     <div className="flex items-center gap-1.5">
                       <button

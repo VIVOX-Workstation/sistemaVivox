@@ -445,16 +445,16 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C7A15F] animate-pulse"></span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
+            <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
               Tráfego & Landing Pages • {cliente.nomeFantasia}
             </span>
             {isRealData ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#247A4A]/25 text-[#4ADE80] border border-[#247A4A]/50 shadow-xs">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#247A4A]/25 text-[#4ADE80] border border-[#247A4A]/50 shadow-xs">
                 <CheckCircle2 className="w-2.5 h-2.5" />
                 Dados Reais OpenPanel · {op?.projectId}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#C7A15F] border border-[#C7A15F]/35">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#C7A15F]/20 text-[#C7A15F] border border-[#C7A15F]/35">
                 Modo Demonstrativo
               </span>
             )}
@@ -504,7 +504,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             <Sparkles className="w-4 h-4 text-[#8A6828]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Origem Principal</p>
+            <p className="text-[12px] font-bold text-[#847663] uppercase tracking-wider">Origem Principal</p>
             <p className="text-xs font-bold text-[#1E1A16] truncate">
               {topCanalNome} ({topCanalPct}%)
             </p>
@@ -516,7 +516,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             <Smartphone className="w-4 h-4 text-[#247A4A]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Mobile Share</p>
+            <p className="text-[12px] font-bold text-[#847663] uppercase tracking-wider">Mobile Share</p>
             <p className="text-xs font-bold text-[#1E1A16] truncate">
               {mobilePct}% dos acessos via celular
             </p>
@@ -528,7 +528,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             <Target className="w-4 h-4 text-[#16A34A]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Taxa Conv. WhatsApp</p>
+            <p className="text-[12px] font-bold text-[#847663] uppercase tracking-wider">Taxa Conv. WhatsApp</p>
             <p className="text-xs font-bold text-[#16A34A] truncate">
               {metricas.taxaConversaoWhats}% ({metricas.whatsappCliques} leads)
             </p>
@@ -540,7 +540,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             <TrendingUp className="w-4 h-4 text-[#8A6828]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#847663] uppercase tracking-wider">Média de Tráfego</p>
+            <p className="text-[12px] font-bold text-[#847663] uppercase tracking-wider">Média de Tráfego</p>
             <p className="text-xs font-bold text-[#1E1A16] truncate">
               ~{mediaDiaria} visitas por dia
             </p>
@@ -561,13 +561,13 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                 <Radio className={`w-3.5 h-3.5 ${(op?.liveVisitors || 0) > 0 ? 'text-[#22C55E]' : 'text-[#8A6828]'}`} />
                 Visitantes Ativos Agora no Site / Landing Pages
               </h3>
-              <span className="text-[10px] text-[#847663] font-mono">Última checagem: {lastUpdatedTime}</span>
+              <span className="text-[12px] text-[#847663] font-mono">Última checagem: {lastUpdatedTime}</span>
             </div>
           </div>
 
           <button
             onClick={() => setAutoRefreshRealtime(!autoRefreshRealtime)}
-            className={`text-[10px] font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer flex items-center gap-1 ${
+            className={`text-[12px] font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer flex items-center gap-1 ${
               autoRefreshRealtime
                 ? 'bg-[#22C55E]/10 border-[#22C55E]/30 text-[#16A34A]'
                 : 'bg-[#FAF7F2] border-[#D8CBB8] text-[#847663]'
@@ -592,7 +592,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#847663] mb-1">
-            <span className="text-[11px] font-semibold">Visualizações</span>
+            <span className="text-[12.5px] font-semibold">Visualizações</span>
             <Eye className="w-3.5 h-3.5 text-[#8A6828]" />
           </div>
           <h3 className="text-xl font-black text-[#1E1A16]">{metricas.visualizacoes.toLocaleString('pt-BR')}</h3>
@@ -600,7 +600,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#847663] mb-1">
-            <span className="text-[11px] font-semibold">Sessões</span>
+            <span className="text-[12.5px] font-semibold">Sessões</span>
             <Activity className="w-3.5 h-3.5 text-[#3b82f6]" />
           </div>
           <h3 className="text-xl font-black text-[#1E1A16]">{metricas.sessoes.toLocaleString('pt-BR')}</h3>
@@ -608,7 +608,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#847663] mb-1">
-            <span className="text-[11px] font-semibold">Visitantes Únicos</span>
+            <span className="text-[12.5px] font-semibold">Visitantes Únicos</span>
             <Users className="w-3.5 h-3.5 text-[#B89455]" />
           </div>
           <h3 className="text-xl font-black text-[#1E1A16]">{metricas.usuarios.toLocaleString('pt-BR')}</h3>
@@ -616,7 +616,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#847663] mb-1">
-            <span className="text-[11px] font-semibold">Páginas/Sessão</span>
+            <span className="text-[12.5px] font-semibold">Páginas/Sessão</span>
             <Layers className="w-3.5 h-3.5 text-[#625746]" />
           </div>
           <h3 className="text-xl font-black text-[#1E1A16]">{metricas.paginasPorSessao}</h3>
@@ -624,7 +624,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#847663] mb-1">
-            <span className="text-[11px] font-semibold">Duração Média</span>
+            <span className="text-[12.5px] font-semibold">Duração Média</span>
             <Clock className="w-3.5 h-3.5 text-[#625746]" />
           </div>
           <h3 className="text-lg font-black text-[#1E1A16] mt-0.5">{metricas.duracaoMedia}</h3>
@@ -632,7 +632,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
         <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#847663] mb-1">
-            <span className="text-[11px] font-semibold">Taxa de Rejeição</span>
+            <span className="text-[12.5px] font-semibold">Taxa de Rejeição</span>
             <AlertCircle className="w-3.5 h-3.5 text-[#B83B32]" />
           </div>
           <h3 className="text-xl font-black text-[#1E1A16]">{metricas.taxaRejeicao}%</h3>
@@ -641,12 +641,12 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
         {/* CARD ESPECIAL: CONVERSÃO DE WHATSAPP */}
         <div className="bg-gradient-to-br from-[#F3FBF6] to-[#FFFDF8] p-3.5 rounded-[11px] border border-[#22C55E]/30 shadow-2xs flex flex-col justify-between col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-[#16A34A] mb-1">
-            <span className="text-[11px] font-bold">Conv. WhatsApp</span>
+            <span className="text-[12.5px] font-bold">Conv. WhatsApp</span>
             <MessageCircle className="w-3.5 h-3.5 text-[#16A34A]" />
           </div>
           <div>
             <h3 className="text-xl font-black text-[#16A34A]">{metricas.taxaConversaoWhats}%</h3>
-            <span className="text-[10px] text-[#847663] font-mono">{metricas.whatsappCliques} cliques</span>
+            <span className="text-[12px] text-[#847663] font-mono">{metricas.whatsappCliques} cliques</span>
           </div>
         </div>
       </div>
@@ -662,7 +662,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
                 Linha do Tempo Diária de Tráfego
               </h3>
-              <p className="text-[10px] text-[#847663]">
+              <p className="text-[12px] text-[#847663]">
                 Pico: <strong>{maxValorGrafico}</strong> • Média diária: <strong>~{mediaDiaria}</strong>
               </p>
             </div>
@@ -672,7 +672,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
           <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-lg border border-[#D8CBB8]/70">
             <button
               onClick={() => setMetricaGrafico('visualizacoes')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer ${
                 metricaGrafico === 'visualizacoes'
                   ? 'bg-[#14120E] text-[#C7A15F] shadow-xs'
                   : 'text-[#625746] hover:text-[#1E1A16]'
@@ -682,7 +682,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             </button>
             <button
               onClick={() => setMetricaGrafico('visitantes')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer ${
                 metricaGrafico === 'visitantes'
                   ? 'bg-[#14120E] text-[#C7A15F] shadow-xs'
                   : 'text-[#625746] hover:text-[#1E1A16]'
@@ -692,7 +692,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             </button>
             <button
               onClick={() => setMetricaGrafico('sessoes')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer ${
                 metricaGrafico === 'sessoes'
                   ? 'bg-[#14120E] text-[#C7A15F] shadow-xs'
                   : 'text-[#625746] hover:text-[#1E1A16]'
@@ -722,14 +722,14 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                   {/* TOOLTIP FLUTUANTE DE ALTA RESOLUÇÃO */}
                   {isHovered && (
                     <div className="absolute -top-20 z-40 bg-[#14120E] text-[#FAF7F2] border border-[#C7A15F]/40 p-2.5 rounded-lg shadow-xl text-left pointer-events-none min-w-[140px] animate-fade-in">
-                      <p className="text-[10px] font-bold text-[#C7A15F] uppercase tracking-wider">{d.dataCompleta}</p>
+                      <p className="text-[12px] font-bold text-[#C7A15F] uppercase tracking-wider">{d.dataCompleta}</p>
                       <p className="text-xs font-black text-[#FAF7F2] mt-0.5">
                         {valor.toLocaleString('pt-BR')}{' '}
-                        <span className="text-[9px] font-normal text-[#D8CBB8]">
+                        <span className="text-[11px] font-normal text-[#D8CBB8]">
                           {metricaGrafico === 'visualizacoes' ? 'views' : metricaGrafico === 'visitantes' ? 'visitantes' : 'sessões'}
                         </span>
                       </p>
-                      <div className="flex items-center gap-2 text-[9px] text-[#A89880] mt-1 pt-1 border-t border-[#2B261F]">
+                      <div className="flex items-center gap-2 text-[11px] text-[#A89880] mt-1 pt-1 border-t border-[#2B261F]">
                         <span>Views: {d.visualizacoes}</span>
                         <span>•</span>
                         <span>Únicos: {d.visitantes}</span>
@@ -738,7 +738,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                   )}
 
                   <span
-                    className={`text-[9px] font-bold mb-1 transition-opacity ${
+                    className={`text-[11px] font-bold mb-1 transition-opacity ${
                       isPico || isHovered ? 'text-[#8A6828] opacity-100' : 'text-[#847663] opacity-0 group-hover:opacity-100'
                     }`}
                   >
@@ -763,7 +763,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
           </div>
 
           {/* DATAS NO EIXO X */}
-          <div className="flex justify-between text-[9px] text-[#847663] font-mono pt-2 overflow-hidden">
+          <div className="flex justify-between text-[11px] text-[#847663] font-mono pt-2 overflow-hidden">
             {timelineData.map((d, index) => (
               <span key={index} className="truncate max-w-[36px] text-center">
                 {d.dia}
@@ -787,7 +787,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
           <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-lg border border-[#D8CBB8]/70 overflow-x-auto">
             <button
               onClick={() => setAbaTrafego('canais')}
-              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap ${
                 abaTrafego === 'canais' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
               }`}
             >
@@ -795,7 +795,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             </button>
             <button
               onClick={() => setAbaTrafego('campanhas')}
-              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
                 abaTrafego === 'campanhas' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
               }`}
             >
@@ -804,7 +804,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             </button>
             <button
               onClick={() => setAbaTrafego('tecnologia')}
-              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
                 abaTrafego === 'tecnologia' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
               }`}
             >
@@ -813,7 +813,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
             </button>
             <button
               onClick={() => setAbaTrafego('localizacao')}
-              className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-md text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
                 abaTrafego === 'localizacao' ? 'bg-[#14120E] text-[#C7A15F] shadow-xs' : 'text-[#625746] hover:text-[#1E1A16]'
               }`}
             >
@@ -844,12 +844,12 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.cor }} />
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-[#1E1A16] truncate">{c.nome}</p>
-                      <p className="text-[10px] text-[#847663]">{c.pageviews.toLocaleString('pt-BR')} visualizações</p>
+                      <p className="text-[12px] text-[#847663]">{c.pageviews.toLocaleString('pt-BR')} visualizações</p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="font-bold text-[#1E1A16] text-xs">{c.porcentagem}%</span>
-                    <p className="text-[9px] text-[#847663] font-mono">{c.sessoes} sessões</p>
+                    <p className="text-[11px] text-[#847663] font-mono">{c.sessoes} sessões</p>
                   </div>
                 </div>
               ))}
@@ -868,10 +868,10 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               <div className="space-y-1.5">
                 {utmSources.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC] text-xs">
-                    <span className="font-mono text-[11px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
+                    <span className="font-mono text-[12.5px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
                     <div className="text-right">
                       <span className="font-bold text-[#1E1A16]">{item.percentage}%</span>
-                      <p className="text-[9px] text-[#847663]">{item.sessions} sessões</p>
+                      <p className="text-[11px] text-[#847663]">{item.sessions} sessões</p>
                     </div>
                   </div>
                 ))}
@@ -887,10 +887,10 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               <div className="space-y-1.5">
                 {utmMediums.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC] text-xs">
-                    <span className="font-mono text-[11px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
+                    <span className="font-mono text-[12.5px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
                     <div className="text-right">
                       <span className="font-bold text-[#1E1A16]">{item.percentage}%</span>
-                      <p className="text-[9px] text-[#847663]">{item.sessions} sessões</p>
+                      <p className="text-[11px] text-[#847663]">{item.sessions} sessões</p>
                     </div>
                   </div>
                 ))}
@@ -906,10 +906,10 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               <div className="space-y-1.5">
                 {utmCampaigns.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 rounded bg-[#FFFDF8] border border-[#EEE7DC] text-xs">
-                    <span className="font-mono text-[11px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
+                    <span className="font-mono text-[12.5px] text-[#8A6828] truncate max-w-[120px]">{item.name}</span>
                     <div className="text-right">
                       <span className="font-bold text-[#1E1A16]">{item.percentage}%</span>
-                      <p className="text-[9px] text-[#847663]">{item.sessions} sessões</p>
+                      <p className="text-[11px] text-[#847663]">{item.sessions} sessões</p>
                     </div>
                   </div>
                 ))}
@@ -935,7 +935,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-bold text-[#1E1A16]">{dev.percentage}%</span>
-                      <p className="text-[9px] text-[#847663]">{dev.sessions} sessões</p>
+                      <p className="text-[11px] text-[#847663]">{dev.sessions} sessões</p>
                     </div>
                   </div>
                 ))}
@@ -954,7 +954,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     <span className="text-xs font-semibold text-[#1E1A16]">{osItem.name}</span>
                     <div className="text-right">
                       <span className="text-xs font-bold text-[#1E1A16]">{osItem.percentage}%</span>
-                      <p className="text-[9px] text-[#847663]">{osItem.sessions} sessões</p>
+                      <p className="text-[11px] text-[#847663]">{osItem.sessions} sessões</p>
                     </div>
                   </div>
                 ))}
@@ -973,7 +973,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     <span className="text-xs font-semibold text-[#1E1A16]">{nav.name}</span>
                     <div className="text-right">
                       <span className="text-xs font-bold text-[#1E1A16]">{nav.percentage}%</span>
-                      <p className="text-[9px] text-[#847663]">{nav.sessions} sessões</p>
+                      <p className="text-[11px] text-[#847663]">{nav.sessions} sessões</p>
                     </div>
                   </div>
                 ))}
@@ -993,7 +993,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                   </div>
                   <div className="text-right">
                     <span className="font-bold text-[#1E1A16]">{c.percentage}%</span>
-                    <p className="text-[9px] text-[#847663]">{c.sessions} sessões</p>
+                    <p className="text-[11px] text-[#847663]">{c.sessions} sessões</p>
                   </div>
                 </div>
               ))}
@@ -1011,7 +1011,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
               <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
                 Páginas & Landing Pages Mais Acessadas
               </h3>
-              <p className="text-[10px] text-[#847663]">Ranking por volume de visualizações e engajamento</p>
+              <p className="text-[12px] text-[#847663]">Ranking por volume de visualizações e engajamento</p>
             </div>
           </div>
 
@@ -1045,7 +1045,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
                 return (
                   <tr key={i} className="hover:bg-[#FAF7F2] transition-colors">
-                    <td className="py-2.5 px-3 font-mono text-[11px] text-[#8A6828] max-w-[240px] truncate">
+                    <td className="py-2.5 px-3 font-mono text-[12.5px] text-[#8A6828] max-w-[240px] truncate">
                       <div className="flex items-center gap-1.5">
                         <span>{p.caminho}</span>
                         {p.caminho.startsWith('http') && (
@@ -1056,7 +1056,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                       </div>
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] border ${p.badgeCor}`}>
+                      <span className={`inline-block px-2 py-0.5 rounded text-[12px] border ${p.badgeCor}`}>
                         {p.tipo}
                       </span>
                     </td>
@@ -1094,18 +1094,18 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                 <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
                   Histórico de Cliques no WhatsApp (Intenção de Compra)
                 </h3>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#22C55E]/15 text-[#16A34A] border border-[#22C55E]/30">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#22C55E]/15 text-[#16A34A] border border-[#22C55E]/30">
                   Taxa {metricas.taxaConversaoWhats}%
                 </span>
               </div>
-              <p className="text-[10px] text-[#847663]">
+              <p className="text-[12px] text-[#847663]">
                 Rastreamento de visitantes que acionaram o botão de contato comercial no site ou LP
               </p>
             </div>
           </div>
           <div className="text-right shrink-0">
             <span className="text-3xl font-black text-[#16A34A]">{whatsappClicksCount}</span>
-            <p className="text-[10px] text-[#847663]">leads/cliques no período</p>
+            <p className="text-[12px] text-[#847663]">leads/cliques no período</p>
           </div>
         </div>
 
@@ -1118,11 +1118,11 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     <ArrowUpRight className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
                     <span>{c.mensagem || c.botao || 'Clique no botão de WhatsApp'}</span>
                   </p>
-                  <p className="text-[10px] text-[#847663] font-mono mt-0.5">
+                  <p className="text-[12px] text-[#847663] font-mono mt-0.5">
                     {[c.cidade, c.dispositivo, c.navegador].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <span className="text-[10px] text-[#847663] shrink-0 whitespace-nowrap">
+                <span className="text-[12px] text-[#847663] shrink-0 whitespace-nowrap">
                   {formatRelativeTime(c.createdAt)}
                 </span>
               </div>
@@ -1168,7 +1168,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                   placeholder="Ex: dra-manuela-cordeiro-lp"
                   className="w-full h-10 px-3 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs font-mono text-[#1E1A16] focus:outline-none focus:border-[#8A6828]"
                 />
-                <span className="text-[10px] text-[#847663] mt-1 block">
+                <span className="text-[12px] text-[#847663] mt-1 block">
                   Visível no dashboard do OpenPanel, na URL ou nas configurações do projeto (slug).
                 </span>
               </div>
@@ -1177,12 +1177,12 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-[#1E1A16]">Credenciais deste cliente</label>
                   {op?.configured ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#247A4A]/10 text-[#247A4A] border border-[#247A4A]/30">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#247A4A]/10 text-[#247A4A] border border-[#247A4A]/30">
                       <CheckCircle2 className="w-2.5 h-2.5" />
                       Configuradas
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#B83B32]/10 text-[#B83B32] border border-[#B83B32]/30">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#B83B32]/10 text-[#B83B32] border border-[#B83B32]/30">
                       <AlertCircle className="w-2.5 h-2.5" />
                       Pendentes
                     </span>
@@ -1191,7 +1191,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#625746] mb-1">Client ID</label>
+                    <label className="block text-[12.5px] font-semibold text-[#625746] mb-1">Client ID</label>
                     <input
                       type="text"
                       value={clientIdInput}
@@ -1201,7 +1201,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#625746] mb-1">Client Secret</label>
+                    <label className="block text-[12.5px] font-semibold text-[#625746] mb-1">Client Secret</label>
                     <input
                       type="password"
                       value={clientSecretInput}
@@ -1211,7 +1211,7 @@ export function ClientPerformanceDashboard({ cliente, onClienteUpdated }: Props)
                     />
                   </div>
                 </div>
-                <span className="text-[10px] text-[#847663] block">
+                <span className="text-[12px] text-[#847663] block">
                   Gerados especificamente para este cliente no painel do OpenPanel (Organization → API Keys).
                 </span>
               </div>

@@ -159,6 +159,7 @@ model User {
   historicoPlanejamento HistoricoServico[]
   tarefasCriadas        Tarefa[]              @relation("TarefaCriador")
   tarefasAtribuidas     Tarefa[]              @relation("TarefaResponsavel")
+  tarefasObservadas     Tarefa[]              @relation("TarefaObservadores")
   projetosGerenciados   Projeto[]             @relation("ProjetoResponsavel")
   comentariosTarefas    TarefaComentario[]
   chamadosProprietario  Chamado[]             @relation("ChamadoProprietario")
@@ -563,6 +564,7 @@ model Tarefa {
   horasGastas    Float?           @default(0)
   tags           String[]         @default([])
   ordem          Int              @default(0)
+  origemBitrixId String?          @unique
 
   // Relações
   autorId       String?
@@ -579,9 +581,10 @@ model Tarefa {
   servicoId String?
   servico   ServicoContratado? @relation(fields: [servicoId], references: [id], onDelete: SetNull)
 
-  checklist   TarefaChecklist[]
-  comentarios TarefaComentario[]
-  chamado     Chamado?
+  checklist    TarefaChecklist[]
+  comentarios  TarefaComentario[]
+  chamado      Chamado?
+  observadores User[]             @relation("TarefaObservadores")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -607,12 +610,13 @@ model TarefaChecklist {
 }
 
 model TarefaComentario {
-  id       String @id @default(uuid())
+  id       String  @id @default(uuid())
   tarefaId String
-  tarefa   Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  tarefa   Tarefa  @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
   autorId  String
-  autor    User   @relation(fields: [autorId], references: [id], onDelete: Cascade)
-  texto    String @db.Text
+  autor    User    @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  texto    String  @db.Text
+  sistema  Boolean @default(false)
 
   createdAt DateTime @default(now())
 

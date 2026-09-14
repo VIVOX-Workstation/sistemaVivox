@@ -301,7 +301,7 @@ export default function LoginVivox({
 
             <div className="relative">
               <div className="h-px w-full bg-[var(--vivox-border)]" />
-              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[var(--vivox-surface)] px-2 text-[11px] uppercase tracking-widest text-[var(--vivox-text-subtle)]">
+              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[var(--vivox-surface)] px-2 text-[12.5px] uppercase tracking-widest text-[var(--vivox-text-subtle)]">
                 ou
               </span>
             </div>
@@ -323,7 +323,7 @@ export default function LoginVivox({
                 Fale com o administrador
               </a>
             </div>
-            <span className="text-[10px] tracking-wide text-[var(--vivox-text-subtle)]">
+            <span className="text-[12px] tracking-wide text-[var(--vivox-text-subtle)]">
               VIVOX — Agência &amp; Produtora
             </span>
           </div>

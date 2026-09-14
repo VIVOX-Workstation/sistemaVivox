@@ -298,7 +298,7 @@ function InnerFlow({ planejamentoId, initialNodes, initialEdges, onSave }: { pla
                   title="Clique ou arraste para adicionar"
                 >
                   {preview}
-                  <span className="text-[11px] mt-2 font-medium text-slate-600">{label}</span>
+                  <span className="text-[12.5px] mt-2 font-medium text-slate-600">{label}</span>
                 </div>
               ))}
             </div>

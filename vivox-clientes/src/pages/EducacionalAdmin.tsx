@@ -78,11 +78,11 @@ function SortableCurso({ curso, onEdit, onDelete }: SortableCursoProps) {
         <h3 className="font-bold text-[#1E1A16] truncate">{curso.titulo}</h3>
         <div className="flex items-center gap-2 mt-1">
           {curso.publicado ? (
-            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#2E7D32] bg-[#E8F5E9] px-2 py-0.5 rounded">
+            <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-[#2E7D32] bg-[#E8F5E9] px-2 py-0.5 rounded">
               <Eye className="w-3 h-3" /> Publicado
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#8F8271] bg-[#F6F0E7] px-2 py-0.5 rounded">
+            <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-[#8F8271] bg-[#F6F0E7] px-2 py-0.5 rounded">
               <EyeOff className="w-3 h-3" /> Rascunho
             </span>
           )}

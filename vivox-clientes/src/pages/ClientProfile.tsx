@@ -44,6 +44,8 @@ import { NotesTab } from '../components/ClientTabs/NotesTab';
 import { MarketTab } from '../components/ClientTabs/MarketTab';
 import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { AiContentStudioTab } from '../components/ClientTabs/AiContentStudioTab';
+import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
+import { chamadosApi } from '../api/chamados';
 
 type Tab = 'overview' | 'services' | 'ai-studio' | 'hosting' | 'market' | 'notes';
 
@@ -55,6 +57,10 @@ export function ClientProfile() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl || 'overview');
   const [copiado, setCopiado] = useState(false);
+
+  // Chamados em aberto deste cliente (contador real da pílula "Demandas")
+  const [chamadosAbertos, setChamadosAbertos] = useState(0);
+  const [isNovoChamadoModalOpen, setNovoChamadoModalOpen] = useState(false);
 
   // Modal para adicionar/editar contato
   const [isContatoModalOpen, setContatoModalOpen] = useState(false);
@@ -102,6 +108,7 @@ export function ClientProfile() {
   useEffect(() => {
     if (id) {
       loadCliente(id);
+      loadChamadosAbertos(id);
     }
   }, [id]);
 
@@ -113,6 +120,18 @@ export function ClientProfile() {
       setBannerUrlInput(response.data.bannerUrl || '');
     } catch (error) {
       console.error("Erro ao carregar cliente", error);
+    }
+  };
+
+  const loadChamadosAbertos = async (clienteId: string) => {
+    try {
+      const [abertos, emAndamento] = await Promise.all([
+        chamadosApi.getChamados({ clienteId, status: 'ABERTO' }),
+        chamadosApi.getChamados({ clienteId, status: 'EM_ANDAMENTO' }),
+      ]);
+      setChamadosAbertos(abertos.length + emAndamento.length);
+    } catch (error) {
+      console.error("Erro ao carregar chamados do cliente", error);
     }
   };
 
@@ -340,14 +359,14 @@ export function ClientProfile() {
           {/* Lado Direito: Pílulas de Status, Editar Cadastro, Banner/Logo & Data */}
           <div className="flex items-center gap-2.5 flex-wrap">
             {copiado && (
-              <span className="text-[11px] font-bold text-[#247A4A] flex items-center gap-1 animate-fade-in">
+              <span className="text-[12.5px] font-bold text-[#247A4A] flex items-center gap-1 animate-fade-in">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Link Copiado!
               </span>
             )}
 
             {/* Botão para Criar Chamado */}
             <button
-              onClick={() => alert('Em breve: Modal de Criar Chamado')} // TODO: Integrar modal de chamado
+              onClick={() => setNovoChamadoModalOpen(true)}
               className="px-4 py-2 rounded-full bg-gradient-to-r from-[#181512] to-[#2A241E] text-white text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer hover:scale-105 border border-[#C7A15F]/40"
             >
               <Ticket className="w-3.5 h-3.5 text-[#C7A15F]" />
@@ -423,7 +442,7 @@ export function ClientProfile() {
                 ) : (
                   <div className="w-full h-full bg-gradient-to-r from-[#181512] via-[#2B2319] to-[#1E1A16] flex items-center justify-end pr-5 relative">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#C7A15F_1px,transparent_1px)] [background-size:16px_16px]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#C7A15F]/40 select-none">
+                    <span className="text-[12px] font-black uppercase tracking-widest text-[#C7A15F]/40 select-none">
                       VIVOX BRAND COVER
                     </span>
                   </div>
@@ -433,7 +452,7 @@ export function ClientProfile() {
                 <button
                   onClick={() => fileInputBannerRef.current?.click()}
                   title="Alterar imagem de capa / banner"
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-[#FFFDF8] text-[10px] font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-sm hover:scale-105"
+                  className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-[#FFFDF8] text-[12px] font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-sm hover:scale-105"
                 >
                   <Camera className="w-3.5 h-3.5 text-[#C7A15F]" />
                   <span>{uploadingBanner ? 'Enviando...' : 'Capa'}</span>
@@ -463,7 +482,7 @@ export function ClientProfile() {
                     )}
 
                     {/* Hover Overlay com Ícone de Câmera */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-bold gap-0.5">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-bold gap-0.5">
                       <Camera className="w-4 h-4 text-[#C7A15F]" />
                       <span>{uploadingLogo ? '...' : 'Trocar'}</span>
                     </div>
@@ -544,30 +563,31 @@ export function ClientProfile() {
                   </button>
                 </div>
 
-                {/* Time Slots / Metadata Row (Cores Vivox GP) */}
+                {/* Contrato & Chamados em Aberto (Cores Vivox GP) */}
                 <div className="pt-2">
-                  <span className="text-[11px] font-bold text-[#8F8271] block mb-2">
-                    Time Slots & Contrato
+                  <span className="text-[12.5px] font-bold text-[#8F8271] block mb-2">
+                    Contrato & Demandas
                   </span>
                   <div className="flex items-center justify-between gap-2">
                     {/* Pílula de Data */}
                     <div className="px-4 py-2 rounded-2xl bg-[#FAF7F2] flex items-center gap-2 text-xs font-bold text-[#1E1A16]">
                       <span>
-                        {cliente.dataInicioContrato 
+                        {cliente.dataInicioContrato
                           ? new Date(cliente.dataInicioContrato).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
                           : 'Contrato Ativo'}
                       </span>
                       <CalendarIcon className="w-3.5 h-3.5 text-[#C7A15F]" />
                     </div>
 
-                    {/* Pílula de Demandas (Meetings 3) */}
-                    <div 
+                    {/* Pílula de Chamados em Aberto */}
+                    <div
                       onClick={() => navigate('/gp')}
+                      title="Chamados em aberto ou em andamento"
                       className="px-4 py-2 rounded-2xl bg-[#FAF2E4] hover:bg-[#E8D4B4] transition-colors flex items-center gap-1.5 text-xs font-bold text-[#8A6828] cursor-pointer shadow-2xs"
                     >
-                      <span>Demandas</span>
-                      <span className="w-5 h-5 rounded-full bg-[#181512] text-[#C7A15F] text-[10px] flex items-center justify-center font-bold">
-                        {cliente.contatos?.length || 1}
+                      <span>Chamados</span>
+                      <span className="w-5 h-5 rounded-full bg-[#181512] text-[#C7A15F] text-[12px] flex items-center justify-center font-bold">
+                        {chamadosAbertos}
                       </span>
                     </div>
                   </div>
@@ -579,7 +599,7 @@ export function ClientProfile() {
             <div className="bg-[#FFFDF8] rounded-[28px] p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-1">
                 <h3 className="text-sm font-black text-[#1E1A16] tracking-tight">
-                  Detailed Information
+                  Informações Detalhadas
                 </h3>
                 <button
                   onClick={openEditClientModal}
@@ -600,13 +620,13 @@ export function ClientProfile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">Razão Social</span>
+                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Razão Social</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
                       {cliente.razaoSocial || cliente.nomeFantasia}
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#247A4A]/15 text-[#247A4A] shrink-0">
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-[#247A4A]/15 text-[#247A4A] shrink-0">
                     {cliente.status}
                   </span>
                 </div>
@@ -619,7 +639,7 @@ export function ClientProfile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">CNPJ / CPF</span>
+                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">CNPJ / CPF</span>
                     </div>
                     <p className="font-mono text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
                       {cliente.cnpjCpf || 'Não informado'}
@@ -633,7 +653,7 @@ export function ClientProfile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">Email Address</span>
+                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Email Address</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
                       {cliente.email || primeiroContato?.email || 'Nenhum e-mail'}
@@ -647,7 +667,7 @@ export function ClientProfile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">Contact Number</span>
+                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Telefone de Contato</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
                       {cliente.telefone || primeiroContato?.telefone || 'Não cadastrado'}
@@ -664,7 +684,7 @@ export function ClientProfile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">Localização</span>
+                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Localização</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
                       {cliente.localizacao || 'Não cadastrada'}
@@ -681,7 +701,7 @@ export function ClientProfile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[10px] font-bold text-[#8F8271] uppercase">Segmento</span>
+                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Segmento</span>
                     </div>
                     <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
                       {cliente.segmento || 'Não informado'}
@@ -938,7 +958,7 @@ export function ClientProfile() {
               <button
                 type="button"
                 onClick={() => fileInputLogoRef.current?.click()}
-                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[11px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
+                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12.5px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
               >
                 <UploadCloud className="w-3.5 h-3.5" />
                 <span>{uploadingLogo ? 'Enviando...' : 'Fazer Upload'}</span>
@@ -956,7 +976,7 @@ export function ClientProfile() {
                 )}
               </div>
               <div className="flex-1">
-                <label className="block text-[11px] font-bold text-[#8F8271] mb-1">
+                <label className="block text-[12.5px] font-bold text-[#8F8271] mb-1">
                   Ou cole a URL direta da imagem:
                 </label>
                 <Input
@@ -978,7 +998,7 @@ export function ClientProfile() {
               <button
                 type="button"
                 onClick={() => fileInputBannerRef.current?.click()}
-                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[11px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
+                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12.5px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
               >
                 <UploadCloud className="w-3.5 h-3.5" />
                 <span>{uploadingBanner ? 'Enviando...' : 'Fazer Upload'}</span>
@@ -996,7 +1016,7 @@ export function ClientProfile() {
                 )}
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-[#8F8271] mb-1">
+                <label className="block text-[12.5px] font-bold text-[#8F8271] mb-1">
                   Ou cole a URL direta do banner:
                 </label>
                 <Input
@@ -1074,6 +1094,17 @@ export function ClientProfile() {
           </div>
         </form>
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: NOVO CHAMADO (CENTRAL DE CHAMADOS)                                 */}
+      {/* ========================================================================= */}
+      {isNovoChamadoModalOpen && (
+        <NovoChamadoModal
+          initialClienteId={cliente.id}
+          onClose={() => setNovoChamadoModalOpen(false)}
+          onChamadoCreated={() => loadChamadosAbertos(cliente.id)}
+        />
+      )}
     </div>
   );
 }
