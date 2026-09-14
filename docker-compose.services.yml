@@ -1,0 +1,62 @@
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: vivox-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: vivox
+      MINIO_ROOT_PASSWORD: vivox12345
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - coolify
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: vivox-minio-init
+    depends_on:
+      - minio
+    networks:
+      - coolify
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 vivox vivox12345;
+      mc mb -p local/vivox-media;
+      mc anonymous set download local/vivox-media;
+      exit 0;
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: vivox-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - coolify
+
+  excalidraw-room:
+    image: excalidraw/excalidraw-room:latest
+    container_name: vivox-excalidraw-room
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    environment:
+      CORS_ORIGIN: "*"
+    networks:
+      - coolify
+
+volumes:
+  minio_data:
+  redis_data:
+
+networks:
+  coolify:
+    external: true
