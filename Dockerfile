@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 
 # Instalar dependências essenciais
 RUN apt-get update && apt-get install -y openssl
@@ -8,8 +8,8 @@ WORKDIR /app
 # Copiar os arquivos de pacote
 COPY backend/package*.json ./
 
-# Instalar as dependências
-RUN npm install
+# Instalar as dependências (incluindo devDependencies necessárias pro build)
+RUN npm install --include=dev
 
 # Copiar todo o código do backend
 COPY backend/ .
