@@ -32,24 +32,35 @@ export class UsersService {
     return this.create(createUserDto);
   }
 
-  async seedAdmin(email = 'kelson@vivox.com.br', pass = '123456') {
+  async seedAdmin(email = 'equipevivox@gmail.com', pass = '123456', role: Role = Role.ADMIN, nome = 'Equipe Vivox') {
     const hashedPassword = await bcrypt.hash(pass, 10);
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      await this.prisma.user.update({
+      const updated = await this.prisma.user.update({
         where: { email },
-        data: { senha: hashedPassword },
+        data: {
+          senha: hashedPassword,
+          role,
+          ...(nome ? { nome } : {}),
+        },
       });
-      return { message: `Senha do usuário ${email} atualizada com sucesso para "${pass}"!`, email };
+      return {
+        message: `Usuário ${email} atualizado com sucesso com perfil ${role}!`,
+        user: { id: updated.id, nome: updated.nome, email: updated.email, role: updated.role },
+      };
     }
     const created = await this.prisma.user.create({
       data: {
-        nome: 'Kelson Cosme',
+        nome,
         email,
         senha: hashedPassword,
+        role,
       },
     });
-    return { message: `Usuário ${email} criado com sucesso com a senha "${pass}"!`, email: created.email };
+    return {
+      message: `Usuário ${email} criado com sucesso com a senha "${pass}" e perfil ${role}!`,
+      user: { id: created.id, nome: created.nome, email: created.email, role: created.role },
+    };
   }
 
   findAll() {

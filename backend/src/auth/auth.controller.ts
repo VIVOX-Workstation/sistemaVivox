@@ -1,6 +1,7 @@
 import { Controller, Post, Body, UnauthorizedException, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { Role } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -11,18 +12,18 @@ export class AuthController {
 
   @Post('seed-admin')
   @HttpCode(HttpStatus.OK)
-  async seedAdmin(@Body() req: { email?: string; senha?: string; setupToken?: string }) {
+  async seedAdmin(@Body() req: { email?: string; senha?: string; role?: Role; nome?: string; setupToken?: string }) {
     const setupToken = process.env.SETUP_TOKEN;
     if (!setupToken || req?.setupToken !== setupToken) {
       throw new UnauthorizedException('Token de setup inválido ou não configurado');
     }
 
-    const { email, senha } = req || {};
+    const { email, senha, role, nome } = req || {};
     if (!email || !senha) {
       throw new BadRequestException('Informe email e senha para provisionar o admin');
     }
 
-    return this.usersService.seedAdmin(email, senha);
+    return this.usersService.seedAdmin(email, senha, role || Role.ADMIN, nome);
   }
 
   @Post('login')
