@@ -247,7 +247,7 @@ export function ServicesTab({ cliente }: Props) {
 
                     {/* Widget Vivox GP Integrado */}
                     <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-2.5 mb-2">
-                      <div className="flex items-center justify-between text-[11px] text-stone-200 mb-1.5">
+                      <div className="flex items-center justify-between text-[12.5px] text-stone-200 mb-1.5">
                         <span className="font-semibold flex items-center gap-1.5">
                           <Kanban className="w-3.5 h-3.5 text-[#C7A15F]" />
                           {servicoTarefas.length > 0
@@ -270,7 +270,7 @@ export function ServicesTab({ cliente }: Props) {
                         <button
                           onClick={(e) => handleNavigateToGP(contratado.id, e)}
                           title="Abrir pipeline no Vivox GP"
-                          className="flex-1 py-1 px-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                          className="flex-1 py-1 px-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[12px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                         >
                           <Kanban className="w-3 h-3 text-[#C7A15F]" />
                           <span>Ver no GP</span>
@@ -280,7 +280,7 @@ export function ServicesTab({ cliente }: Props) {
                         <button
                           onClick={(e) => handleOpenCreateTask(contratado.id, e)}
                           title="Criar nova demanda vinculada a este serviço"
-                          className="py-1 px-2.5 rounded-lg bg-[#C7A15F] hover:bg-[#B89455] text-[#1D160B] text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
+                          className="py-1 px-2.5 rounded-lg bg-[#C7A15F] hover:bg-[#B89455] text-[#1D160B] text-[12px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
                         >
                           <Plus className="w-3 h-3" />
                           <span>Demanda</span>
@@ -471,7 +471,7 @@ export function ServicesTab({ cliente }: Props) {
                       <div className="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-[#C7A15F] border-2 border-white shadow-2xs" />
 
                       <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-3 shadow-2xs">
-                        <div className="flex items-center justify-between text-[10px] text-[#8F8271] mb-1">
+                        <div className="flex items-center justify-between text-[12px] text-[#8F8271] mb-1">
                           <span className="font-bold text-[#1E1A16]">
                             {item.usuario?.nome || 'Equipe Vivox'}
                           </span>

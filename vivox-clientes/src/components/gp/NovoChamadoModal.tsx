@@ -86,7 +86,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
             <h3 className="text-sm font-black text-[#1E1A16] uppercase tracking-wider">
               Novo Chamado
             </h3>
-            <span className="text-[11px] text-[#8F8271]">
+            <span className="text-[12.5px] text-[#8F8271]">
               Suporte pós-entrega • Central de Chamados
             </span>
           </div>
@@ -103,7 +103,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
           {/* Cliente e Serviço */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
                 <Building2 className="w-3.5 h-3.5 text-[#8F8271]" />
                 Cliente <span className="text-[#B83B32]">*</span>
               </label>
@@ -126,7 +126,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
                 <FolderKanban className="w-3.5 h-3.5 text-[#8F8271]" />
                 Serviço (opcional)
               </label>
@@ -148,7 +148,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
 
           {/* Título */}
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Título / Assunto <span className="text-[#B83B32]">*</span>
             </label>
             <input
@@ -163,7 +163,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
 
           {/* Descrição */}
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Descrição Detalhada <span className="text-[#B83B32]">*</span>
             </label>
             <textarea
@@ -179,7 +179,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
           {/* Categoria e Urgência */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                 Categoria / Tipo de Problema <span className="text-[#B83B32]">*</span>
               </label>
               <select
@@ -197,7 +197,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                 Urgência / Impacto
               </label>
               <select
@@ -214,7 +214,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
 
           {/* Anexos */}
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
               <Paperclip className="w-3.5 h-3.5 text-[#8F8271]" />
               Anexos (opcional)
             </label>
@@ -226,7 +226,7 @@ export const NovoChamadoModal: React.FC<NovoChamadoModalProps> = ({
               className="w-full text-xs bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg p-2.5 outline-none focus:border-[#C7A15F] file:mr-3 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-[#E5D9C8] file:text-[#1E1A16] file:text-xs file:font-bold"
             />
             {anexos.length > 0 && (
-              <p className="text-[11px] text-[#8F8271] mt-1">{anexos.length} arquivo(s) selecionado(s)</p>
+              <p className="text-[12.5px] text-[#8F8271] mt-1">{anexos.length} arquivo(s) selecionado(s)</p>
             )}
           </div>
 

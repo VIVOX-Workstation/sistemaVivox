@@ -1,15 +1,18 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTarefaDto } from './dto/create-tarefa.dto';
 import { UpdateTarefaDto } from './dto/update-tarefa.dto';
 import { AddChecklistItemDto, UpdateChecklistItemDto } from './dto/checklist.dto';
 import { AddComentarioDto } from './dto/comentario.dto';
+import { SetObservadoresDto } from './dto/observadores.dto';
 import { GerarChecklistIaDto } from './dto/gerar-checklist-ia.dto';
 import { CreateProjetoDto } from './dto/create-projeto.dto';
 import { UpdateProjetoDto } from './dto/update-projeto.dto';
 import { PrioridadeTarefa } from '@prisma/client';
 import { generateText } from 'ai';
 import { groq } from '@ai-sdk/groq';
+import * as bcrypt from 'bcrypt';
+
 
 @Injectable()
 export class TarefasService {
@@ -17,7 +20,25 @@ export class TarefasService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(params: {
+  private readonly tarefaInclude = {
+    responsavel: { select: { id: true, nome: true, email: true } },
+    autor: { select: { id: true, nome: true, email: true } },
+    cliente: { select: { id: true, nomeFantasia: true } },
+    projeto: { select: { id: true, nome: true, cor: true } },
+    servico: { select: { id: true, tipoServico: true, status: true } },
+    checklist: {
+      select: { id: true, titulo: true, concluido: true, ordem: true },
+      orderBy: { ordem: 'asc' as const },
+    },
+    _count: {
+      select: {
+        checklist: true,
+        comentarios: true,
+      },
+    },
+  };
+
+  private buildTarefaWhere(params: {
     search?: string;
     status?: string;
     prioridade?: PrioridadeTarefa;
@@ -44,27 +65,96 @@ export class TarefasService {
     if (projetoId) where.projetoId = projetoId;
     if (servicoId) where.servicoId = servicoId;
 
+    return where;
+  }
+
+  async findAll(params: {
+    search?: string;
+    status?: string;
+    prioridade?: PrioridadeTarefa;
+    responsavelId?: string;
+    clienteId?: string;
+    projetoId?: string;
+    servicoId?: string;
+  }) {
     return this.prisma.tarefa.findMany({
-      where,
-      include: {
-        responsavel: { select: { id: true, nome: true, email: true } },
-        autor: { select: { id: true, nome: true, email: true } },
-        cliente: { select: { id: true, nomeFantasia: true } },
-        projeto: { select: { id: true, nome: true, cor: true } },
-        servico: { select: { id: true, tipoServico: true, status: true } },
-        checklist: {
-          select: { id: true, titulo: true, concluido: true, ordem: true },
-          orderBy: { ordem: 'asc' },
-        },
-        _count: {
-          select: {
-            checklist: true,
-            comentarios: true,
-          },
-        },
-      },
+      where: this.buildTarefaWhere(params),
+      include: this.tarefaInclude,
       orderBy: [{ ordem: 'asc' }, { createdAt: 'desc' }],
     });
+  }
+
+  // Busca paginada de uma única etapa/coluna do Kanban. A etapa (coluna do
+  // quadro) é um valor livre armazenado em `status` — pode ser um dos status
+  // padrão (A_FAZER, EM_ANDAMENTO, CONCLUIDA) ou o id de uma coluna custom
+  // criada pelo usuário (ex: "col_123_producao"). Usado para carregar cada
+  // coluna do Kanban sob demanda, em vez de trazer o workspace inteiro de uma vez.
+  async findColuna(params: {
+    projetoId?: string;
+    status: string;
+    search?: string;
+    prioridade?: PrioridadeTarefa;
+    responsavelId?: string;
+    clienteId?: string;
+    servicoId?: string;
+    skip?: number;
+    take?: number;
+  }) {
+    const { skip = 0, take = 30, ...filtros } = params;
+    const where = this.buildTarefaWhere(filtros);
+
+    const [items, total] = await Promise.all([
+      this.prisma.tarefa.findMany({
+        where,
+        include: this.tarefaInclude,
+        orderBy: [{ ordem: 'asc' }, { createdAt: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.tarefa.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  // Resumo agregado usado pelo cabeçalho do Kanban (contadores das pílulas de
+  // filtro e de cada coluna/etapa), sem precisar carregar as tarefas em si.
+  // Os filtros aqui são os mesmos da busca/pílulas, exceto o status/etapa em
+  // específico — os contadores por etapa cobrem exatamente essa dimensão.
+  async getResumoEtapas(params: {
+    projetoId?: string;
+    search?: string;
+    prioridade?: PrioridadeTarefa;
+    responsavelId?: string;
+    clienteId?: string;
+    servicoId?: string;
+  }) {
+    const where = this.buildTarefaWhere(params);
+
+    const [porEtapa, total, emAndamento, concluidas, urgentes] = await Promise.all([
+      this.prisma.tarefa.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      this.prisma.tarefa.count({ where }),
+      this.prisma.tarefa.count({ where: { ...where, status: 'EM_ANDAMENTO' } }),
+      this.prisma.tarefa.count({ where: { ...where, status: 'CONCLUIDA' } }),
+      this.prisma.tarefa.count({ where: { ...where, prioridade: 'URGENTE' } }),
+    ]);
+
+    const contadoresPorEtapa: Record<string, number> = {};
+    for (const g of porEtapa) contadoresPorEtapa[g.status] = g._count._all;
+
+    return { contadoresPorEtapa, total, emAndamento, concluidas, urgentes };
+  }
+
+  // Move em massa todas as tarefas de uma etapa para outra dentro de um
+  // workspace. Usado ao excluir uma coluna do Kanban que ainda tem tarefas —
+  // sem isso, precisaríamos carregar todos os ids da coluna no cliente só
+  // pra movê-los um a um.
+  async moverEtapa(params: { projetoId?: string; statusOrigem: string; statusDestino: string }) {
+    const { projetoId, statusOrigem, statusDestino } = params;
+    const where: any = { status: statusOrigem };
+    if (projetoId) where.projetoId = projetoId;
+    const result = await this.prisma.tarefa.updateMany({ where, data: { status: statusDestino } });
+    return { movidas: result.count };
   }
 
   async getMetricas() {
@@ -113,6 +203,7 @@ export class TarefasService {
         cliente: { select: { id: true, nomeFantasia: true, logoUrl: true } },
         projeto: { select: { id: true, nome: true, cor: true } },
         servico: { select: { id: true, tipoServico: true, status: true } },
+        observadores: { select: { id: true, nome: true, email: true } },
         checklist: {
           orderBy: { ordem: 'asc' },
         },
@@ -161,10 +252,19 @@ export class TarefasService {
     });
   }
 
-  async update(id: string, dto: UpdateTarefaDto, usuarioId?: string) {
+  async update(id: string, dto: UpdateTarefaDto, usuarioId?: string, role?: string) {
     const tarefaExistente = await this.findOne(id);
 
     const { checklist, prazo, dataInicio, dataConclusao, ...rest } = dto;
+
+    const novoPrazoValue = prazo !== undefined ? (prazo ? new Date(prazo) : null) : undefined;
+    const prazoAtualTs = tarefaExistente.prazo ? tarefaExistente.prazo.getTime() : null;
+    const novoPrazoTs = novoPrazoValue === undefined ? undefined : novoPrazoValue ? novoPrazoValue.getTime() : null;
+    const prazoAlterado = novoPrazoTs !== undefined && novoPrazoTs !== prazoAtualTs;
+
+    if (prazoAlterado && role !== 'ADMIN') {
+      throw new ForbiddenException('Apenas administradores podem alterar o prazo da tarefa.');
+    }
 
     let conclDate = dataConclusao ? new Date(dataConclusao) : undefined;
     if (dto.status === 'CONCLUIDA' && !conclDate) {
@@ -174,7 +274,7 @@ export class TarefasService {
     }
 
     const data: any = { ...rest };
-    if (prazo !== undefined) data.prazo = prazo ? new Date(prazo) : null;
+    if (prazo !== undefined) data.prazo = novoPrazoValue;
     if (dataInicio !== undefined) data.dataInicio = dataInicio ? new Date(dataInicio) : null;
     if (conclDate !== undefined) data.dataConclusao = conclDate;
 
@@ -244,7 +344,46 @@ export class TarefasService {
       }
     }
 
+    // Registra a alteração de prazo no bate-papo da tarefa (apenas admins chegam até aqui)
+    if (prazoAlterado) {
+      try {
+        let autorId = usuarioId;
+        if (!autorId) {
+          const primeiroUsuario = await this.prisma.user.findFirst();
+          autorId = primeiroUsuario?.id;
+        }
+
+        if (autorId) {
+          const texto = novoPrazoValue
+            ? `alterou o prazo para ${this.formatarPrazoPtBr(novoPrazoValue)}.`
+            : 'removeu o prazo da tarefa.';
+
+          await this.prisma.tarefaComentario.create({
+            data: { tarefaId: id, autorId, texto, sistema: true },
+          });
+        }
+      } catch (err) {
+        this.logger.warn('Aviso: não foi possível registrar alteração de prazo no histórico:', err);
+      }
+    }
+
     return tarefaAtualizada;
+  }
+
+  private formatarPrazoPtBr(date: Date): string {
+    const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'America/Sao_Paulo',
+    }).format(date);
+    const horaFormatada = new Intl.DateTimeFormat('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Sao_Paulo',
+    }).format(date);
+    return `${dataFormatada}, ${horaFormatada}`;
   }
 
   async remove(id: string) {
@@ -298,8 +437,27 @@ export class TarefasService {
         tarefaId,
         autorId: userId,
         texto: dto.texto,
+        sistema: dto.sistema ?? false,
       },
       include: {
+        autor: { select: { id: true, nome: true, email: true } },
+      },
+    });
+  }
+
+  async setObservadores(tarefaId: string, observadorIds: string[]) {
+    await this.findOne(tarefaId);
+
+    return this.prisma.tarefa.update({
+      where: { id: tarefaId },
+      data: {
+        observadores: {
+          set: observadorIds.map((id) => ({ id })),
+        },
+      },
+      include: {
+        observadores: { select: { id: true, nome: true, email: true } },
+        responsavel: { select: { id: true, nome: true, email: true } },
         autor: { select: { id: true, nome: true, email: true } },
       },
     });
@@ -343,6 +501,214 @@ Gere o checklist em formato JSON:
       'Revisão interna de qualidade',
       'Aprovação final e entrega',
     ];
+  }
+
+  async importarBitrix(fileBuffer: Buffer, projetoId: string | undefined, etapa?: string) {
+    const htmlContent = fileBuffer.toString('utf-8');
+
+    const tbodyMatch = htmlContent.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
+    if (!tbodyMatch) {
+      return { totalLinhas: 0, criadas: 0, atualizadas: 0, ignoradasDuplicadas: 0, usuariosCriados: [] };
+    }
+
+    const unescapeHtml = (html: string) => {
+      return html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .trim();
+    };
+
+    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let matchRow;
+    const rows: string[][] = [];
+
+    while ((matchRow = trRegex.exec(tbodyMatch[1])) !== null) {
+      const tdsMatch = [...matchRow[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
+      const tds = tdsMatch.map((m) => unescapeHtml(m[1]));
+      if (tds.length >= 31) {
+        rows.push(tds);
+      }
+    }
+
+    const users = await this.prisma.user.findMany();
+    const userMap = new Map<string, string>();
+    users.forEach((u) => userMap.set(u.nome.trim().toLowerCase(), u.id));
+
+    const parseDate = (dateStr: string) => {
+      if (!dateStr) return null;
+      const parts = dateStr.trim().split(/[\s/:]+/);
+      if (parts.length >= 6) {
+        return new Date(
+          parseInt(parts[2]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[0]),
+          parseInt(parts[3]),
+          parseInt(parts[4]),
+          parseInt(parts[5]),
+        );
+      }
+      return null;
+    };
+
+    const usuariosCriados: string[] = [];
+    const resolveUser = async (nomeStr: string) => {
+      if (!nomeStr) return null;
+      const nome = nomeStr.trim();
+      const key = nome.toLowerCase();
+      if (!key) return null;
+
+      if (userMap.has(key)) {
+        return userMap.get(key);
+      }
+
+      const hashSuffix = Math.random().toString(36).substring(2, 8);
+      const slug = key.replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const email = `${slug || 'user'}.bitrix${hashSuffix}@importado.vivox.local`;
+      const randomPassword = Math.random().toString(36).slice(-10);
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      try {
+        const newUser = await this.prisma.user.create({
+          data: {
+            nome: nome,
+            email: email,
+            senha: hashedPassword,
+            role: 'COLABORADOR',
+          },
+        });
+        userMap.set(key, newUser.id);
+        if (!usuariosCriados.includes(nome)) {
+          usuariosCriados.push(nome);
+        }
+        return newUser.id;
+      } catch (e: any) {
+        if (e.code === 'P2002') {
+          const existing = await this.prisma.user.findUnique({ where: { email } });
+          if (existing) {
+            userMap.set(key, existing.id);
+            return existing.id;
+          }
+        }
+        this.logger.error(`Error creating placeholder user ${nome}:`, e);
+        return null;
+      }
+    };
+
+    let totalLinhas = rows.length;
+    let criadas = 0;
+    let atualizadas = 0;
+    let ignoradasDuplicadas = 0;
+
+    for (const tds of rows) {
+      try {
+        const origemBitrixId = tds[0];
+        if (!origemBitrixId) continue;
+
+        const existing = await this.prisma.tarefa.findUnique({ where: { origemBitrixId } });
+        if (existing) {
+          // A tarefa já existe (mesmo origemBitrixId). Se o usuário escolheu uma
+          // etapa de destino explicitamente, isso é um pedido de "mover" a tarefa
+          // para este workspace/etapa, não apenas ignorar. Sem etapa, mantemos o
+          // comportamento antigo de só ignorar duplicidade.
+          if (etapa) {
+            await this.prisma.tarefa.update({
+              where: { origemBitrixId },
+              data: {
+                status: etapa,
+                projetoId: projetoId || existing.projetoId,
+              },
+            });
+            atualizadas++;
+          } else {
+            ignoradasDuplicadas++;
+          }
+          continue;
+        }
+
+        const titulo = tds[1] || 'Sem título';
+        const descricao = tds[2] || '';
+        const prazo = parseDate(tds[4]);
+        const autorStr = tds[5];
+        const responsavelStr = tds[6];
+        const observadoresStr = tds[8];
+        const statusStr = tds[9];
+
+        // "Status" do Bitrix (Pendente/Em andamento/Concluída) não é a mesma coisa
+        // que a etapa/coluna do Kanban aqui no Vivox. Quando o usuário escolhe uma
+        // etapa de destino explicitamente, todas as linhas importadas vão para ela,
+        // ignorando o texto de Status do Bitrix.
+        let status: string;
+        if (etapa) {
+          status = etapa;
+        } else {
+          status = 'A_FAZER';
+          if (statusStr === 'Concluída') status = 'CONCLUIDA';
+          else if (statusStr === 'Em andamento') status = 'EM_ANDAMENTO';
+          else if (statusStr === 'Pendente') status = 'A_FAZER';
+        }
+
+        const createdAt = parseDate(tds[11]) || new Date();
+        const dataInicio = parseDate(tds[12]);
+        const dataConclusao = parseDate(tds[14]);
+        const tags = tds[20] ? tds[20].split(',').map((t) => t.trim()).filter((t) => t) : [];
+
+        const autorId = await resolveUser(autorStr);
+        const responsavelId = await resolveUser(responsavelStr);
+
+        const observadoresIds: string[] = [];
+        if (observadoresStr) {
+          const obsNames = observadoresStr.split(',').map((n) => n.trim()).filter((n) => n);
+          for (const obsName of obsNames) {
+            const obsId = await resolveUser(obsName);
+            if (obsId) {
+              observadoresIds.push(obsId);
+            }
+          }
+        }
+
+        await this.prisma.tarefa.create({
+          data: {
+            origemBitrixId,
+            titulo,
+            descricao,
+            prazo,
+            status,
+            createdAt,
+            dataInicio,
+            dataConclusao,
+            tags,
+            projetoId: projetoId || undefined,
+            autorId: autorId || undefined,
+            responsavelId: responsavelId || undefined,
+            observadores:
+              observadoresIds.length > 0
+                ? {
+                    connect: observadoresIds.map((id) => ({ id })),
+                  }
+                : undefined,
+          },
+        });
+
+        criadas++;
+      } catch (err) {
+        this.logger.error(`Error processing bitrix row ${tds[0]}:`, err);
+        ignoradasDuplicadas++;
+      }
+    }
+
+    return {
+      totalLinhas,
+      criadas,
+      atualizadas,
+      ignoradasDuplicadas,
+      usuariosCriados,
+    };
   }
 
   // ============================================

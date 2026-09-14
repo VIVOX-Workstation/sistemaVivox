@@ -92,7 +92,7 @@ export function ClientList() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Cadastrados</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#C7A15F]/20 text-[#8A6828] border border-[#C7A15F]/40">
                   ↑{ativos}
                 </span>
               </div>
@@ -105,7 +105,7 @@ export function ClientList() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Ativos</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#247A4A]/20 text-[#247A4A] border border-[#247A4A]/30">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#247A4A]/20 text-[#247A4A] border border-[#247A4A]/30">
                   ● ON
                 </span>
               </div>
@@ -118,7 +118,7 @@ export function ClientList() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#8F8271]">Prospects</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#FFA800]/20 text-[#B45309] border border-[#FFA800]/40">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-[#FFA800]/20 text-[#B45309] border border-[#FFA800]/40">
                   ⚡ Pipeline
                 </span>
               </div>
@@ -149,7 +149,7 @@ export function ClientList() {
                       setSearch('');
                       setOpenSearch(false);
                     }}
-                    className="text-[10px] text-[#8F8271] hover:text-[#1E1A16] font-bold ml-1 cursor-pointer"
+                    className="text-[12px] text-[#8F8271] hover:text-[#1E1A16] font-bold ml-1 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -248,7 +248,7 @@ export function ClientList() {
                 {/* Status Pill & Seta ↗ Fixos e Seguros no Canto Superior Direito do Banner */}
                 <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
                   <span
-                    className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-md border shadow-xs ${
+                    className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-md border shadow-xs ${
                       cliente.status === 'ATIVO'
                         ? 'bg-[#247A4A]/85 text-white border-[#247A4A]'
                         : cliente.status === 'PROSPECT'

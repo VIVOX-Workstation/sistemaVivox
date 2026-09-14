@@ -343,7 +343,7 @@ export function GanttChart({ tasks, onAddTask, onUpdateTask, onEditTask, onDelet
               {months.map(m => (
                 <div 
                   key={m.month} 
-                  className="flex-none border-r border-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50/50"
+                  className="flex-none border-r border-slate-100 flex items-center justify-center text-[12px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50/50"
                   style={{ width: `${m.colSpan * CELL_WIDTH}px` }}
                 >
                   {m.month}
@@ -354,7 +354,7 @@ export function GanttChart({ tasks, onAddTask, onUpdateTask, onEditTask, onDelet
               {daysArray.map((d, i) => (
                 <div 
                   key={i} 
-                  className={`flex-none w-[${CELL_WIDTH}px] border-r border-slate-100 flex items-center justify-center text-[10px] ${d.getDay() === 0 || d.getDay() === 6 ? 'text-rose-400 bg-rose-50/30' : 'text-slate-400'}`}
+                  className={`flex-none w-[${CELL_WIDTH}px] border-r border-slate-100 flex items-center justify-center text-[12px] ${d.getDay() === 0 || d.getDay() === 6 ? 'text-rose-400 bg-rose-50/30' : 'text-slate-400'}`}
                   style={{ width: `${CELL_WIDTH}px` }}
                 >
                   {format(d, 'dd')}
@@ -399,7 +399,7 @@ export function GanttChart({ tasks, onAddTask, onUpdateTask, onEditTask, onDelet
                     >
                       {/* Título interno (se a barra for grande o suficiente) */}
                       {width > 60 && (
-                        <div className="px-2 text-[10px] text-white/90 font-medium truncate leading-6 pointer-events-none">
+                        <div className="px-2 text-[12px] text-white/90 font-medium truncate leading-6 pointer-events-none">
                           {task.titulo}
                         </div>
                       )}

@@ -122,7 +122,7 @@ export const TaskDeadlineView: React.FC<TaskDeadlineViewProps> = ({
               </h3>
             </div>
 
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${secao.badgeBg}`}>
+            <span className={`px-2 py-0.5 rounded-full text-[12.5px] font-bold ${secao.badgeBg}`}>
               {secao.items.length}
             </span>
           </div>
@@ -131,7 +131,7 @@ export const TaskDeadlineView: React.FC<TaskDeadlineViewProps> = ({
           <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2.5">
             {secao.items.length === 0 ? (
               <div className="h-28 rounded-xl border border-dashed border-[#D8CBB8] bg-[#FFFDF8]/40 flex flex-col items-center justify-center text-center p-3 text-[#8F8271]">
-                <span className="text-[11px] font-medium">Nenhuma tarefa nesta faixa</span>
+                <span className="text-[12.5px] font-medium">Nenhuma tarefa nesta faixa</span>
               </div>
             ) : (
               secao.items.map((tarefa) => (

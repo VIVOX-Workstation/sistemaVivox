@@ -195,7 +195,7 @@ export function Configuracoes() {
                             <option value="COLABORADOR">COLABORADOR</option>
                           </select>
                         ) : (
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          <span className={`px-2 py-1 rounded text-[12px] font-bold uppercase tracking-wider ${
                             user.role === 'ADMIN' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#F6F0E7] text-[#8F8271]'
                           }`}>
                             {user.role || 'COLABORADOR'}

@@ -109,7 +109,7 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Pré-visualização da Faixa Chevron */}
           <div>
-            <label className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
+            <label className="text-[12.5px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
               Pré-visualização do Cabeçalho
             </label>
             <div
@@ -130,7 +130,7 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({
 
           {/* Nome da Coluna */}
           <div>
-            <label className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
+            <label className="text-[12.5px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
               Nome da Etapa *
             </label>
             <input
@@ -146,7 +146,7 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({
 
           {/* Subtítulo / Descrição Opcional */}
           <div>
-            <label className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
+            <label className="text-[12.5px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
               Subtítulo / Descrição (Opcional)
             </label>
             <input
@@ -160,7 +160,7 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({
 
           {/* Seletor de Cores da Faixa */}
           <div>
-            <label className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider flex items-center gap-1.5 mb-2">
+            <label className="text-[12.5px] font-bold text-[#8F8271] uppercase tracking-wider flex items-center gap-1.5 mb-2">
               <Palette className="w-3.5 h-3.5 text-[#C7A15F]" />
               Cor da Faixa da Coluna
             </label>

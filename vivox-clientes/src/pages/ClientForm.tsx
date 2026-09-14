@@ -194,7 +194,7 @@ export function ClientForm() {
                 value={formData.openpanelProjectId || ''}
                 onChange={handleChange}
               />
-              <p className="text-[11px] text-slate-400 mt-1">Slug do projeto exibido no dashboard do OpenPanel.</p>
+              <p className="text-[12.5px] text-slate-400 mt-1">Slug do projeto exibido no dashboard do OpenPanel.</p>
             </div>
           </div>
         </Card>

@@ -202,10 +202,10 @@ export function PlanningTab({ cliente }: Props) {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C7A15F] animate-pulse"></span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
+            <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#C7A15F]">
               Planejamento Estratégico • {cliente.nomeFantasia}
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#C7A15F]/20 text-[#C7A15F] border border-[#C7A15F]/40">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#C7A15F]/20 text-[#C7A15F] border border-[#C7A15F]/40">
               <ShieldCheck className="w-2.5 h-2.5" />
               Matriz Ativa Q3 / 2026
             </span>
@@ -304,7 +304,7 @@ export function PlanningTab({ cliente }: Props) {
                       <span className="w-7 h-7 rounded-lg bg-[#FAF2E4] border border-[#E8D4B4] text-[#8A6828] text-xs font-black flex items-center justify-center font-mono">
                         {pilar.numero}
                       </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A6828]">
+                      <span className="text-[12px] font-bold uppercase tracking-wider text-[#8A6828]">
                         {pilar.categoria}
                       </span>
                     </div>
@@ -321,7 +321,7 @@ export function PlanningTab({ cliente }: Props) {
                   <div className="space-y-2.5 bg-[#FAF7F2] p-3.5 rounded-lg border border-[#EEE7DC]">
                     {pilar.itens.map((item, idx) => (
                       <div key={idx} className="text-xs">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#847663] block mb-0.5">
+                        <span className="text-[12px] font-bold uppercase tracking-wider text-[#847663] block mb-0.5">
                           {item.rotulo}
                         </span>
                         <p className="text-xs font-medium text-[#1E1A16] leading-snug">
@@ -332,7 +332,7 @@ export function PlanningTab({ cliente }: Props) {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-[#EEE7DC] flex items-center justify-between text-[11px]">
+                <div className="mt-4 pt-3 border-t border-[#EEE7DC] flex items-center justify-between text-[12.5px]">
                   <span className="text-[#847663] font-medium flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-[#247A4A]" />
                     Pilar Validado
@@ -369,14 +369,14 @@ export function PlanningTab({ cliente }: Props) {
               {okrs.map((okr, index) => (
                 <div key={index} className="bg-[#FAF7F2] p-4 rounded-lg border border-[#EEE7DC] flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A6828] block mb-1">
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-[#8A6828] block mb-1">
                       {okr.status}
                     </span>
                     <h4 className="text-xs font-bold text-[#1E1A16] leading-tight mb-2">
                       {okr.titulo}
                     </h4>
                     <div className="flex items-baseline justify-between text-xs mb-1.5">
-                      <span className="text-[#625746] text-[11px]">Meta: <strong>{okr.meta}</strong></span>
+                      <span className="text-[#625746] text-[12.5px]">Meta: <strong>{okr.meta}</strong></span>
                       <span className="font-black text-[#1E1A16] font-mono">{okr.progresso}%</span>
                     </div>
                   </div>
@@ -404,7 +404,7 @@ export function PlanningTab({ cliente }: Props) {
             <div className="bg-[#FFFDF8] rounded-[12px] border border-[#D8CBB8] shadow-xs p-5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#EEE7DC]">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#C7A15F]/15 text-[#8A6828] border border-[#C7A15F]/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[12px] font-bold bg-[#C7A15F]/15 text-[#8A6828] border border-[#C7A15F]/30">
                     TOPO DE FUNIL (60%)
                   </span>
                   <span className="text-xs font-bold text-[#625746]">Atração & Alcance</span>
@@ -420,20 +420,20 @@ export function PlanningTab({ cliente }: Props) {
                 <div className="space-y-2">
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "3 Mitos sobre a Febre do Bebê"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Reels Curto com gancho impactante nos primeiros 3s.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Reels Curto com gancho impactante nos primeiros 3s.</span>
                   </div>
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "O que nunca te contaram sobre o salto dos 3 meses"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Carrossel de 6 lâminas salvável.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Carrossel de 6 lâminas salvável.</span>
                   </div>
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Guia de Primeiros Socorros na Introdução Alimentar"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Vídeo explicativo demonstrando na prática.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Vídeo explicativo demonstrando na prática.</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#EEE7DC] text-[11px] text-[#8A6828] font-bold">
+              <div className="mt-4 pt-3 border-t border-[#EEE7DC] text-[12.5px] text-[#8A6828] font-bold">
                 🎯 Meta: 100k+ impressões orgânicas mensais
               </div>
             </div>
@@ -442,7 +442,7 @@ export function PlanningTab({ cliente }: Props) {
             <div className="bg-[#FFFDF8] rounded-[12px] border border-[#D8CBB8] shadow-xs p-5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#EEE7DC]">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#8A6828]/15 text-[#8A6828] border border-[#8A6828]/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[12px] font-bold bg-[#8A6828]/15 text-[#8A6828] border border-[#8A6828]/30">
                     MEIO DE FUNIL (30%)
                   </span>
                   <span className="text-xs font-bold text-[#625746]">Conexão & Autoridade</span>
@@ -458,20 +458,20 @@ export function PlanningTab({ cliente }: Props) {
                 <div className="space-y-2">
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Por que uma consulta de 1 hora muda tudo"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Bastidores no consultório explicando a metodologia.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Bastidores no consultório explicando a metodologia.</span>
                   </div>
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Relato real de uma mãe sobre a evolução do sono"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Depoimento com antes e depois documentado.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Depoimento com antes e depois documentado.</span>
                   </div>
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Como funciona o suporte contínuo via WhatsApp"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Stories narrativos respondendo dúvidas reais.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Stories narrativos respondendo dúvidas reais.</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#EEE7DC] text-[11px] text-[#8A6828] font-bold">
+              <div className="mt-4 pt-3 border-t border-[#EEE7DC] text-[12.5px] text-[#8A6828] font-bold">
                 🎯 Meta: Aumento de 40% na taxa de engajamento
               </div>
             </div>
@@ -480,7 +480,7 @@ export function PlanningTab({ cliente }: Props) {
             <div className="bg-[#FFFDF8] rounded-[12px] border border-[#D8CBB8] shadow-xs p-5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#EEE7DC]">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#247A4A]/15 text-[#247A4A] border border-[#247A4A]/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[12px] font-bold bg-[#247A4A]/15 text-[#247A4A] border border-[#247A4A]/30">
                     FUNDO DE FUNIL (10%)
                   </span>
                   <span className="text-xs font-bold text-[#247A4A]">Conversão Direta</span>
@@ -496,20 +496,20 @@ export function PlanningTab({ cliente }: Props) {
                 <div className="space-y-2">
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Abertura de Vagas para o Acompanhamento Baby"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Post estático elegante com link direto na Bio/Stories.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Post estático elegante com link direto na Bio/Stories.</span>
                   </div>
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Últimos horários de atendimento da semana"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Sequência de 3 Stories com sticker de WhatsApp.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Sequência de 3 Stories com sticker de WhatsApp.</span>
                   </div>
                   <div className="p-2.5 rounded bg-[#FAF7F2] border border-[#EEE7DC] text-xs">
                     <span className="font-bold text-[#1E1A16] block">📌 "Consulta Pré-Natal Pediátrica para Gestantes"</span>
-                    <span className="text-[11px] text-[#847663]">Formato: Anúncio patrocinado com botão 'Fale Conosco'.</span>
+                    <span className="text-[12.5px] text-[#847663]">Formato: Anúncio patrocinado com botão 'Fale Conosco'.</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#EEE7DC] text-[11px] text-[#247A4A] font-bold">
+              <div className="mt-4 pt-3 border-t border-[#EEE7DC] text-[12.5px] text-[#247A4A] font-bold">
                 🎯 Meta: 25+ novos leads qualificados por semana
               </div>
             </div>
@@ -576,7 +576,7 @@ export function PlanningTab({ cliente }: Props) {
             <div className="bg-[#FAF7F2] rounded-[12px] border border-dashed border-[#D8CBB8] p-8 text-center">
               <BookOpen className="w-8 h-8 text-[#8A6828] mx-auto mb-2 opacity-60" />
               <p className="text-xs font-bold text-[#1E1A16] mb-1">Nenhum briefing ou fonte cadastrada ainda.</p>
-              <p className="text-[11px] text-[#847663] mb-4">Adicione anotações de reuniões, links de sites ou arquivos para alimentar o cérebro estratégico.</p>
+              <p className="text-[12.5px] text-[#847663] mb-4">Adicione anotações de reuniões, links de sites ou arquivos para alimentar o cérebro estratégico.</p>
               <button
                 onClick={() => openModal()}
                 className="px-4 py-2 bg-[#C7A15F] text-[#14120E] text-xs font-bold rounded-lg hover:bg-[#B89455] transition-colors cursor-pointer shadow-xs inline-flex items-center gap-1.5"
@@ -594,7 +594,7 @@ export function PlanningTab({ cliente }: Props) {
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
                         {getSourceIcon(fonte.tipo)}
                         {fonte.tipo}
                       </span>
@@ -627,7 +627,7 @@ export function PlanningTab({ cliente }: Props) {
                     )}
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-[#EEE7DC] flex items-center justify-between text-[10px] text-[#847663]">
+                  <div className="mt-3 pt-2.5 border-t border-[#EEE7DC] flex items-center justify-between text-[12px] text-[#847663]">
                     <span>Sincronizado com RAG IA</span>
                     <span className="text-[#247A4A] font-bold">● Ativo</span>
                   </div>

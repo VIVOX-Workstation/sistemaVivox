@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import type { Tarefa, MetricasTarefas, StatusTarefa, Cliente, Projeto } from '../types';
-import { tarefasApi } from '../api/tarefas';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import type { Tarefa, StatusTarefa, PrioridadeTarefa, Cliente, Projeto } from '../types';
+import { tarefasApi, type ResumoEtapas } from '../api/tarefas';
 import { chamadosApi, type Chamado, type StatusChamado } from '../api/chamados';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +15,7 @@ import { WorkspaceModal } from '../components/gp/WorkspaceModal';
 import { ChamadosBoard } from '../components/gp/ChamadosBoard';
 import { ChamadoModal } from '../components/gp/ChamadoModal';
 import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
+import { ImportBitrixModal } from '../components/gp/ImportBitrixModal';
 import { 
   Kanban, 
   ListTodo, 
@@ -31,7 +32,9 @@ import {
   Clock,
   Layers,
   Sparkles,
-  X
+  X,
+  Upload,
+  Loader2
 } from 'lucide-react';
 
 interface UserOption {
@@ -40,12 +43,23 @@ interface UserOption {
   email: string;
 }
 
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 export const VivoxGP: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClienteId = searchParams.get('clienteId');
   const queryServicoId = searchParams.get('servicoId');
+  const isMinhasTarefas = location.pathname.startsWith('/gp/minhas-tarefas');
 
   const { workspaceId: paramWorkspaceId, tarefaId: paramTarefaId } = useParams<{
     workspaceId?: string;
@@ -56,8 +70,16 @@ export const VivoxGP: React.FC = () => {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [workspaces, setWorkspaces] = useState<Projeto[]>([]);
-  const [metricas, setMetricas] = useState<MetricasTarefas | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const loadVersion = useRef(0);
+
+  // No Pipeline (Kanban), cada coluna busca suas próprias tarefas sob demanda
+  // em vez de depender do array `tarefas` completo — incrementar este sinal
+  // faz o Kanban recarregar todas as colunas do zero (ex: após criar/editar
+  // uma tarefa em outro lugar da tela, ou importar do Bitrix).
+  const [kanbanRefreshSignal, setKanbanRefreshSignal] = useState(0);
+  const [resumoEtapas, setResumoEtapas] = useState<ResumoEtapas | null>(null);
 
   // Filtros
   const [busca, setBusca] = useState('');
@@ -80,6 +102,10 @@ export const VivoxGP: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
 
+  // Importação de tarefas do Bitrix
+  const [isImportingBitrix, setIsImportingBitrix] = useState(false);
+  const [isImportBitrixModalOpen, setIsImportBitrixModalOpen] = useState(false);
+
   // Workspace selecionado
   const selectedWorkspaceId = useMemo(() => {
     if (queryClienteId || queryServicoId) return 'ALL';
@@ -90,33 +116,68 @@ export const VivoxGP: React.FC = () => {
 
   const tarefaSelecionadaId = paramTarefaId || null;
 
-  const carregarDados = async () => {
+  // O Pipeline (Kanban) de um workspace específico carrega suas colunas sob
+  // demanda (ver KanbanBoard) — não precisa do array `tarefas` completo, que
+  // pode ter milhares de itens. As demais visões (Lista, Prazos, Minhas
+  // Tarefas, Central de Chamados, Hub de workspaces) continuam usando o
+  // array completo, como antes.
+  const usaListaCompletaDeTarefas =
+    isMinhasTarefas || !selectedWorkspaceId || selectedWorkspaceId === 'ALL' || visao !== 'kanban';
+
+  const carregarDados = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
+    setLoadError(false);
     try {
-      const [tarefasData, chamadosData, workspacesData, metricasData, usersRes, clientesRes] = await Promise.all([
-        tarefasApi.getTarefas(),
-        chamadosApi.getChamados().catch(() => []),
+      const [tarefasData, chamadosData, workspacesData, clientesRes] = await Promise.all([
+        usaListaCompletaDeTarefas
+          ? tarefasApi.getTarefas({
+              projetoId: selectedWorkspaceId && selectedWorkspaceId !== 'ALL' ? selectedWorkspaceId : undefined,
+              responsavelId: isMinhasTarefas ? user?.id : undefined,
+              clienteId: queryClienteId || undefined,
+              servicoId: queryServicoId || undefined,
+            })
+          : Promise.resolve([]),
+        selectedWorkspaceId === 'ALL' ? chamadosApi.getChamados().catch(() => []) : Promise.resolve([]),
         tarefasApi.getProjetos().catch(() => []),
-        tarefasApi.getMetricas().catch(() => null),
-        api.get<UserOption[]>('/users').catch(() => ({ data: [] })),
-        api.get<Cliente[]>('/clientes').catch(() => ({ data: [] })),
+        selectedWorkspaceId === 'ALL'
+          ? api.get<Cliente[]>('/clientes').catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] }),
       ]);
 
+      if (version !== loadVersion.current) return;
       setTarefas(tarefasData);
       setChamados(chamadosData);
       setWorkspaces(workspacesData);
-      setMetricas(metricasData);
-      setUsuarios(usersRes.data || []);
       setClientes(clientesRes.data || []);
+      // Também sinaliza para o Kanban recarregar suas colunas, caso esteja
+      // ativo — cobre casos como criar/editar/excluir tarefa ou importar.
+      setKanbanRefreshSignal((s) => s + 1);
     } catch (err) {
+      if (version !== loadVersion.current) return;
+      setLoadError(true);
       console.error('Erro ao carregar dados do Vivox GP:', err);
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
-  };
+  }, [selectedWorkspaceId, isMinhasTarefas, user?.id, queryClienteId, queryServicoId, usaListaCompletaDeTarefas]);
+
+  const invalidatePendingLoad = useCallback(() => {
+    loadVersion.current++;
+  }, []);
 
   useEffect(() => {
+    setTarefas([]);
     carregarDados();
+    return invalidatePendingLoad;
+  }, [carregarDados, invalidatePendingLoad]);
+
+  useEffect(() => {
+    let active = true;
+    api.get<UserOption[]>('/users').then(res => {
+      if (active) setUsuarios(res.data || []);
+    }).catch(() => {});
+    return () => { active = false; };
   }, []);
 
   const handleSelectWorkspace = (id: string | null) => {
@@ -129,18 +190,22 @@ export const VivoxGP: React.FC = () => {
     }
   };
 
-  const handleSelectTarefa = (t: Tarefa) => {
-    if (selectedWorkspaceId && selectedWorkspaceId !== 'ALL') {
+  const handleSelectTarefa = useCallback((t: Tarefa) => {
+    if (isMinhasTarefas) {
+      navigate(`/gp/minhas-tarefas/tarefa/${t.id}`);
+    } else if (selectedWorkspaceId && selectedWorkspaceId !== 'ALL') {
       navigate(`/gp/workspace/${selectedWorkspaceId}/tarefa/${t.id}`);
     } else if (selectedWorkspaceId === 'ALL') {
       navigate(`/gp/workspace/all/tarefa/${t.id}`);
     } else {
       navigate(`/gp/tarefa/${t.id}`);
     }
-  };
+  }, [isMinhasTarefas, selectedWorkspaceId, navigate]);
 
   const handleCloseTaskModal = () => {
-    if (selectedWorkspaceId && selectedWorkspaceId !== 'ALL') {
+    if (isMinhasTarefas) {
+      navigate('/gp/minhas-tarefas');
+    } else if (selectedWorkspaceId && selectedWorkspaceId !== 'ALL') {
       navigate(`/gp/workspace/${selectedWorkspaceId}`);
     } else if (selectedWorkspaceId === 'ALL') {
       navigate(`/gp/workspace/all`);
@@ -150,25 +215,21 @@ export const VivoxGP: React.FC = () => {
   };
 
   const handleUpdateStatus = async (tarefaId: string, novoStatus: StatusTarefa) => {
+    const version = loadVersion.current;
     setTarefas((prev) =>
       prev.map((t) => (t.id === tarefaId ? { ...t, status: novoStatus } : t))
     );
 
     try {
       await tarefasApi.updateTarefa(tarefaId, { status: novoStatus });
-      const [metricasAtualizadas, workspacesAtualizados] = await Promise.all([
-        tarefasApi.getMetricas().catch(() => null),
-        tarefasApi.getProjetos().catch(() => []),
-      ]);
-      if (metricasAtualizadas) setMetricas(metricasAtualizadas);
-      if (workspacesAtualizados.length > 0) setWorkspaces(workspacesAtualizados);
     } catch (err) {
       console.error('Erro ao atualizar status da tarefa:', err);
-      carregarDados();
+      if (version === loadVersion.current) carregarDados();
     }
   };
 
   const handleUpdateChamadoStatus = async (chamadoId: string, novoStatus: StatusChamado) => {
+    const version = loadVersion.current;
     setChamados((prev) =>
       prev.map((c) => (c.id === chamadoId ? { ...c, status: novoStatus } : c))
     );
@@ -176,7 +237,7 @@ export const VivoxGP: React.FC = () => {
       await chamadosApi.updateChamado(chamadoId, { status: novoStatus });
     } catch (err) {
       console.error('Erro ao atualizar status do chamado:', err);
-      carregarDados();
+      if (version === loadVersion.current) carregarDados();
     }
   };
 
@@ -185,8 +246,6 @@ export const VivoxGP: React.FC = () => {
     try {
       await tarefasApi.deleteTarefa(tarefaId);
       setTarefas((prev) => prev.filter((t) => t.id !== tarefaId));
-      const metricasAtualizadas = await tarefasApi.getMetricas().catch(() => null);
-      if (metricasAtualizadas) setMetricas(metricasAtualizadas);
     } catch (err) {
       console.error('Erro ao excluir tarefa:', err);
     }
@@ -212,6 +271,26 @@ export const VivoxGP: React.FC = () => {
     }
   };
 
+  const handleImportBitrix = async (file: File, etapa?: string) => {
+    if (!selectedWorkspaceId || selectedWorkspaceId === 'ALL') return;
+
+    try {
+      setIsImportingBitrix(true);
+      const res = await tarefasApi.importarBitrix(file, selectedWorkspaceId, etapa);
+
+      const msg = `${res.criadas} tarefas novas importadas.\n${res.atualizadas} já existiam e foram movidas para esta etapa.\n${res.ignoradasDuplicadas} já existiam e foram ignoradas (nenhuma etapa selecionada).\n${res.usuariosCriados?.length ? `Novos usuários: ${res.usuariosCriados.join(', ')}` : ''}`;
+      window.alert(`Importação concluída!\n\n${msg}`);
+
+      setIsImportBitrixModalOpen(false);
+      carregarDados();
+    } catch (err: any) {
+      console.error(err);
+      window.alert('Erro ao importar: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsImportingBitrix(false);
+    }
+  };
+
   const activeWorkspace = useMemo(() => {
     if (!selectedWorkspaceId || selectedWorkspaceId === 'ALL') return null;
     return workspaces.find((w) => w.id === selectedWorkspaceId) || null;
@@ -219,7 +298,12 @@ export const VivoxGP: React.FC = () => {
 
   // Filtragem de Tarefas
   const tarefasFiltradas = useMemo(() => {
+    const termoBusca = busca.toLowerCase();
     return tarefas.filter((t) => {
+      if (isMinhasTarefas) {
+        if (!user || t.responsavelId !== user.id) return false;
+      }
+
       if (selectedWorkspaceId && selectedWorkspaceId !== 'ALL') {
         if (t.projetoId !== selectedWorkspaceId) return false;
       }
@@ -234,9 +318,9 @@ export const VivoxGP: React.FC = () => {
 
       if (busca.trim()) {
         const matchBusca =
-          t.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-          (t.descricao && t.descricao.toLowerCase().includes(busca.toLowerCase())) ||
-          (t.cliente && t.cliente.nomeFantasia.toLowerCase().includes(busca.toLowerCase()));
+          t.titulo.toLowerCase().includes(termoBusca) ||
+          (t.descricao && t.descricao.toLowerCase().includes(termoBusca)) ||
+          (t.cliente && t.cliente.nomeFantasia.toLowerCase().includes(termoBusca));
         if (!matchBusca) return false;
       }
 
@@ -266,15 +350,49 @@ export const VivoxGP: React.FC = () => {
 
       return true;
     });
-  }, [tarefas, selectedWorkspaceId, queryClienteId, queryServicoId, busca, apenasMinhas, user, filtroResponsavel, filtroPrioridade, filtroStatusRapido]);
+  }, [tarefas, selectedWorkspaceId, isMinhasTarefas, queryClienteId, queryServicoId, busca, apenasMinhas, user, filtroResponsavel, filtroPrioridade, filtroStatusRapido]);
 
-  // Se nenhum workspace estiver na URL (e não estiver abrindo uma tarefa), exibe o Hub
-  if (selectedWorkspaceId === null && !tarefaSelecionadaId) {
+  // Filtros repassados ao Kanban para cada coluna buscar sua própria página
+  // de tarefas. A busca por texto é debounced pra não disparar uma requisição
+  // por coluna a cada tecla digitada.
+  const buscaDebounced = useDebouncedValue(busca, 350);
+  const kanbanFiltros = useMemo(() => ({
+    search: buscaDebounced.trim() || undefined,
+    responsavelId: apenasMinhas ? user?.id : filtroResponsavel || undefined,
+    prioridade: filtroStatusRapido === 'urgentes' ? ('URGENTE' as const) : ((filtroPrioridade || undefined) as PrioridadeTarefa | undefined),
+    statusExato: filtroStatusRapido === 'em_andamento' ? 'EM_ANDAMENTO' : filtroStatusRapido === 'concluidas' ? 'CONCLUIDA' : undefined,
+  }), [buscaDebounced, apenasMinhas, user?.id, filtroResponsavel, filtroPrioridade, filtroStatusRapido]);
+
+  // Estatísticas do cabeçalho (pílulas + números grandes) quando o Kanban
+  // está no modo leve: vêm de um resumo agregado do servidor em vez de serem
+  // calculadas sobre o array completo de tarefas (que não é carregado aqui).
+  useEffect(() => {
+    if (usaListaCompletaDeTarefas) {
+      setResumoEtapas(null);
+      return;
+    }
+    let active = true;
+    tarefasApi.getResumoEtapas({
+      projetoId: selectedWorkspaceId && selectedWorkspaceId !== 'ALL' ? selectedWorkspaceId : undefined,
+      search: buscaDebounced.trim() || undefined,
+      responsavelId: apenasMinhas ? user?.id : filtroResponsavel || undefined,
+      prioridade: (filtroPrioridade || undefined) as PrioridadeTarefa | undefined,
+    }).then((res) => {
+      if (active) setResumoEtapas(res);
+    }).catch((err) => {
+      console.error('Erro ao carregar resumo do Kanban:', err);
+    });
+    return () => { active = false; };
+  }, [usaListaCompletaDeTarefas, selectedWorkspaceId, buscaDebounced, apenasMinhas, user?.id, filtroResponsavel, filtroPrioridade, kanbanRefreshSignal]);
+
+  // Se nenhum workspace estiver na URL (e não estiver abrindo uma tarefa nem na visão "Minhas Tarefas"), exibe o Hub
+  if (!isMinhasTarefas && selectedWorkspaceId === null && !tarefaSelecionadaId) {
     return (
       <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-[#F4F1EA]">
         <WorkspaceListHub
           workspaces={workspaces}
           tarefas={tarefas}
+          loading={loading}
           onSelectWorkspace={handleSelectWorkspace}
           onOpenCreateWorkspace={() => {
             setEditingWorkspaceId(null);
@@ -301,10 +419,13 @@ export const VivoxGP: React.FC = () => {
     );
   }
 
-  const totalWorkspaceTarefas = tarefasFiltradas.length;
-  const emAndamentoCount = tarefasFiltradas.filter((t) => t.status === 'EM_ANDAMENTO').length;
-  const urgentesCount = tarefasFiltradas.filter((t) => t.prioridade === 'URGENTE').length;
-  const concluidasCount = tarefasFiltradas.filter((t) => t.status === 'CONCLUIDA').length;
+  // No modo leve do Kanban (workspace grande, paginado por coluna) os números
+  // do cabeçalho vêm do resumo agregado do servidor; nas demais visões, do
+  // array completo já carregado em memória.
+  const totalWorkspaceTarefas = resumoEtapas ? resumoEtapas.total : tarefasFiltradas.length;
+  const emAndamentoCount = resumoEtapas ? resumoEtapas.emAndamento : tarefasFiltradas.filter((t) => t.status === 'EM_ANDAMENTO').length;
+  const urgentesCount = resumoEtapas ? resumoEtapas.urgentes : tarefasFiltradas.filter((t) => t.prioridade === 'URGENTE').length;
+  const concluidasCount = resumoEtapas ? resumoEtapas.concluidas : tarefasFiltradas.filter((t) => t.status === 'CONCLUIDA').length;
 
   return (
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-[#F6F5F1] select-none">
@@ -325,12 +446,14 @@ export const VivoxGP: React.FC = () => {
             </button>
 
             <div>
-              <span className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider block">
+              <span className="text-[12.5px] font-bold text-[#8F8271] uppercase tracking-wider block">
                 Planejamento de Demandas • Vivox GP
               </span>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl lg:text-3xl font-black text-[#1E1A16] tracking-tight leading-none">
-                  {selectedWorkspaceId === 'ALL'
+                  {isMinhasTarefas
+                    ? 'Minhas Tarefas'
+                    : selectedWorkspaceId === 'ALL'
                     ? 'Central de Chamados'
                     : activeWorkspace?.nome || 'Operação Diária'}
                 </h1>
@@ -353,7 +476,7 @@ export const VivoxGP: React.FC = () => {
           {/* Lado Direito: Seletor de Visões (Pipeline/Lista/Prazos) + Grandes Métricas Numéricas */}
           <div className="flex items-center gap-6 lg:gap-10 flex-wrap">
             {/* Seletor de Visões em Pílulas */}
-            {selectedWorkspaceId !== 'ALL' && (
+            {!isMinhasTarefas && selectedWorkspaceId !== 'ALL' && (
               <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-full p-1 flex items-center gap-1 shadow-2xs">
                 <button
                   onClick={() => setVisao('kanban')}
@@ -396,8 +519,8 @@ export const VivoxGP: React.FC = () => {
                 <span className="text-2xl font-black text-[#1E1A16] leading-none">
                   {selectedWorkspaceId === 'ALL' ? chamados.length : totalWorkspaceTarefas}
                 </span>
-                <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">
-                  {selectedWorkspaceId === 'ALL' ? 'Chamados Totais' : 'Tarefas do Espaço'}
+                <span className="text-[12px] font-semibold text-[#8F8271] mt-0.5">
+                  {isMinhasTarefas ? 'Total de Tarefas' : selectedWorkspaceId === 'ALL' ? 'Chamados Totais' : 'Tarefas do Espaço'}
                 </span>
               </div>
 
@@ -405,7 +528,7 @@ export const VivoxGP: React.FC = () => {
                 <span className="text-2xl font-black text-[#1E1A16] leading-none">
                   {selectedWorkspaceId === 'ALL' ? chamados.filter(c => c.status === 'ABERTO').length : urgentesCount}
                 </span>
-                <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">
+                <span className="text-[12px] font-semibold text-[#8F8271] mt-0.5">
                   {selectedWorkspaceId === 'ALL' ? 'Em Aberto' : 'Aguardando Atenção'}
                 </span>
               </div>
@@ -414,7 +537,7 @@ export const VivoxGP: React.FC = () => {
                 <span className="text-2xl font-black text-[#1E1A16] leading-none">
                   {usuarios.length}
                 </span>
-                <span className="text-[10px] font-semibold text-[#8F8271] mt-0.5">
+                <span className="text-[12px] font-semibold text-[#8F8271] mt-0.5">
                   Membros Envolvidos
                 </span>
               </div>
@@ -537,19 +660,38 @@ export const VivoxGP: React.FC = () => {
               />
             </div>
 
-            <button
-              onClick={() => setApenasMinhas(!apenasMinhas)}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                apenasMinhas
-                  ? 'bg-[#181512] text-white shadow-2xs'
-                  : 'bg-[#FAF7F2] text-[#625746] border border-[#D8CBB8] hover:bg-[#EEE7DC]'
-              }`}
-            >
-              Minhas Tarefas
-            </button>
+            {!isMinhasTarefas && (
+              <button
+                onClick={() => setApenasMinhas(!apenasMinhas)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  apenasMinhas
+                    ? 'bg-[#181512] text-white shadow-2xs'
+                    : 'bg-[#FAF7F2] text-[#625746] border border-[#D8CBB8] hover:bg-[#EEE7DC]'
+                }`}
+              >
+                Minhas Tarefas
+              </button>
+            )}
+
+            {!isMinhasTarefas && selectedWorkspaceId && selectedWorkspaceId !== 'ALL' && (
+              <button
+                type="button"
+                title="Importar tarefas do Bitrix"
+                onClick={() => setIsImportBitrixModalOpen(true)}
+                disabled={isImportingBitrix}
+                className={`p-1.5 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
+                  isImportingBitrix
+                    ? 'bg-[#181512] border-[#181512] text-white'
+                    : 'bg-[#FAF7F2] border-[#D8CBB8] hover:border-[#1E1A16] text-[#1E1A16]'
+                }`}
+              >
+                {isImportingBitrix ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              </button>
+            )}
 
             <button
               onClick={carregarDados}
+              disabled={loading}
               title="Atualizar"
               className="p-1.5 rounded-full bg-[#FAF7F2] border border-[#D8CBB8] hover:border-[#1E1A16] text-[#1E1A16] transition-colors cursor-pointer"
             >
@@ -561,6 +703,7 @@ export const VivoxGP: React.FC = () => {
 
       {/* Conteúdo Principal do Kanban / Lista / Prazos */}
       <main className="flex-1 w-full h-full overflow-hidden flex flex-col">
+        {loadError && <div role="alert" className="p-3 text-sm text-red-700">Não foi possível carregar as tarefas. Tente atualizar novamente.</div>}
         {selectedWorkspaceId === 'ALL' ? (
           <ChamadosBoard
             chamados={chamados}
@@ -568,19 +711,29 @@ export const VivoxGP: React.FC = () => {
             onUpdateStatus={handleUpdateChamadoStatus}
             onOpenChamado={setChamadoSelecionado}
           />
-        ) : visao === 'kanban' ? (
+        ) : isMinhasTarefas ? (
+          <div className="flex-1 min-h-0 overflow-hidden p-6">
+            <TaskListView
+              tarefas={tarefasFiltradas}
+              onSelectTarefa={handleSelectTarefa}
+              onUpdateStatus={handleUpdateStatus}
+              onDeleteTarefa={handleDeleteTarefa}
+            />
+          </div>
+        ) : visao === 'kanban' && selectedWorkspaceId ? (
           <KanbanBoard
-            tarefas={tarefasFiltradas}
+            key={selectedWorkspaceId}
             workspaceId={selectedWorkspaceId}
+            filtros={kanbanFiltros}
+            refreshSignal={kanbanRefreshSignal}
             onSelectTarefa={handleSelectTarefa}
             onUpdateStatus={handleUpdateStatus}
             onQuickCreate={handleOpenCreateForStatus}
-            onOpenWorkspaceHub={() => navigate('/gp')}
           />
         ) : null}
 
-        {visao === 'lista' && selectedWorkspaceId !== 'ALL' && (
-          <div className="flex-1 overflow-y-auto p-6">
+        {!isMinhasTarefas && visao === 'lista' && selectedWorkspaceId !== 'ALL' && (
+          <div className="flex-1 min-h-0 overflow-hidden p-6">
             <TaskListView
               tarefas={tarefasFiltradas}
               onSelectTarefa={handleSelectTarefa}
@@ -590,7 +743,7 @@ export const VivoxGP: React.FC = () => {
           </div>
         )}
 
-        {visao === 'prazos' && selectedWorkspaceId !== 'ALL' && (
+        {!isMinhasTarefas && visao === 'prazos' && selectedWorkspaceId !== 'ALL' && (
           <TaskDeadlineView
             tarefas={tarefasFiltradas}
             onSelectTarefa={handleSelectTarefa}
@@ -650,6 +803,16 @@ export const VivoxGP: React.FC = () => {
           initialClienteId={queryClienteId}
           onClose={() => setIsNovoChamadoModalOpen(false)}
           onChamadoCreated={carregarDados}
+        />
+      )}
+
+      {/* Modal de Importação do Bitrix */}
+      {isImportBitrixModalOpen && selectedWorkspaceId && selectedWorkspaceId !== 'ALL' && (
+        <ImportBitrixModal
+          workspaceId={selectedWorkspaceId}
+          isImporting={isImportingBitrix}
+          onClose={() => setIsImportBitrixModalOpen(false)}
+          onImport={handleImportBitrix}
         />
       )}
     </div>

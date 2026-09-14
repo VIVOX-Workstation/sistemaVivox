@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { ServicoContratado, Tarefa, StatusTarefa } from '../types';
+import type { ServicoContratado, Tarefa } from '../types';
 import { api } from '../api/client';
 import { tarefasApi } from '../api/tarefas';
 import { chamadosApi, type CategoriaChamado, type UrgenciaChamado } from '../api/chamados';
@@ -9,35 +9,24 @@ import { TaskFormModal } from '../components/gp/TaskFormModal';
 import { Modal } from '../components/Modal';
 import { QuadroColaborativo } from '../components/QuadroColaborativo';
 import { 
+  X,
   ArrowLeft, 
   Calendar, 
-  Clock, 
-  CheckCircle2, 
   Building2, 
   Plus, 
   FileText, 
   Sparkles, 
   ExternalLink, 
   Kanban, 
-  Layers, 
   Save, 
   Loader2, 
   ChevronRight,
-  Smartphone,
   Globe,
   PenTool,
-  Code2,
   Trash2,
-  Edit3,
   Zap,
-  BookOpen,
-  FolderOpen,
-  CheckSquare,
-  Square,
   Link as LinkIcon,
   Layout,
-  FileCheck2,
-  Milestone,
   AlertTriangle
 } from 'lucide-react';
 
@@ -45,6 +34,8 @@ export interface EstruturaSecao {
   id: string;
   titulo: string;
   descricao?: string;
+  texto?: string;
+  cta?: string;
 }
 
 export interface EtapaProducao {
@@ -62,9 +53,25 @@ export interface ItemPlanejado {
   linkFigma?: string;
   linkFinal?: string;
   copyTexto?: string;
+  publico?: string;
+  oferta?: string;
+  referencias?: string;
+  tarefaIds?: string[];
   estrutura: EstruturaSecao[];
   etapas: EtapaProducao[];
   createdAt: string;
+}
+
+function estruturaInicial(tipo: string): EstruturaSecao[] {
+  const modelos: Record<string, string[]> = {
+    LANDING_PAGE: ['Apresentação e proposta de valor', 'Benefícios e prova social', 'Oferta e chamada para ação'],
+    VIDEO: ['Cena 1 — Abertura', 'Cena 2 — Desenvolvimento', 'Cena 3 — Encerramento'],
+    APP: ['Tela inicial', 'Fluxo principal', 'Confirmação'],
+    GERENCIAMENTO_REDES: ['Peça 1 — Apresentação', 'Peça 2 — Conteúdo', 'Peça 3 — Conversão'],
+    FOTOGRAFIA: ['Conceito do ensaio', 'Cenas e enquadramentos', 'Seleção e tratamento'],
+    IDENTIDADE_VISUAL: ['Conceito da marca', 'Elementos visuais', 'Aplicações'],
+  };
+  return (modelos[tipo] || ['Abertura', 'Conteúdo principal', 'Fechamento']).map((titulo, idx) => ({ id: 's' + (idx + 1), titulo, descricao: '' }));
 }
 
 export function PlanejamentoServico() {
@@ -80,19 +87,21 @@ export function PlanejamentoServico() {
   const [itens, setItens] = useState<ItemPlanejado[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [syncError, setSyncError] = useState(false);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
   // Item selecionado via rota de URL
   const selectedItemId = paramItemId || null;
 
-  // Aba dentro do item selecionado: 'estrutura' | 'copy' | 'etapas' | 'links' | 'quadro'
-  const [abaItem, setAbaItem] = useState<'estrutura' | 'copy' | 'etapas' | 'links' | 'quadro'>('estrutura');
+  // Main workflow and optional ideas board.
+  const [abaItem, setAbaItem] = useState<'briefing' | 'conteudo' | 'producao' | 'quadro'>('briefing');
 
   // Modal Novo Item / Peça
   const [isNovoItemModalOpen, setIsNovoItemModalOpen] = useState(false);
   const [novoItemTitulo, setNovoItemTitulo] = useState('');
   const [novoItemDescricao, setNovoItemDescricao] = useState('');
   const [novoItemPrazo, setNovoItemPrazo] = useState('');
-  const [nomeCliente, setNomeCliente] = useState('');
+  const [_nomeCliente, setNomeCliente] = useState('');
 
   // IA Loading states
   const [loadingIaEstrutura, setLoadingIaEstrutura] = useState(false);
@@ -103,6 +112,7 @@ export function PlanejamentoServico() {
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [initialTaskTitle, setInitialTaskTitle] = useState('');
   const [initialTaskDesc, setInitialTaskDesc] = useState('');
+  const [initialTaskChecklist, setInitialTaskChecklist] = useState<string[]>([]);
 
   // Modal de Chamado (Suporte pós-entrega)
   const [isChamadoModalOpen, setIsChamadoModalOpen] = useState(false);
@@ -163,7 +173,7 @@ export function PlanejamentoServico() {
         try {
           const cRes = await api.get(`/clientes/${clienteId}`);
           resolvedClientName = cRes.data?.nomeFantasia || cRes.data?.razaoSocial || cRes.data?.nome;
-        } catch (_) {}
+        } catch {}
       }
       if (resolvedClientName) {
         setNomeCliente(resolvedClientName);
@@ -180,7 +190,7 @@ export function PlanejamentoServico() {
           if (Array.isArray(parsed)) {
             itensCarregados = parsed;
           }
-        } catch (_) {}
+        } catch {}
       } else if (planRes.data && Array.isArray(planRes.data.flowNodes)) {
         itensCarregados = planRes.data.flowNodes;
       } else {
@@ -200,21 +210,14 @@ export function PlanejamentoServico() {
           linkFigma: item.linkFigma || '',
           linkFinal: item.linkFinal || '',
           copyTexto: item.copyTexto || '',
+          publico: item.publico || '',
+          oferta: item.oferta || '',
+          referencias: item.referencias || '',
+          tarefaIds: Array.isArray(item.tarefaIds) ? item.tarefaIds : [],
           estrutura: Array.isArray(item.estrutura)
             ? item.estrutura
-            : [
-                { id: 's1', titulo: '1. Abertura / Capa', descricao: 'Apresentação principal da peça.' },
-                { id: 's2', titulo: '2. Conteúdo Central', descricao: 'Diferenciais e argumentos principais.' },
-                { id: 's3', titulo: '3. Fechamento & Chamada para Ação', descricao: 'Contatos e próximos passos.' },
-              ],
-          etapas: Array.isArray(item.etapas) && item.etapas.length > 0
-            ? item.etapas
-            : [
-                { id: 'e1', titulo: '1. Briefing e alinhamento', concluido: true },
-                { id: 'e2', titulo: '2. Redação de conteúdo / Copy', concluido: false },
-                { id: 'e3', titulo: '3. Design e diagramação', concluido: false },
-                { id: 'e4', titulo: '4. Aprovação e entrega', concluido: false },
-              ],
+            : estruturaInicial(servicoRes.data.tipoServico || servicoRes.data.tipo_servico || 'LANDING_PAGE'),
+          etapas: Array.isArray(item.etapas) ? item.etapas : [],
           createdAt: item.createdAt || new Date().toISOString(),
         }));
       }
@@ -237,16 +240,22 @@ export function PlanejamentoServico() {
     if (servicoId) {
       const storageKey = `@Vivox:itensPlanejados:${servicoId}`;
       localStorage.setItem(storageKey, JSON.stringify(novosItens));
-      try {
-        const res = await api.get(`/planejamento-servico/servico/${servicoId}`).catch(() => ({ data: null }));
-        if (res.data?.id) {
-          await api.patch(`/planejamento-servico/${res.data.id}`, { flowNodes: novosItens });
-        } else {
-          await api.post('/planejamento-servico', { servicoContratadoId: servicoId, flowNodes: novosItens });
+      // Keep writes in order so an older keystroke cannot overwrite newer content.
+      saveQueue.current = saveQueue.current.then(async () => {
+        try {
+          const res = await api.get(`/planejamento-servico/servico/${servicoId}`);
+          if (res.data?.id) {
+            await api.patch(`/planejamento-servico/${res.data.id}`, { flowNodes: novosItens });
+          } else {
+            await api.post('/planejamento-servico', { servicoContratadoId: servicoId, flowNodes: novosItens });
+          }
+          setSyncError(false);
+        } catch (err) {
+          setSyncError(true);
+          console.warn('Erro ao sincronizar com backend:', err);
         }
-      } catch (err) {
-        console.warn('Erro ao sincronizar com backend:', err);
-      }
+      });
+      await saveQueue.current;
     }
   };
 
@@ -261,17 +270,9 @@ export function PlanejamentoServico() {
       status: 'BRIEFING',
       prazo: novoItemPrazo || new Date(Date.now() + 20 * 86400000).toISOString().split('T')[0],
       copyTexto: '',
-      estrutura: [
-        { id: 's1', titulo: '1. Abertura / Capa', descricao: 'Apresentação principal da peça.' },
-        { id: 's2', titulo: '2. Conteúdo Central', descricao: 'Diferenciais e argumentos principais.' },
-        { id: 's3', titulo: '3. Fechamento & Chamada para Ação', descricao: 'Contatos e próximos passos.' },
-      ],
-      etapas: [
-        { id: 'e1', titulo: '1. Briefing e alinhamento', concluido: false },
-        { id: 'e2', titulo: '2. Redação de conteúdo / Copy', concluido: false },
-        { id: 'e3', titulo: '3. Design e diagramação', concluido: false },
-        { id: 'e4', titulo: '4. Aprovação e entrega', concluido: false },
-      ],
+      estrutura: estruturaInicial(tipoStr),
+      etapas: [],
+      tarefaIds: [],
       createdAt: new Date().toISOString(),
     };
 
@@ -296,6 +297,12 @@ export function PlanejamentoServico() {
 
   // Item atualmente em edição
   const itemAtivo = itens.find((i) => i.id === selectedItemId) || null;
+  const tarefasDaEntrega = tarefas.filter((t) => itemAtivo?.tarefaIds?.includes(t.id));
+  const nomeBloco = tipoStr === 'VIDEO' ? 'Cena' : tipoStr === 'APP' ? 'Tela' : tipoStr === 'GERENCIAMENTO_REDES' ? 'Peça' : 'Seção';
+  const campoPlanejamento = 'w-full text-sm bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-3 outline-none focus:border-[#C7A15F]';
+  const cardPlanejamento = 'bg-[#FFFDF8] border border-[#D8CBB8] rounded-2xl p-5 space-y-4';
+  const rotuloPlanejamento = 'block text-xs font-semibold text-[#625746] mb-2';
+
 
   const atualizarItemAtivo = (campos: Partial<ItemPlanejado>) => {
     if (!itemAtivo) return;
@@ -309,8 +316,9 @@ export function PlanejamentoServico() {
     setLoadingIaEstrutura(true);
     try {
       const prompt = `Atue como Especialista em Criação e Planejamento da agência Vivox.
-Gere a estrutura de seções/telas/dobras recomendada para a peça "${itemAtivo.titulo}" (${nomeFormatadoServico}) da empresa "${servico.cliente?.nomeFantasia || 'Cliente'}".
+Gere a estrutura adequada ao tipo de serviço (seções para páginas, cenas para vídeo, telas para app, peças para campanha) para a peça "${itemAtivo.titulo}" (${nomeFormatadoServico}) da empresa "${servico.cliente?.nomeFantasia || 'Cliente'}".
 
+Briefing: ${itemAtivo.descricao || "Não informado"}. Público: ${itemAtivo.publico || "Não informado"}. Oferta: ${itemAtivo.oferta || "Não informada"}.
 Retorne OBRIGATORIAMENTE um array JSON válido contendo objetos no formato:
 [
   {
@@ -333,7 +341,7 @@ Retorne OBRIGATORIAMENTE um array JSON válido contendo objetos no formato:
             titulo: s.titulo || `Seção ${idx + 1}`,
             descricao: s.descricao || '',
           }));
-          atualizarItemAtivo({ estrutura: novaEstrutura });
+          atualizarItemAtivo({ estrutura: [...itemAtivo.estrutura, ...novaEstrutura] });
         }
       }
     } catch (err) {
@@ -402,11 +410,15 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
 
   const handleExportarItemParaGP = () => {
     if (!itemAtivo) return;
+    setInitialTaskChecklist([]);
     setInitialTaskTitle(`[${nomeFormatadoServico}] ${itemAtivo.titulo}`);
-    setInitialTaskDesc(
-      `Planejamento da Peça:\n${itemAtivo.descricao || ''}\n\nLink Figma: ${itemAtivo.linkFigma || 'N/A'}\n\nEtapas de Produção:\n` +
-      itemAtivo.etapas.map((e) => `- [${e.concluido ? 'x' : ' '}] ${e.titulo}`).join('\n')
-    );
+    setInitialTaskDesc([
+      itemAtivo.descricao || '',
+      itemAtivo.publico ? `Público: ${itemAtivo.publico}` : '',
+      itemAtivo.oferta ? `Oferta: ${itemAtivo.oferta}` : '',
+      `Planejamento: ${window.location.origin}/cliente/${clienteId}/servicos/${servicoId}/planejamento/${itemAtivo.id}`,
+      itemAtivo.linkFigma ? `Design: ${itemAtivo.linkFigma}` : '',
+    ].filter(Boolean).join('\n\n'));
     setIsCreateTaskModalOpen(true);
   };
 
@@ -455,11 +467,11 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
 
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#8F8271] flex items-center gap-1">
+                  <span className="text-[12px] font-black uppercase tracking-wider text-[#8F8271] flex items-center gap-1">
                     <Layout className="w-3.5 h-3.5 text-[#C7A15F]" />
                     Central de Projetos & Planejamento
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#247A4A]/10 text-[#247A4A] border border-[#247A4A]/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[12px] font-black uppercase tracking-wider bg-[#247A4A]/10 text-[#247A4A] border border-[#247A4A]/30">
                     {servico.status}
                   </span>
                 </div>
@@ -529,8 +541,8 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {itens.map((item, idx) => {
-                  const etapas = Array.isArray(item.etapas) ? item.etapas : [];
-                  const etapasConcluidas = etapas.filter((e) => e && e.concluido).length;
+                  const etapas = tarefas.filter((t) => item.tarefaIds?.includes(t.id));
+                  const etapasConcluidas = etapas.filter((e) => e.status === 'CONCLUIDA').length;
                   const totalEtapas = etapas.length;
                   const percentual = totalEtapas > 0 ? Math.round((etapasConcluidas / totalEtapas) * 100) : 0;
 
@@ -544,13 +556,13 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                       <div className="space-y-3">
                         {/* Topo do Card */}
                         <div className="flex justify-between items-start">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#FAF7F2] border border-[#D8CBB8] text-[#1E1A16]">
+                          <span className="px-2.5 py-1 rounded-full text-[12px] font-black uppercase tracking-wider bg-[#FAF7F2] border border-[#D8CBB8] text-[#1E1A16]">
                             {getNomeItemSingular()} #{idx + 1}
                           </span>
 
                           <div className="flex items-center gap-2">
                             <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              className={`px-2.5 py-0.5 rounded-full text-[12px] font-bold uppercase tracking-wider border ${
                                 item.status === 'CONCLUIDO'
                                   ? 'bg-[#247A4A]/10 text-[#247A4A] border-[#247A4A]/30'
                                   : item.status === 'EM_PRODUCAO'
@@ -583,9 +595,9 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
 
                         {/* Progresso das Etapas */}
                         <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px] font-bold">
+                          <div className="flex items-center justify-between text-[12.5px] font-bold">
                             <span className="text-[#1E1A16]">
-                              {etapasConcluidas}/{totalEtapas} etapas
+                              {etapasConcluidas}/{totalEtapas} tarefas concluídas
                             </span>
                             <span className="text-[#C7A15F]">{percentual}%</span>
                           </div>
@@ -623,6 +635,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
       {/* ======================================================== */}
       {itemAtivo && (
         <div className="space-y-6">
+          {syncError && <div role="alert" className="p-3 border border-[#B83B32]/30 bg-[#B83B32]/10 rounded-xl text-sm text-[#B83B32]">Alterações guardadas neste navegador, mas a sincronização falhou. <button type="button" className="underline font-semibold" onClick={() => salvarItensNoStorage(itens)}>Tentar novamente</button></div>}
           {/* Barra Superior de Retorno & Título do Item */}
           <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -636,13 +649,13 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#8F8271]">
+                  <span className="text-[12px] font-black uppercase tracking-wider text-[#8F8271]">
                     Planejamento • {nomeFormatadoServico}
                   </span>
                   <select
                     value={itemAtivo.status}
                     onChange={(e) => atualizarItemAtivo({ status: e.target.value as any })}
-                    className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FAF7F2] border border-[#D8CBB8] text-[#1E1A16] outline-none cursor-pointer"
+                    className="text-[12px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FAF7F2] border border-[#D8CBB8] text-[#1E1A16] outline-none cursor-pointer"
                   >
                     <option value="BRIEFING">Briefing</option>
                     <option value="PLANEJAMENTO">Planejamento</option>
@@ -679,7 +692,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                 className="px-4 py-2.5 rounded-2xl bg-[#FAF7F2] hover:bg-white border border-[#D8CBB8] hover:border-[#1E1A16] text-xs font-bold text-[#1E1A16] flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-[#C7A15F]" />
-                <span>Exportar Demanda para o GP</span>
+                <span>Criar tarefa no GP</span>
               </button>
 
               <button
@@ -687,309 +700,27 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                 className="px-5 py-2.5 rounded-2xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                <span>Concluir Planejamento</span>
+                <span>Voltar às entregas</span>
               </button>
             </div>
           </div>
 
-          {/* Seletor de Abas de Planejamento da Peça */}
-          <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-2xl p-1.5 shadow-2xs flex items-center gap-1.5 overflow-x-auto">
-            <button
-              onClick={() => setAbaItem('estrutura')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                abaItem === 'estrutura'
-                  ? 'bg-[#181512] text-white shadow-xs'
-                  : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
-              }`}
-            >
-              <Layout className="w-4 h-4 text-[#C7A15F]" />
-              <span>1. Estrutura & Seções ({(itemAtivo.estrutura || []).length})</span>
-            </button>
-
-            <button
-              onClick={() => setAbaItem('copy')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                abaItem === 'copy'
-                  ? 'bg-[#181512] text-white shadow-xs'
-                  : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
-              }`}
-            >
-              <FileText className="w-4 h-4 text-[#C7A15F]" />
-              <span>2. Textos, Copy & Briefing</span>
-            </button>
-
-            <button
-              onClick={() => setAbaItem('etapas')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                abaItem === 'etapas'
-                  ? 'bg-[#181512] text-white shadow-xs'
-                  : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
-              }`}
-            >
-              <CheckSquare className="w-4 h-4 text-[#C7A15F]" />
-              <span>
-                3. Checklist de Produção ({(itemAtivo.etapas || []).filter((e) => e && e.concluido).length}/{(itemAtivo.etapas || []).length})
-              </span>
-            </button>
-
-            <button
-              onClick={() => setAbaItem('links')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                abaItem === 'links'
-                  ? 'bg-[#181512] text-white shadow-xs'
-                  : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
-              }`}
-            >
-              <LinkIcon className="w-4 h-4 text-[#C7A15F]" />
-              <span>4. Links (Figma / Publicação)</span>
-            </button>
-
-            <button
-              onClick={() => setAbaItem('quadro')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                abaItem === 'quadro'
-                  ? 'bg-[#181512] text-white shadow-xs'
-                  : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
-              }`}
-            >
-              <PenTool className="w-4 h-4 text-[#C7A15F]" />
-              <span>5. ✏️ Quadro Colaborativo</span>
-            </button>
-          </div>
-
-          {/* ABA ITEM 1: ESTRUTURA & SEÇÕES */}
-          {abaItem === 'estrutura' && (
-            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-black text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
-                    <Layout className="w-4 h-4 text-[#C7A15F]" />
-                    Estrutura de Seções / Dobras / Telas
-                  </h3>
-                  <p className="text-xs text-[#8F8271]">
-                    Defina a sequência de conteúdo e blocos visuais desta peça
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleGerarEstruturaIa}
-                    disabled={loadingIaEstrutura}
-                    className="px-3.5 py-1.5 rounded-full bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 text-[#8F6F2D] border border-[#C7A15F]/40 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {loadingIaEstrutura ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C7A15F]" />
-                    ) : (
-                      <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    )}
-                    Gerar Estrutura com IA
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const nova: EstruturaSecao = {
-                        id: `sec-${Date.now()}`,
-                        titulo: `${itemAtivo.estrutura.length + 1}. Nova Seção`,
-                        descricao: '',
-                      };
-                      atualizarItemAtivo({ estrutura: [...itemAtivo.estrutura, nova] });
-                    }}
-                    className="px-3.5 py-1.5 rounded-full bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Adicionar Bloco
-                  </button>
-                </div>
-              </div>
-
-              {/* Lista de Blocos Estruturais */}
-              <div className="space-y-3">
-                {(itemAtivo.estrutura || []).map((sec, sIdx) => (
-                  <div
-                    key={sec.id}
-                    className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4"
-                  >
-                    <div className="flex items-start gap-3 flex-1">
-                      <span className="w-7 h-7 rounded-xl bg-[#181512] text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                        {sIdx + 1}
-                      </span>
-                      <div className="space-y-1 flex-1">
-                        <input
-                          type="text"
-                          value={sec.titulo}
-                          onChange={(e) => {
-                            const updated = [...(itemAtivo.estrutura || [])];
-                            updated[sIdx].titulo = e.target.value;
-                            atualizarItemAtivo({ estrutura: updated });
-                          }}
-                          className="font-bold text-sm text-[#1E1A16] bg-transparent outline-none w-full border-b border-transparent focus:border-[#C7A15F]"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Objetivo ou conteúdo desta parte..."
-                          value={sec.descricao || ''}
-                          onChange={(e) => {
-                            const updated = [...(itemAtivo.estrutura || [])];
-                            updated[sIdx].descricao = e.target.value;
-                            atualizarItemAtivo({ estrutura: updated });
-                          }}
-                          className="text-xs text-[#625746] bg-transparent outline-none w-full"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        const updated = (itemAtivo.estrutura || []).filter((_, idx) => idx !== sIdx);
-                        atualizarItemAtivo({ estrutura: updated });
-                      }}
-                      className="text-[#8F8271] hover:text-[#B83B32] p-1.5 transition-colors cursor-pointer self-end md:self-center"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ABA ITEM 2: COPYWRITING & TEXTOS */}
-          {abaItem === 'copy' && (
-            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-black text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#C7A15F]" />
-                    Redação de Copy, Textos & Argumentos de Venda
-                  </h3>
-                  <p className="text-xs text-[#8F8271]">
-                    Headlines, chamadas para ação e textos que serão aplicados no design final
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleGerarCopyIa}
-                  disabled={loadingIaCopy}
-                  className="px-3.5 py-1.5 rounded-full bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 text-[#8F6F2D] border border-[#C7A15F]/40 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {loadingIaCopy ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C7A15F]" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
-                  )}
-                  Escrever Copy com IA
-                </button>
-              </div>
-
-              <textarea
-                rows={12}
-                value={itemAtivo.copyTexto || ''}
-                onChange={(e) => atualizarItemAtivo({ copyTexto: e.target.value })}
-                placeholder="Insira os textos, títulos, argumentos de persuasão e direcionamento de conteúdo..."
-                className="w-full text-xs text-[#1E1A16] bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 outline-none focus:border-[#C7A15F] leading-relaxed resize-y font-mono"
-              />
-            </div>
-          )}
-
-          {/* ABA ITEM 3: ETAPAS DE PRODUÇÃO */}
-          {abaItem === 'etapas' && (
-            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-xs space-y-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-black text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4 text-[#C7A15F]" />
-                    Checklist de Produção da Peça
-                  </h3>
-                  <p className="text-xs text-[#8F8271]">
-                    Marque as etapas conforme a criação for avançando
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => {
-                    const nova: EtapaProducao = {
-                      id: `eta-${Date.now()}`,
-                      titulo: 'Nova Etapa',
-                      concluido: false,
-                    };
-                    atualizarItemAtivo({ etapas: [...(itemAtivo.etapas || []), nova] });
-                  }}
-                  className="px-3.5 py-1.5 rounded-full bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Adicionar Etapa
-                </button>
-              </div>
-
-              <div className="space-y-2.5">
-                {(itemAtivo.etapas || []).map((etapa, eIdx) => (
-                  <div
-                    key={etapa.id}
-                    className="flex items-center justify-between gap-3 bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-3.5 shadow-2xs"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <button
-                        onClick={() => {
-                          const updated = [...itemAtivo.etapas];
-                          updated[eIdx].concluido = !updated[eIdx].concluido;
-                          atualizarItemAtivo({ etapas: updated });
-                        }}
-                        className="cursor-pointer"
-                      >
-                        {etapa.concluido ? (
-                          <CheckCircle2 className="w-5 h-5 text-[#247A4A]" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-md border-2 border-[#8F8271]" />
-                        )}
-                      </button>
-
-                      <input
-                        type="text"
-                        value={etapa.titulo}
-                        onChange={(e) => {
-                          const updated = [...itemAtivo.etapas];
-                          updated[eIdx].titulo = e.target.value;
-                          atualizarItemAtivo({ etapas: updated });
-                        }}
-                        className={`text-xs font-bold bg-transparent outline-none flex-1 ${
-                          etapa.concluido ? 'line-through text-[#8F8271]' : 'text-[#1E1A16]'
-                        }`}
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        const updated = itemAtivo.etapas.filter((_, idx) => idx !== eIdx);
-                        atualizarItemAtivo({ etapas: updated });
-                      }}
-                      className="text-[#8F8271] hover:text-[#B83B32] p-1 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* ABA ITEM 4: LINKS & PROTÓTIPO */}
-          {abaItem === 'links' && (
-            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-xs space-y-5">
+          {itemAtivo && (
+            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-2xl p-4 space-y-3">
               <div>
-                <h3 className="text-base font-black text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-[#625746] flex items-center gap-2">
                   <LinkIcon className="w-4 h-4 text-[#C7A15F]" />
-                  Links do Projeto (Figma & Publicação)
+                  Arquivos e entrega
                 </h3>
-                <p className="text-xs text-[#8F8271]">
-                  Acesso rápido aos arquivos de design e versão no ar
-                </p>
+
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+                  <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
                     <LinkIcon className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    Link do Protótipo (Figma)
+                    Design / Protótipo
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -1013,9 +744,9 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
+                  <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
                     <Globe className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    Link Publicado / No Ar
+                    Versão final / Publicação
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -1041,6 +772,177 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             </div>
           )}
 
+          <nav aria-label="Áreas da entrega" className="flex flex-wrap gap-2 border-b border-[#D8CBB8] pb-3">
+            {([
+              ['briefing', 'Briefing'], ['conteudo', 'Conteúdo'], ['producao', 'Produção'],
+            ] as const).map(([id, label]) => (
+              <button key={id} type="button" aria-current={abaItem === id ? 'page' : undefined} onClick={() => setAbaItem(id)} className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${abaItem === id ? 'bg-[#181512] text-[#FFFDF8]' : 'text-[#625746] hover:bg-[#EEE7DC]'}`}>{label}</button>
+            ))}
+            <button type="button" onClick={() => setAbaItem('quadro')} aria-current={abaItem === 'quadro' ? 'page' : undefined} className={`ml-auto px-4 py-2 text-xs rounded-xl flex items-center gap-2 ${abaItem === 'quadro' ? 'bg-[#EEE7DC] text-[#1E1A16]' : 'text-[#625746]'}`}><PenTool size={15} />Quadro de ideias</button>
+          </nav>
+
+          {abaItem === 'briefing' && <section className={cardPlanejamento}>
+            <div><h3 className="text-lg font-bold text-[#1E1A16]">O que vamos entregar?</h3><p className="text-xs text-[#847663] mt-1">Alinhe o objetivo e as orientações antes de começar a produção.</p></div>
+            <div><label htmlFor="entrega-objetivo" className={rotuloPlanejamento}>Objetivo e orientações</label><textarea id="entrega-objetivo" rows={5} className={campoPlanejamento} value={itemAtivo.descricao || ''} onChange={(e) => atualizarItemAtivo({ descricao: e.target.value })} placeholder="O que esta entrega precisa resolver? Inclua orientações e restrições do cliente." /></div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div><label htmlFor="entrega-publico" className={rotuloPlanejamento}>Público</label><textarea id="entrega-publico" rows={3} className={campoPlanejamento} value={itemAtivo.publico || ''} onChange={(e) => atualizarItemAtivo({ publico: e.target.value })} placeholder="Para quem estamos criando?" /></div>
+              <div><label htmlFor="entrega-oferta" className={rotuloPlanejamento}>Oferta e mensagem principal</label><textarea id="entrega-oferta" rows={3} className={campoPlanejamento} value={itemAtivo.oferta || ''} onChange={(e) => atualizarItemAtivo({ oferta: e.target.value })} placeholder="O que comunicar e qual ação esperamos?" /></div>
+            </div>
+            <div className="max-w-xs"><label htmlFor="entrega-prazo" className={rotuloPlanejamento}>Prazo da entrega</label><input id="entrega-prazo" type="date" className={campoPlanejamento} value={itemAtivo.prazo?.slice(0, 10) || ''} onChange={(e) => atualizarItemAtivo({ prazo: e.target.value })} /></div>
+            <div><label htmlFor="entrega-referencias" className={rotuloPlanejamento}>Referências</label><textarea id="entrega-referencias" rows={3} className={campoPlanejamento} value={itemAtivo.referencias || ''} onChange={(e) => atualizarItemAtivo({ referencias: e.target.value })} placeholder="Links, exemplos e materiais de apoio." /></div>
+          </section>}
+
+          {/* ABA ITEM 1: ESTRUTURA & SEÇÕES */}
+          {abaItem === 'conteudo' && (
+            <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-black text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
+                    <Layout className="w-4 h-4 text-[#C7A15F]" />
+                    Estrutura e conteúdo
+                  </h3>
+                  <p className="text-xs text-[#8F8271]">
+                    Organize cada parte da entrega com objetivo, texto e chamada para ação.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleGerarEstruturaIa}
+                    disabled={loadingIaEstrutura}
+                    className="px-3.5 py-1.5 rounded-full bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 text-[#8F6F2D] border border-[#C7A15F]/40 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {loadingIaEstrutura ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C7A15F]" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
+                    )}
+                    Gerar Estrutura com IA
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const nova: EstruturaSecao = {
+                        id: `sec-${Date.now()}`,
+                        titulo: `${nomeBloco} ${itemAtivo.estrutura.length + 1}`,
+                        descricao: '',
+                      };
+                      atualizarItemAtivo({ estrutura: [...itemAtivo.estrutura, nova] });
+                    }}
+                    className="px-3.5 py-1.5 rounded-full bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Adicionar {nomeBloco.toLowerCase()}
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de Blocos Estruturais */}
+              <div className="space-y-3">
+                {(itemAtivo.estrutura || []).map((sec, sIdx) => (
+                  <div
+                    key={sec.id}
+                    className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="flex items-start gap-3 flex-1">
+                      <span className="w-7 h-7 rounded-xl bg-[#181512] text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                        {sIdx + 1}
+                      </span>
+                      <div className="space-y-1 flex-1">
+                        <input
+                          type="text"
+                          value={sec.titulo}
+                          onChange={(e) => {
+                            const updated = [...(itemAtivo.estrutura || [])];
+                            updated[sIdx].titulo = e.target.value;
+                            atualizarItemAtivo({ estrutura: updated });
+                          }}
+                          aria-label={`Título da ${nomeBloco.toLowerCase()} ${sIdx + 1}`}
+                          className={campoPlanejamento}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Objetivo ou conteúdo desta parte..."
+                          value={sec.descricao || ''}
+                          onChange={(e) => {
+                            const updated = [...(itemAtivo.estrutura || [])];
+                            updated[sIdx].descricao = e.target.value;
+                            atualizarItemAtivo({ estrutura: updated });
+                          }}
+                          aria-label={`Objetivo da ${nomeBloco.toLowerCase()} ${sIdx + 1}`}
+                          className={campoPlanejamento}
+                        />
+                        <label className="block text-xs font-semibold text-[#625746] pt-3" htmlFor={`texto-${sec.id}`}>Texto / Roteiro</label>
+                        <textarea id={`texto-${sec.id}`} rows={4} value={sec.texto || ''} placeholder="Escreva o conteúdo desta parte…" className={campoPlanejamento} onChange={(e) => atualizarItemAtivo({ estrutura: itemAtivo.estrutura.map((parte) => parte.id === sec.id ? { ...parte, texto: e.target.value } : parte) })} />
+                        <label className="block text-xs font-semibold text-[#625746] pt-2" htmlFor={`cta-${sec.id}`}>Chamada para ação (opcional)</label>
+                        <input id={`cta-${sec.id}`} value={sec.cta || ''} placeholder="Ex.: Agendar uma conversa" className={campoPlanejamento} onChange={(e) => atualizarItemAtivo({ estrutura: itemAtivo.estrutura.map((parte) => parte.id === sec.id ? { ...parte, cta: e.target.value } : parte) })} />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const updated = (itemAtivo.estrutura || []).filter((_, idx) => idx !== sIdx);
+                        atualizarItemAtivo({ estrutura: updated });
+                      }}
+                      className="text-[#8F8271] hover:text-[#B83B32] p-1.5 transition-colors cursor-pointer self-end md:self-center"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ABA ITEM 2: COPYWRITING & TEXTOS */}
+          {abaItem === 'conteudo' && (
+            <details className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-2xl p-5 space-y-4">
+              <summary className="text-sm font-semibold text-[#625746] cursor-pointer">Texto geral e rascunhos {itemAtivo.copyTexto ? '· Conteúdo salvo' : '(opcional)'}</summary>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-black text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#C7A15F]" />
+                    Texto geral e rascunhos
+                  </h3>
+                  <p className="text-xs text-[#8F8271]">
+                    Textos já existentes ficam preservados aqui. Use os blocos acima para organizar a versão de cada parte.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleGerarCopyIa}
+                  disabled={loadingIaCopy}
+                  className="px-3.5 py-1.5 rounded-full bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 text-[#8F6F2D] border border-[#C7A15F]/40 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {loadingIaCopy ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C7A15F]" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
+                  )}
+                  Escrever Copy com IA
+                </button>
+              </div>
+
+              <textarea
+                rows={12}
+                value={itemAtivo.copyTexto || ''}
+                onChange={(e) => atualizarItemAtivo({ copyTexto: e.target.value })}
+                placeholder="Insira os textos, títulos, argumentos de persuasão e direcionamento de conteúdo..."
+                className="w-full text-xs text-[#1E1A16] bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 outline-none focus:border-[#C7A15F] leading-relaxed resize-y font-mono"
+              />
+            </details>
+          )}
+
+          {abaItem === 'producao' && <section className={cardPlanejamento}>
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-bold text-[#1E1A16]">Produção no GP</h3><p className="text-xs text-[#847663] mt-1">Responsáveis, prazos e andamento nas tarefas desta entrega.</p></div><button type="button" onClick={handleExportarItemParaGP} className="px-4 py-2 bg-[#C7A15F] text-[#1D160B] rounded-xl text-xs font-semibold">Criar tarefa</button></div>
+            {tarefasDaEntrega.length === 0 && <p className="p-6 text-sm text-[#625746] bg-[#FAF7F2] rounded-xl">Nenhuma tarefa vinculada. Crie uma tarefa ou vincule uma já existente neste serviço.</p>}
+            <div className="space-y-2">{tarefasDaEntrega.map((t) => <div key={t.id} className="flex items-center gap-2"><button type="button" onClick={() => setSelectedTaskId(t.id)} className="w-full text-left flex flex-wrap items-center justify-between gap-3 p-4 border border-[#D8CBB8] rounded-xl hover:bg-[#FAF7F2]">
+              <div className="min-w-0"><span className="block text-sm font-semibold text-[#1E1A16] break-words">{t.titulo}</span><span className="text-xs text-[#847663]">{t.responsavel?.nome || 'Sem responsável'} · {t.prazo ? new Date(t.prazo).toLocaleDateString('pt-BR') : 'Sem prazo'}</span></div><span className="text-xs text-[#625746]">{t.status.replace(/_/g, ' ')}</span>
+            </button><button type="button" aria-label={`Desvincular ${t.titulo}`} title="Desvincular desta entrega" className="p-2 text-[#847663] hover:text-[#B83B32]" onClick={() => atualizarItemAtivo({ tarefaIds: itemAtivo.tarefaIds?.filter((id) => id !== t.id) })}><X size={16} /></button></div>)}</div>
+            <div><label htmlFor="vincular-tarefa" className={rotuloPlanejamento}>Vincular tarefa existente do serviço</label><select id="vincular-tarefa" className={campoPlanejamento} value="" onChange={(e) => { if (e.target.value) atualizarItemAtivo({ tarefaIds: [...(itemAtivo.tarefaIds || []), e.target.value] }); }}><option value="">Selecione uma tarefa</option>{tarefas.filter((t) => !itemAtivo.tarefaIds?.includes(t.id)).map((t) => <option key={t.id} value={t.id}>{t.titulo}</option>)}</select></div>
+            {itemAtivo.etapas.length > 0 && <details className="border-t border-[#D8CBB8] pt-4"><summary className="text-xs font-semibold text-[#625746] cursor-pointer">Checklist anterior · {itemAtivo.etapas.filter((e) => e.concluido).length}/{itemAtivo.etapas.length} concluídos</summary><p className="text-xs text-[#847663] my-3">Registro preservado do planejamento anterior. O andamento atual é acompanhado nas tarefas do GP.</p><ul className="space-y-2">{itemAtivo.etapas.map((e) => <li key={e.id} className="flex gap-2 text-xs text-[#625746]"><span>{e.concluido ? '✓' : '○'}</span>{e.titulo}</li>)}</ul>{itemAtivo.etapas.some((e) => !e.concluido) && <button type="button" className="mt-4 px-3 py-2 border border-[#D8CBB8] rounded-lg text-xs text-[#625746]" onClick={() => { handleExportarItemParaGP(); setInitialTaskChecklist(itemAtivo.etapas.filter((e) => !e.concluido).map((e) => e.titulo)); }}>Criar tarefa com as pendências</button>}</details>}
+          </section>}
+
           {/* ABA ITEM 5: QUADRO COLABORATIVO (EXCALIDRAW NATIVO) */}
           {abaItem === 'quadro' && (
             <QuadroColaborativo itemId={itemAtivo.id} itemTitulo={itemAtivo.titulo} />
@@ -1056,7 +958,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
       >
         <form onSubmit={handleCriarNovoItem} className="space-y-4">
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Nome / Título da Peça
             </label>
             <input
@@ -1070,7 +972,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Data Prevista de Entrega
             </label>
             <input
@@ -1082,7 +984,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+            <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
               Descrição / Objetivo
             </label>
             <textarea
@@ -1132,7 +1034,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               urgente será criada automaticamente no Vivox GP para a equipe resolver.
             </p>
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                 Título / Assunto
               </label>
               <input
@@ -1145,7 +1047,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               />
             </div>
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                 Descrição do Problema
               </label>
               <textarea
@@ -1159,7 +1061,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                   Categoria
                 </label>
                 <select
@@ -1175,7 +1077,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                 </select>
               </div>
               <div>
-                <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+                <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                   Urgência
                 </label>
                 <select
@@ -1190,7 +1092,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               </div>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
+              <label className="text-[12.5px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
                 Anexos (opcional)
               </label>
               <input
@@ -1201,7 +1103,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
                 className="w-full text-xs bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl p-2.5 outline-none focus:border-[#C7A15F] file:mr-3 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-[#E5D9C8] file:text-[#1E1A16] file:text-xs file:font-bold"
               />
               {chamadoAnexos.length > 0 && (
-                <p className="text-[11px] text-[#8F8271] mt-1">{chamadoAnexos.length} arquivo(s) selecionado(s)</p>
+                <p className="text-[12.5px] text-[#8F8271] mt-1">{chamadoAnexos.length} arquivo(s) selecionado(s)</p>
               )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -1245,6 +1147,9 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
       {/* Modal Criar Demanda no GP pré-preenchida */}
       {isCreateTaskModalOpen && (
         <TaskFormModal
+          initialTitle={initialTaskTitle}
+          initialDescription={initialTaskDesc}
+          initialChecklist={initialTaskChecklist}
           initialStatus="A_FAZER"
           initialClienteId={clienteId}
           initialServicoId={servico.id}
@@ -1253,7 +1158,11 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             setInitialTaskTitle('');
             setInitialTaskDesc('');
           }}
-          onTaskCreated={() => carregarDados()}
+          onTaskCreated={(criada) => {
+            if (itemAtivo) atualizarItemAtivo({ tarefaIds: [...(itemAtivo.tarefaIds || []), criada.id] });
+            setTarefas((atuais) => [...atuais, criada]);
+            setAbaItem('producao');
+          }}
         />
       )}
     </div>

@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { workspaceCompression } from './tarefas/workspace-compression';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // As listagens do GP podem conter milhares de tarefas. Comprimir somente
+  // estas rotas evita interferir nos endpoints de streaming do assistente.
+  app.use(['/tarefas', '/projetos'], workspaceCompression());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const corsOrigins = process.env.CORS_ORIGINS
@@ -23,6 +27,7 @@ async function bootstrap() {
         corsOrigins.includes(origin) ||
         origin.includes('sslip.io') ||
         origin.includes('localhost') ||
+        origin.includes('vivoxmarketing.com.br') ||
         origin.includes('179.198.120.113') ||
         origin.includes('convocacaovivox.site');
 

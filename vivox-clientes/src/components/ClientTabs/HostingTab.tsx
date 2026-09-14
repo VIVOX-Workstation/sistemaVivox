@@ -147,34 +147,34 @@ export function HostingTab({ cliente }: Props) {
   const renderBadgeVencimento = (dias: number | null) => {
     if (dias === null) {
       return (
-        <span className="text-[10px] text-[#847663] bg-[#EEE7DC] px-2 py-0.5 rounded font-medium">
+        <span className="text-[12px] text-[#847663] bg-[#EEE7DC] px-2 py-0.5 rounded font-medium">
           Sem data
         </span>
       );
     }
     if (dias < 0) {
       return (
-        <span className="text-[10px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
+        <span className="text-[12px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" /> Expirou há {Math.abs(dias)}d
         </span>
       );
     }
     if (dias <= 7) {
       return (
-        <span className="text-[10px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
+        <span className="text-[12px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" /> Vence em {dias}d (Crítico)
         </span>
       );
     }
     if (dias <= 30) {
       return (
-        <span className="text-[10px] text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
+        <span className="text-[12px] text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
           <Clock className="w-3 h-3" /> Vence em {dias}d
         </span>
       );
     }
     return (
-      <span className="text-[10px] text-[#247A4A] bg-[#E6F4EA] border border-[#CEEAD6] px-2.5 py-0.5 rounded font-semibold flex items-center gap-1">
+      <span className="text-[12px] text-[#247A4A] bg-[#E6F4EA] border border-[#CEEAD6] px-2.5 py-0.5 rounded font-semibold flex items-center gap-1">
         <CheckCircle2 className="w-3 h-3" /> Em dia ({dias}d)
       </span>
     );
@@ -187,7 +187,7 @@ export function HostingTab({ cliente }: Props) {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-[#1E1A16] tracking-tight">Landing Pages & Renovações de Domínio</h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
+            <span className="px-2 py-0.5 rounded-full text-[12px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
               {ativos.length} {ativos.length === 1 ? 'página' : 'páginas'}
             </span>
           </div>
@@ -301,7 +301,7 @@ export function HostingTab({ cliente }: Props) {
 
                   {/* Observações */}
                   {ativo.observacoes && (
-                    <div className="text-[11px] text-[#625746] bg-[#FAF6F0] p-2 rounded-md border border-[#E5D9C8]">
+                    <div className="text-[12.5px] text-[#625746] bg-[#FAF6F0] p-2 rounded-md border border-[#E5D9C8]">
                       <span className="font-bold text-[#1E1A16]">Notas: </span>
                       {ativo.observacoes}
                     </div>
@@ -310,14 +310,14 @@ export function HostingTab({ cliente }: Props) {
 
                 {/* Footer do Card */}
                 <div className="pt-2 border-t border-[#EEE7DC] flex items-center justify-between text-xs">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
+                  <span className="px-2 py-0.5 rounded text-[12px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
                     {ativo.status}
                   </span>
                   <a
                     href={ativo.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] font-semibold text-[#8A6828] hover:underline flex items-center gap-1"
+                    className="text-[12.5px] font-semibold text-[#8A6828] hover:underline flex items-center gap-1"
                   >
                     Acessar LP <ExternalLink className="w-3 h-3" />
                   </a>

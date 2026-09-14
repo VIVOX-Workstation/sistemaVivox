@@ -1,48 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import type { StatusTarefa, PrioridadeTarefa, Cliente, Projeto } from '../../types';
+import type { StatusTarefa, PrioridadeTarefa, Cliente, Projeto, Tarefa } from '../../types';
 import { tarefasApi } from '../../api/tarefas';
 import { api } from '../../api/client';
-import { 
-  X, 
-  Plus, 
-  Sparkles, 
-  Trash2, 
-  Loader2, 
-  Calendar, 
-  User as UserIcon, 
-  Building2, 
+import { carregarOpcoesTarefa, type UserOption } from '../../api/opcoesTarefa';
+import {
+  X,
+  Plus,
+  Sparkles,
+  Trash2,
+  Loader2,
+  Calendar,
+  User as UserIcon,
   FolderKanban,
-  Flame 
+  Flame,
+  ListChecks,
+  ChevronDown
 } from 'lucide-react';
 
-interface UserOption {
-  id: string;
-  nome: string;
-  email: string;
-}
+import './TaskFormModal.css';
+
+const EMPTY_WORKSPACES: Projeto[] = [];
 
 interface TaskFormModalProps {
+  initialTitle?: string;
+  initialDescription?: string;
+  initialChecklist?: string[];
   initialStatus?: StatusTarefa;
   initialWorkspaceId?: string | null;
   initialClienteId?: string | null;
   initialServicoId?: string | null;
   workspaces?: Projeto[];
   onClose: () => void;
-  onTaskCreated: () => void;
+  onTaskCreated: (tarefa: Tarefa) => void;
 }
 
 export const TaskFormModal: React.FC<TaskFormModalProps> = ({
+  initialTitle = '',
+  initialDescription = '',
+  initialChecklist = [],
   initialStatus = 'A_FAZER',
   initialWorkspaceId = null,
   initialClienteId = null,
   initialServicoId = null,
-  workspaces = [],
+  workspaces = EMPTY_WORKSPACES,
   onClose,
   onTaskCreated,
 }) => {
-  const [titulo, setTitulo] = useState('');
-  const [descricao, setDescricao] = useState('');
+  const [detalhado, setDetalhado] = useState(false);
+  const [mostrarChecklist, setMostrarChecklist] = useState(initialChecklist.length > 0);
+  const [mostrarProjeto, setMostrarProjeto] = useState(false);
+  const [erro, setErro] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
+  const [titulo, setTitulo] = useState(initialTitle);
+  const [descricao, setDescricao] = useState(initialDescription);
   const [status, setStatus] = useState<StatusTarefa>(initialStatus);
   const [prioridade, setPrioridade] = useState<PrioridadeTarefa>('MEDIA');
   const [projetoId, setProjetoId] = useState<string>(initialWorkspaceId || '');
@@ -51,7 +63,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [servicoId, setServicoId] = useState(initialServicoId || '');
   const [prazo, setPrazo] = useState('');
   const [horasEstimadas, setHorasEstimadas] = useState('');
-  const [checklist, setChecklist] = useState<string[]>([]);
+  const [checklist, setChecklist] = useState<string[]>(initialChecklist);
   const [novoItem, setNovoItem] = useState('');
 
   const [usuarios, setUsuarios] = useState<UserOption[]>([]);
@@ -60,6 +72,36 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [listaWorkspaces, setListaWorkspaces] = useState<Projeto[]>(workspaces);
   const [loading, setLoading] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, []);
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape' && !submittingRef.current) {
+      event.stopPropagation();
+      onClose();
+    }
+    if (event.key !== 'Tab') return;
+    const controls = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'
+    );
+    if (!controls?.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first.focus();
+    }
+  };
 
   const carregarServicos = async (cId: string) => {
     if (!cId) {
@@ -83,14 +125,11 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   useEffect(() => {
     const carregarDependencias = async () => {
       try {
-        const [usersRes, clientesRes, wsRes] = await Promise.all([
-          api.get<UserOption[]>('/users').catch(() => ({ data: [] })),
-          api.get<Cliente[]>('/clientes').catch(() => ({ data: [] })),
-          workspaces.length > 0 ? Promise.resolve(workspaces) : tarefasApi.getProjetos().catch(() => []),
-        ]);
-        setUsuarios(usersRes.data || []);
-        setClientes(clientesRes.data || []);
-        setListaWorkspaces(wsRes || []);
+        const opcoes = await carregarOpcoesTarefa();
+        const wsRes = workspaces.length > 0 ? workspaces : opcoes.workspaces;
+        setUsuarios(opcoes.usuarios);
+        setClientes(opcoes.clientes);
+        setListaWorkspaces(wsRes);
 
         // Se houver initialClienteId e existir um workspace para este cliente, pré-seleciona
         if (initialClienteId && !initialWorkspaceId && wsRes) {
@@ -105,7 +144,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
     };
 
     carregarDependencias();
-  }, []);
+  }, [initialClienteId, initialWorkspaceId, workspaces]);
 
   const handleAddChecklistItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +172,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setChecklist(sugestoes);
     } catch (err) {
       console.error('Erro ao gerar checklist via IA:', err);
+      setErro('Não foi possível gerar o checklist. Tente novamente.');
     } finally {
       setLoadingAi(false);
     }
@@ -140,11 +180,13 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim()) return;
+    if (!titulo.trim() || submittingRef.current || loadingAi) return;
 
+    submittingRef.current = true;
+    setErro('');
     setLoading(true);
     try {
-      await tarefasApi.createTarefa({
+      const criada = await tarefasApi.createTarefa({
         titulo: titulo.trim(),
         descricao: descricao.trim() || undefined,
         status,
@@ -158,277 +200,113 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         checklist: checklist.length > 0 ? checklist : undefined,
       });
 
-      onTaskCreated();
+      onTaskCreated(criada);
       onClose();
     } catch (err) {
       console.error('Erro ao criar tarefa:', err);
+      setErro('Não foi possível criar a tarefa. Seus dados foram mantidos; tente novamente.');
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E0D0B]/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Cabeçalho */}
-        <div className="px-6 py-4 bg-[#FFFDF8] border-b border-[#D8CBB8] flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-black text-[#1E1A16] uppercase tracking-wider">
-              Criar Nova Tarefa
-            </h3>
-            <span className="text-[11px] text-[#8F8271]">
-              Módulo Vivox GP • Gestão Operacional
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-[#847663] hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Título */}
-          <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
-              Título da Tarefa <span className="text-[#B83B32]">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ex: Desenvolver nova Landing Page do Dr. Micaela"
-              className="w-full text-sm font-semibold text-[#1E1A16] bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg px-3.5 py-2 outline-none focus:border-[#C7A15F]"
-            />
-          </div>
-
-          {/* Descrição */}
-          <div>
-            <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
-              Descrição & Briefing
-            </label>
-            <textarea
-              rows={3}
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Informações, orientações ou links úteis para a equipe..."
-              className="w-full text-xs text-[#1E1A16] bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg p-3 outline-none focus:border-[#C7A15F] resize-y"
-            />
-          </div>
-
-          {/* Workspace e Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
-                <FolderKanban className="w-3.5 h-3.5 text-[#C7A15F]" />
-                Workspace de Destino
-              </label>
-              <select
-                value={projetoId}
-                onChange={(e) => setProjetoId(e.target.value)}
-                className="w-full text-xs font-semibold py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
-              >
-                <option value="">Nenhum (Workspace Geral)</option>
-                {listaWorkspaces.map((ws) => (
-                  <option key={ws.id} value={ws.id}>
-                    {ws.icone || '📁'} {ws.nome}
-                  </option>
-                ))}
-              </select>
+    <div className="task-create-overlay">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Criar tarefa" className="task-create-dialog" onKeyDown={handleDialogKeyDown}>
+        <form onSubmit={handleSubmit}>
+          <fieldset disabled={loading} className="task-create-fields">
+            <div className="task-create-heading">
+              <input aria-label="Nome da tarefa" required value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome da tarefa" className="task-create-title" />
+              <button type="button" className={`task-create-icon ${prioridade === 'URGENTE' ? 'is-urgent' : ''}`} aria-label="Marcar como urgente" aria-pressed={prioridade === 'URGENTE'} title="Marcar como urgente" onClick={() => setPrioridade(prioridade === 'URGENTE' ? 'MEDIA' : 'URGENTE')}><Flame size={18} /></button>
+              <button type="button" className="task-create-icon" aria-label="Fechar" onClick={onClose}><X size={19} /></button>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
-                Coluna / Status Inicial
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as StatusTarefa)}
-                className="w-full text-xs font-semibold py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
-              >
-                <option value="BACKLOG">Backlog</option>
-                <option value="A_FAZER">A Fazer</option>
-                <option value="EM_ANDAMENTO">Em Andamento</option>
-                <option value="EM_REVISAO">Em Revisão</option>
-                <option value="CONCLUIDA">Concluída</option>
-              </select>
-            </div>
-          </div>
+            <textarea aria-label="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Descrição" rows={2} className="task-create-description" />
 
-          {/* Linha: Prioridade e Responsável */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider block mb-1">
-                Prioridade
-              </label>
-              <select
-                value={prioridade}
-                onChange={(e) => setPrioridade(e.target.value as PrioridadeTarefa)}
-                className="w-full text-xs font-semibold py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
-              >
-                <option value="BAIXA">Baixa</option>
-                <option value="MEDIA">Média</option>
-                <option value="ALTA">Alta</option>
-                <option value="URGENTE">🔥 Urgente</option>
-              </select>
+            <div className="task-create-row">
+              <label htmlFor="create-responsavel">Responsável</label>
+              <div className="task-create-inline-control"><UserIcon size={16} />
+                <select id="create-responsavel" value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)}>
+                  <option value="">Não atribuído</option>
+                  {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="task-create-row">
+              <label htmlFor="create-prazo">Prazo</label>
+              <div className="task-create-inline-control"><Calendar size={16} />
+                <input id="create-prazo" type="datetime-local" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+              </div>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
-                <UserIcon className="w-3.5 h-3.5 text-[#8F8271]" />
-                Responsável
-              </label>
-              <select
-                value={responsavelId}
-                onChange={(e) => setResponsavelId(e.target.value)}
-                className="w-full text-xs py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
-              >
-                <option value="">Não atribuído</option>
-                {usuarios.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Linha: Cliente e Prazo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
-                <Building2 className="w-3.5 h-3.5 text-[#8F8271]" />
-                Cliente Vinculado
-              </label>
-              <select
-                value={clienteId}
-                onChange={(e) => {
-                  const newCId = e.target.value;
-                  setClienteId(newCId);
-                  setServicoId('');
-                  carregarServicos(newCId);
-                }}
-                className="w-full text-xs py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
-              >
-                <option value="">Nenhum cliente</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nomeFantasia}
-                  </option>
-                ))}
-              </select>
+            <div className="task-create-tools">
+              <button type="button" aria-expanded={mostrarChecklist || detalhado} aria-controls="create-checklist" onClick={() => setMostrarChecklist(!mostrarChecklist)} disabled={detalhado}><ListChecks size={15} />Checklist{checklist.length > 0 && <span>{checklist.length}</span>}</button>
+              <button type="button" aria-expanded={mostrarProjeto || detalhado} aria-controls="create-project" onClick={() => setMostrarProjeto(!mostrarProjeto)} disabled={detalhado}><FolderKanban size={15} /><span className="task-create-project-name">{listaWorkspaces.find((ws) => ws.id === projetoId)?.nome || 'Projeto'}</span><ChevronDown size={13} /></button>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
-                <Calendar className="w-3.5 h-3.5 text-[#8F8271]" />
-                Prazo de Entrega
-              </label>
-              <input
-                type="date"
-                value={prazo}
-                onChange={(e) => setPrazo(e.target.value)}
-                className="w-full text-xs py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F]"
-              />
-            </div>
-          </div>
+            {(mostrarProjeto || detalhado) && (
+              <div id="create-project" className="task-create-extra">
+                <label htmlFor="create-workspace">Projeto / Workspace</label>
+                <select id="create-workspace" value={projetoId} onChange={(e) => setProjetoId(e.target.value)}>
+                  <option value="">Workspace geral</option>
+                  {listaWorkspaces.map((ws) => <option key={ws.id} value={ws.id}>{ws.nome}</option>)}
+                </select>
+              </div>
+            )}
 
-          {/* Serviço Contratado do Cliente (Se houver cliente) */}
-          {clienteId && (
-            <div>
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider flex items-center gap-1 mb-1">
-                <FolderKanban className="w-3.5 h-3.5 text-[#C7A15F]" />
-                Serviço Contratado do Cliente
-              </label>
-              <select
-                value={servicoId}
-                onChange={(e) => setServicoId(e.target.value)}
-                className="w-full text-xs py-2 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
-              >
-                <option value="">Nenhum (Demanda Avulsa / Geral)</option>
-                {servicosCliente.map((srv) => (
-                  <option key={srv.id} value={srv.id}>
-                    {srv.tipoServico?.replace(/_/g, ' ')} ({srv.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Checklist Inicial */}
-          <div className="pt-2 border-t border-[#D8CBB8]">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[11px] font-bold text-[#625746] uppercase tracking-wider">
-                Checklist de Subtarefas
-              </label>
-              <button
-                type="button"
-                onClick={handleGerarChecklistIa}
-                disabled={loadingAi}
-                className="text-[11px] font-bold text-[#8F6F2D] hover:text-[#1E1A16] bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 border border-[#C7A15F]/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                {loadingAi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-[#C7A15F]" />}
-                Gerar com IA
-              </button>
-            </div>
-
-            <div className="space-y-1.5 mb-2">
-              {checklist.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between gap-2 p-2 bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg text-xs"
-                >
-                  <span className="text-[#1E1A16]">{item}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveChecklistItem(idx)}
-                    className="text-[#8F8271] hover:text-[#B83B32] p-0.5"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+            {detalhado && (
+              <div id="create-details" className="task-create-extra task-create-grid">
+                <div><label htmlFor="create-status">Status inicial</label>
+                  <select id="create-status" value={status} onChange={(e) => setStatus(e.target.value as StatusTarefa)}>
+                    <option value="BACKLOG">Backlog</option><option value="A_FAZER">A fazer</option><option value="EM_ANDAMENTO">Em andamento</option><option value="EM_REVISAO">Em revisão</option><option value="CONCLUIDA">Concluída</option>
+                  </select>
                 </div>
-              ))}
-            </div>
+                <div><label htmlFor="create-prioridade">Prioridade</label>
+                  <select id="create-prioridade" value={prioridade} onChange={(e) => setPrioridade(e.target.value as PrioridadeTarefa)}>
+                    <option value="BAIXA">Baixa</option><option value="MEDIA">Média</option><option value="ALTA">Alta</option><option value="URGENTE">Urgente</option>
+                  </select>
+                </div>
+                <div><label htmlFor="create-cliente">Cliente</label>
+                  <select id="create-cliente" value={clienteId} onChange={(e) => { setClienteId(e.target.value); setServicoId(''); carregarServicos(e.target.value); }}>
+                    <option value="">Nenhum cliente</option>
+                    {clientes.map((c) => <option key={c.id} value={c.id}>{c.nomeFantasia}</option>)}
+                  </select>
+                </div>
+                <div><label htmlFor="create-horas">Horas estimadas</label>
+                  <input id="create-horas" type="number" min="0" step="0.5" value={horasEstimadas} onChange={(e) => setHorasEstimadas(e.target.value)} placeholder="Ex.: 2" />
+                </div>
+                {clienteId && <div className="task-create-full"><label htmlFor="create-servico">Serviço contratado</label>
+                  <select id="create-servico" value={servicoId} onChange={(e) => setServicoId(e.target.value)}>
+                    <option value="">Nenhum (demanda avulsa)</option>
+                    {servicosCliente.map((srv) => <option key={srv.id} value={srv.id}>{srv.tipoServico?.replace(/_/g, ' ')} ({srv.status})</option>)}
+                  </select>
+                </div>}
+              </div>
+            )}
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={novoItem}
-                onChange={(e) => setNovoItem(e.target.value)}
-                placeholder="Digitar subtarefa manual..."
-                className="flex-1 text-xs bg-[#FFFDF8] border border-[#D8CBB8] rounded-lg px-3 py-1.5 outline-none focus:border-[#C7A15F]"
-              />
-              <button
-                type="button"
-                onClick={handleAddChecklistItem}
-                className="px-3 py-1.5 bg-[#EEE7DC] hover:bg-[#E5D9C8] text-[#1E1A16] rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Adicionar
-              </button>
-            </div>
-          </div>
+            {(mostrarChecklist || detalhado) && (
+              <div id="create-checklist" className="task-create-extra">
+                <div className="task-create-checklist-heading">
+                  <label htmlFor="create-item">Checklist</label>
+                  <button type="button" onClick={handleGerarChecklistIa} disabled={loadingAi || !titulo.trim()}>{loadingAi ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}Gerar com IA</button>
+                </div>
+                <ul className="task-create-checklist">
+                  {checklist.map((item, idx) => <li key={idx}><ListChecks size={14} /><span>{item}</span><button type="button" aria-label={`Remover item: ${item}`} onClick={() => handleRemoveChecklistItem(idx)}><Trash2 size={14} /></button></li>)}
+                </ul>
+                <div className="task-create-add-item">
+                  <input id="create-item" value={novoItem} onChange={(e) => setNovoItem(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { handleAddChecklistItem(e); } }} placeholder="Adicionar um item…" />
+                  <button type="button" aria-label="Adicionar item" disabled={!novoItem.trim()} onClick={handleAddChecklistItem}><Plus size={18} /></button>
+                </div>
+              </div>
+            )}
+          </fieldset>
 
-          {/* Botões do Rodapé */}
-          <div className="pt-4 border-t border-[#D8CBB8] flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-[#847663] hover:text-[#1E1A16] hover:bg-[#EEE7DC] transition-all cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !titulo.trim()}
-              className="px-5 py-2 rounded-lg text-xs font-bold bg-[#C7A15F] hover:bg-[#D1B174] text-[#1E1A16] flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Criar Tarefa
-            </button>
+          {erro && <p role="alert" className="task-create-error">{erro}</p>}
+          <div className="task-create-footer">
+            <button type="submit" className="task-create-primary" disabled={loading || loadingAi || !titulo.trim()}>{loading && <Loader2 size={16} className="animate-spin" />}{loading ? 'Criando…' : 'Criar tarefa'}</button>
+            <button type="button" disabled={loading} onClick={onClose}>Cancelar</button>
+            <button type="button" disabled={loading} className="task-create-details-toggle" aria-expanded={detalhado} aria-controls="create-details" onClick={() => setDetalhado(!detalhado)}>{detalhado ? 'Formulário simples' : 'Formulário detalhado'}</button>
           </div>
         </form>
       </div>

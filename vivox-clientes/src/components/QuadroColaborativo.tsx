@@ -128,7 +128,7 @@ export function QuadroColaborativo({ itemId, itemTitulo }: Props) {
             <h3 className="text-sm font-black text-[#1E1A16] uppercase tracking-wider">
               Quadro Colaborativo
             </h3>
-            <span className="text-[10px] font-bold bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <span className="text-[12px] font-bold bg-[#C7A15F]/20 text-[#8F6F2D] border border-[#C7A15F]/40 px-2 py-0.5 rounded-full flex items-center gap-1">
               <Users className="w-3 h-3" />
               {conectados} {conectados === 1 ? 'pessoa' : 'pessoas'} agora
             </span>

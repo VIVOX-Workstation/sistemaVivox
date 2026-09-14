@@ -67,7 +67,7 @@ export function HostingRadar() {
 
     if (nivelUrgencia === 'CRITICO' && typeof menorDias === 'number') {
       return (
-        <span className="text-[10px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
+        <span className="text-[12px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" />
           {menorDias < 0 ? `Vencido há ${Math.abs(menorDias)}d` : `Vence em ${menorDias}d`}
         </span>
@@ -76,7 +76,7 @@ export function HostingRadar() {
 
     if (nivelUrgencia === 'ATENCAO' && typeof menorDias === 'number') {
       return (
-        <span className="text-[10px] text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
+        <span className="text-[12px] text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
           <Clock className="w-3 h-3" /> Vence em {menorDias}d
         </span>
       );
@@ -84,13 +84,13 @@ export function HostingRadar() {
 
     if (nivelUrgencia === 'EM_DIA' && typeof menorDias === 'number') {
       return (
-        <span className="text-[10px] text-[#247A4A] bg-[#E6F4EA] border border-[#CEEAD6] px-2.5 py-0.5 rounded font-semibold flex items-center gap-1">
+        <span className="text-[12px] text-[#247A4A] bg-[#E6F4EA] border border-[#CEEAD6] px-2.5 py-0.5 rounded font-semibold flex items-center gap-1">
           <CheckCircle2 className="w-3 h-3" /> Em dia ({menorDias}d)
         </span>
       );
     }
 
-    return <span className="text-[10px] text-[#847663] bg-[#EEE7DC] px-2 py-0.5 rounded font-medium">Sem data</span>;
+    return <span className="text-[12px] text-[#847663] bg-[#EEE7DC] px-2 py-0.5 rounded font-medium">Sem data</span>;
   };
 
   return (
@@ -120,7 +120,7 @@ export function HostingRadar() {
       {radar && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-[#FFFDF8] p-4 rounded-[11px] border border-[#D8CBB8] shadow-2xs">
-            <span className="text-[11px] font-semibold text-[#847663]">Total de Landing Pages</span>
+            <span className="text-[12.5px] font-semibold text-[#847663]">Total de Landing Pages</span>
             <h3 className="text-2xl font-bold text-[#1E1A16] mt-1">{radar.totalAtivos}</h3>
           </div>
 
@@ -133,7 +133,7 @@ export function HostingRadar() {
             }`}
           >
             <div className="flex items-center justify-between text-[#B83B32]">
-              <span className="text-[11px] font-semibold">Críticos (&le; 7 dias)</span>
+              <span className="text-[12.5px] font-semibold">Críticos (&le; 7 dias)</span>
               <AlertTriangle className="w-4 h-4" />
             </div>
             <h3 className="text-2xl font-bold text-[#B83B32] mt-1">{radar.criticos7Dias}</h3>
@@ -148,7 +148,7 @@ export function HostingRadar() {
             }`}
           >
             <div className="flex items-center justify-between text-[#8A6828]">
-              <span className="text-[11px] font-semibold">Atenção (&le; 30 dias)</span>
+              <span className="text-[12.5px] font-semibold">Atenção (&le; 30 dias)</span>
               <Clock className="w-4 h-4" />
             </div>
             <h3 className="text-2xl font-bold text-[#8A6828] mt-1">{radar.atencao30Dias}</h3>
@@ -163,7 +163,7 @@ export function HostingRadar() {
             }`}
           >
             <div className="flex items-center justify-between text-[#247A4A]">
-              <span className="text-[11px] font-semibold">Em Dia (&gt; 30 dias)</span>
+              <span className="text-[12.5px] font-semibold">Em Dia (&gt; 30 dias)</span>
               <CheckCircle2 className="w-4 h-4" />
             </div>
             <h3 className="text-2xl font-bold text-[#247A4A] mt-1">{radar.emDia}</h3>
@@ -249,7 +249,7 @@ export function HostingRadar() {
                         href={ativo.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#8A6828] hover:underline font-mono text-[11px] flex items-center gap-1 truncate max-w-[200px]"
+                        className="text-[#8A6828] hover:underline font-mono text-[12.5px] flex items-center gap-1 truncate max-w-[200px]"
                         title={ativo.url}
                       >
                         {ativo.url.replace(/^https?:\/\//, '')}
@@ -274,7 +274,7 @@ export function HostingRadar() {
 
                     {/* Status */}
                     <td className="py-3 px-4 text-right">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
+                      <span className="px-2 py-0.5 rounded text-[12px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
                         {ativo.status}
                       </span>
                     </td>

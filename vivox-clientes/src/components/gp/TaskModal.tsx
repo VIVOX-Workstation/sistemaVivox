@@ -9,38 +9,39 @@ import type {
 } from '../../types';
 import { tarefasApi } from '../../api/tarefas';
 import { api } from '../../api/client';
-import { 
-  X, 
-  CheckSquare, 
-  Sparkles, 
-  Plus, 
-  Trash2, 
-  Send, 
-  User as UserIcon, 
-  Building2, 
-  Calendar, 
-  Clock, 
-  MessageSquare, 
-  Loader2, 
-  Flame, 
+import { carregarOpcoesTarefa, type UserOption } from '../../api/opcoesTarefa';
+import { useAuth } from '../../context/AuthContext';
+import {
+  X,
+  CheckSquare,
+  Sparkles,
+  Plus,
+  Trash2,
+  Send,
+  Building2,
+  Calendar,
+  MessageSquare,
+  Loader2,
+  Flame,
   Save,
   Paperclip,
-  AtSign,
-  List,
-  ListOrdered,
   FolderKanban,
-  Tag,
-  CheckCircle2,
-  Smile,
   Timer,
-  ExternalLink
+  ExternalLink,
+  Users,
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
+import './TaskModal.css';
+import { DEFAULT_COLUNAS } from './KanbanBoard';
 
-interface UserOption {
-  id: string;
-  nome: string;
-  email: string;
-}
+const toDatetimeLocalValue = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 interface TaskModalProps {
   tarefaId: string | null;
@@ -53,6 +54,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onTaskUpdated,
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+
   const [tarefa, setTarefa] = useState<Tarefa | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,13 +80,29 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // Subtarefas e Comentários
   const [novoItemChecklist, setNovoItemChecklist] = useState('');
   const [novoComentario, setNovoComentario] = useState('');
+  const [mensagemRespondida, setMensagemRespondida] = useState<any>(null);
   const [showChecklistSection, setShowChecklistSection] = useState(true);
+
+  // Fecha modal com ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   // Auxiliares
   const [usuarios, setUsuarios] = useState<UserOption[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [workspaces, setWorkspaces] = useState<Projeto[]>([]);
   const [servicosCliente, setServicosCliente] = useState<any[]>([]);
+  const [observadorIds, setObservadorIds] = useState<string[]>([]);
+  const [showObservadorPicker, setShowObservadorPicker] = useState(false);
 
   // Carrega os serviços do cliente selecionado
   const carregarServicosCliente = async (cId: string) => {
@@ -110,10 +130,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setClienteId(data.clienteId || '');
       setProjetoId(data.projetoId || '');
       setServicoId(data.servicoId || '');
-      setPrazo(data.prazo ? data.prazo.split('T')[0] : '');
+      setPrazo(toDatetimeLocalValue(data.prazo));
       setHorasEstimadas(data.horasEstimadas ? String(data.horasEstimadas) : '');
       setHorasGastas(data.horasGastas ? String(data.horasGastas) : '');
       setTags(data.tags || []);
+      setObservadorIds((data.observadores || []).map((o: any) => o.id));
 
       if (data.clienteId) {
         carregarServicosCliente(data.clienteId);
@@ -125,32 +146,57 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
+  // Usuários, clientes e workspaces (cacheados) só alimentam os selects;
+  // não devem bloquear a exibição da tarefa em si.
+  useEffect(() => {
+    let ativo = true;
+    carregarOpcoesTarefa()
+      .then((opcoes) => {
+        if (!ativo) return;
+        setUsuarios(opcoes.usuarios);
+        setClientes(opcoes.clientes);
+        setWorkspaces(opcoes.workspaces);
+      })
+      .catch((e) => console.error('Erro ao carregar selects:', e));
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!tarefaId) return;
     setLoading(true);
-
-    const carregarTudo = async () => {
-      try {
-        const [usersRes, clientesRes, wsRes] = await Promise.all([
-          api.get<UserOption[]>('/users').catch(() => ({ data: [] })),
-          api.get<Cliente[]>('/clientes').catch(() => ({ data: [] })),
-          tarefasApi.getProjetos().catch(() => []),
-        ]);
-        setUsuarios(usersRes.data || []);
-        setClientes(clientesRes.data || []);
-        setWorkspaces(wsRes || []);
-      } catch (e) {
-        console.error('Erro ao carregar selects:', e);
-      }
-      await carregarTarefa(tarefaId);
-    };
-
-    carregarTudo();
+    carregarTarefa(tarefaId);
   }, [tarefaId]);
+
+  const getEtapaLabel = (statusValue: string): string => {
+    try {
+      const storageKey = `vivox_kanban_columns_v3_${tarefa?.projetoId || 'default'}`;
+      const saved = localStorage.getItem(storageKey);
+      const colunas = saved ? JSON.parse(saved) : DEFAULT_COLUNAS;
+      const encontrada = Array.isArray(colunas)
+        ? colunas.find((c: any) => c.id === statusValue)
+        : null;
+      if (encontrada?.titulo) return encontrada.titulo;
+    } catch {
+      // ignora erro de parse e usa o rótulo padrão abaixo
+    }
+    const fallback: Record<string, string> = {
+      BACKLOG: 'Backlog',
+      A_FAZER: 'A Fazer',
+      EM_ANDAMENTO: 'Em Andamento',
+      EM_REVISAO: 'Em Revisão',
+      CONCLUIDA: 'Concluída',
+      CANCELADA: 'Cancelada',
+    };
+    return fallback[statusValue] || statusValue;
+  };
 
   const handleSalvarCamposPrincipais = async () => {
     if (!tarefaId) return;
     setSaving(true);
+    const statusAnterior = tarefa?.status;
+    const statusMudou = !!statusAnterior && status !== statusAnterior;
     try {
       await tarefasApi.updateTarefa(tarefaId, {
         titulo: titulo.trim(),
@@ -161,18 +207,42 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         clienteId: clienteId || undefined,
         projetoId: projetoId || undefined,
         servicoId: servicoId || undefined,
-        prazo: prazo ? new Date(prazo).toISOString() : undefined,
+        prazo: prazo ? new Date(prazo).toISOString() : null,
         horasEstimadas: horasEstimadas ? Number(horasEstimadas) : undefined,
         horasGastas: horasGastas ? Number(horasGastas) : undefined,
         tags,
       });
 
+      if (statusMudou) {
+        const nomeEtapa = getEtapaLabel(status);
+        await tarefasApi.addComentario(tarefaId, `alterou a etapa para "${nomeEtapa}"`, true);
+      }
+
       await carregarTarefa(tarefaId);
       onTaskUpdated();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar alterações da tarefa:', err);
+      if (err?.response?.status === 403) {
+        window.alert(err.response?.data?.message || 'Apenas administradores podem alterar o prazo da tarefa.');
+        await carregarTarefa(tarefaId);
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleObservador = async (userId: string) => {
+    if (!tarefaId) return;
+    const novaLista = observadorIds.includes(userId)
+      ? observadorIds.filter((id) => id !== userId)
+      : [...observadorIds, userId];
+    const listaAnterior = observadorIds;
+    setObservadorIds(novaLista);
+    try {
+      await tarefasApi.setObservadores(tarefaId, novaLista);
+    } catch (err) {
+      console.error('Erro ao atualizar observadores:', err);
+      setObservadorIds(listaAnterior);
     }
   };
 
@@ -256,44 +326,112 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const renderTextoComLinks = (texto: string) => {
-    // Quebra por links markdown [Nome](url) e URLs soltas https:// ou http://
-    const tokens = texto.split(/(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s]+)/g);
+    const lines = texto.split('\n');
 
-    return tokens.map((token, i) => {
-      const mdMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
-      if (mdMatch) {
-        const [, label, url] = mdMatch;
+    return lines.map((line, lineIdx) => {
+      const isQuoteStrict = line.startsWith('>');
+      const content = isQuoteStrict ? line.replace(/^>\s?/, '') : line;
+
+      // Quebra por links markdown [Nome](url) e URLs soltas https:// ou http://
+      const tokens = content.split(/(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s]+)/g);
+
+      const renderedTokens = tokens.map((token, i) => {
+        const checkMedia = (url: string, label: string, isRaw: boolean = false) => {
+          const lowerUrl = url.toLowerCase();
+          const urlWithoutQuery = lowerUrl.split('?')[0];
+          const isImage = urlWithoutQuery.match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/);
+          const isVideo = urlWithoutQuery.match(/\.(mp4|webm|ogg|mov)$/);
+
+          if (isImage) {
+            return (
+              <div key={i} className="my-2 inline-block w-full">
+                <a href={url} target="_blank" rel="noopener noreferrer" className="block w-max max-w-full rounded-lg overflow-hidden border border-[#DED7CC] shadow-sm hover:opacity-90 transition-opacity">
+                  <img src={url} alt={label} className="w-full h-auto max-h-64 object-contain bg-[#211C16]/5" />
+                </a>
+                {!isRaw && (
+                  <div className="text-[12px] text-[#847663] mt-1 flex items-center gap-1">
+                    <span>📎</span> {label}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          if (isVideo) {
+            return (
+              <div key={i} className="my-2 inline-block w-full">
+                <video controls className="w-full max-w-sm max-h-64 rounded-lg border border-[#DED7CC] shadow-sm bg-[#211C16]/5">
+                  <source src={url} />
+                  Seu navegador não suporta vídeos.
+                </video>
+                <div className="text-[12px] text-[#847663] mt-1 flex items-center gap-1">
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                    <span>📎</span> {isRaw ? 'Video Link' : label} <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        };
+
+        const mdMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+        if (mdMatch) {
+          const [, label, url] = mdMatch;
+          const mediaRender = checkMedia(url, label);
+          if (mediaRender) return mediaRender;
+
+          return (
+            <a
+              key={i}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[#2563EB] hover:text-[#1D4ED8] underline font-bold bg-[#3B82F6]/10 px-2 py-0.5 rounded-lg my-0.5 transition-colors"
+            >
+              <span>📎</span>
+              <span>{label}</span>
+              <ExternalLink className="w-3 h-3 ml-0.5" />
+            </a>
+          );
+        }
+
+        if (token.match(/^https?:\/\//)) {
+          const mediaRender = checkMedia(token, token, true);
+          if (mediaRender) return mediaRender;
+
+          return (
+            <a
+              key={i}
+              href={token}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#2563EB] hover:text-[#1D4ED8] underline font-semibold break-all inline-flex items-center gap-0.5"
+            >
+              {token}
+              <ExternalLink className="w-3 h-3 inline shrink-0" />
+            </a>
+          );
+        }
+
+        return <span key={i}>{token}</span>;
+      });
+
+      if (isQuoteStrict) {
         return (
-          <a
-            key={i}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[#2563EB] hover:text-[#1D4ED8] underline font-bold bg-[#3B82F6]/10 px-2 py-0.5 rounded-lg my-0.5 transition-colors"
-          >
-            <span>📎</span>
-            <span>{label}</span>
-            <ExternalLink className="w-3 h-3 ml-0.5" />
-          </a>
+          <div key={lineIdx} className="border-l-2 border-[#C7A15F] pl-2 my-0.5 text-[#847663] bg-[#C7A15F]/5 py-1 pr-2 rounded-r-md italic">
+            {renderedTokens}
+          </div>
         );
       }
 
-      if (token.match(/^https?:\/\//)) {
-        return (
-          <a
-            key={i}
-            href={token}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#2563EB] hover:text-[#1D4ED8] underline font-semibold break-all inline-flex items-center gap-0.5"
-          >
-            {token}
-            <ExternalLink className="w-3 h-3 inline shrink-0" />
-          </a>
-        );
-      }
-
-      return <span key={i}>{token}</span>;
+      return (
+        <React.Fragment key={lineIdx}>
+          {renderedTokens}
+          {lineIdx < lines.length - 1 && <br />}
+        </React.Fragment>
+      );
     });
   };
 
@@ -301,9 +439,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     e.preventDefault();
     if (!tarefaId || !novoComentario.trim()) return;
 
+    let textoFinal = novoComentario.trim();
+    if (mensagemRespondida) {
+      const citacao = mensagemRespondida.texto.split('\n').map((l: string) => `> ${l}`).join('\n');
+      textoFinal = `> **${mensagemRespondida.autor?.nome || 'Usuário'}** escreveu:\n${citacao}\n\n${textoFinal}`;
+    }
+
     try {
-      await tarefasApi.addComentario(tarefaId, novoComentario.trim());
+      await tarefasApi.addComentario(tarefaId, textoFinal);
       setNovoComentario('');
+      setMensagemRespondida(null);
       await carregarTarefa(tarefaId);
       onTaskUpdated();
     } catch (err) {
@@ -344,17 +489,32 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const checklistConcluidos = tarefa?.checklist?.filter((c) => c.concluido).length || 0;
   const checklistPercent = checklistTotal > 0 ? Math.round((checklistConcluidos / checklistTotal) * 100) : 0;
 
+  const atrasoInfo = (() => {
+    if (!prazo || status === 'CONCLUIDA' || status === 'CANCELADA') return null;
+    const prazoDate = new Date(prazo);
+    const agora = new Date();
+    const diffMs = agora.getTime() - prazoDate.getTime();
+    if (diffMs <= 0) return null;
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHoras < 24) {
+      const horas = diffHoras || 1;
+      return { texto: `Atrasado ${horas} hora${horas === 1 ? '' : 's'}` };
+    }
+    const diffDias = Math.floor(diffHoras / 24);
+    return { texto: `Atrasado ${diffDias} dia${diffDias === 1 ? '' : 's'}` };
+  })();
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0E0D0B]/60 backdrop-blur-xs transition-opacity duration-300">
+    <div className="task-detail-overlay fixed inset-0 z-50 flex items-center justify-center bg-[#17130F]/60 backdrop-blur-xs">
       {/* Drawer / Modal Estilo Bitrix24 com Cores do Sistema Vivox */}
-      <div className="w-full max-w-[96vw] h-[92vh] max-h-[94vh] bg-[#FFFDF8] rounded-t-3xl border-t border-x border-[#D8CBB8] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ease-out">
+      <div role="dialog" aria-modal="true" aria-label="Detalhes da tarefa" className="task-detail-dialog bg-[#FFFDF8] border border-[#DED7CC] shadow-2xl flex flex-col overflow-hidden">
         {/* Barra Superior de Fechamento */}
-        <div className="px-6 py-2.5 bg-[#F6F0E7] border-b border-[#E5D9C8] flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#8F8271]">
+        <div className="task-detail-topbar px-6 py-4 bg-[#FFFDF8] border-b border-[#E7E1D7] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#847663]">
             <span className="w-2 h-2 rounded-full bg-[#C7A15F]" />
-            <span className="text-[#1E1A16]">Ficha da Tarefa • Vivox GP</span>
+            <span className="text-[#1E1A16]">Vivox GP / Detalhes da tarefa</span>
             {tarefa?.id && (
-              <span className="font-mono text-[11px] text-[#8F8271] bg-[#EEE7DC] px-1.5 py-0.2 rounded">
+              <span className="font-mono text-[12.5px] text-[#847663] bg-[#F2EEE7] px-1.5 py-0.2 rounded">
                 #{tarefa.id.slice(0, 8)}
               </span>
             )}
@@ -363,7 +523,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleSalvarCamposPrincipais}
-              disabled={saving}
+              disabled={saving || loading || !tarefa || !titulo.trim()}
               className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#C7A15F] hover:bg-[#B89455] text-[#1D160B] flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -372,7 +532,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-[#8F8271] hover:text-[#1E1A16] hover:bg-[#EEE7DC] transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-[#847663] hover:text-[#1E1A16] hover:bg-[#F2EEE7] transition-colors cursor-pointer"
               title="Fechar"
             >
               <X className="w-5 h-5" />
@@ -382,34 +542,47 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
         {/* Corpo Dividido em 2 Painéis */}
         {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#8F8271]">
-            <Loader2 className="w-8 h-8 animate-spin text-[#C7A15F]" />
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#847663]">
+            <Loader2 className="w-8 h-8 animate-spin text-[#847663]" />
             <span className="text-xs font-medium">Carregando detalhes da tarefa...</span>
           </div>
         ) : (
-          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#E5D9C8]">
+          <div className="task-detail-body">
             {/* ======================================================== */}
             {/* PAINEL ESQUERDO: DETALHES & PROPRIEDADES (6 cols)        */}
             {/* ======================================================== */}
-            <div className="lg:col-span-6 xl:col-span-6 p-6 overflow-y-auto bg-[#FFFDF8] flex flex-col gap-4">
-              {/* Título da Tarefa & Botão Urgente */}
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
+            <div className="task-detail-main">
+              <div className="task-detail-summary">
+                <span className="task-detail-status" data-status={status}>
+                  <span />{getEtapaLabel(status)}
+                </span>
+                <span className="text-xs text-[#625746] flex items-center gap-1.5">
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  {checklistConcluidos} de {checklistTotal} itens concluídos
+                </span>
+              </div>
+              {/* Título da Tarefa em Destaque - Topo Esquerdo, estilo Bitrix */}
+              <div className="flex items-start justify-between gap-3 pb-1">
+                <textarea
+                  aria-label="Título da tarefa"
+                  rows={2}
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.preventDefault();
+                  }}
                   placeholder="Nome da Tarefa..."
-                  className="flex-1 text-xl font-bold text-[#1E1A16] placeholder:text-[#8F8271]/50 outline-none border-b border-transparent focus:border-[#C7A15F] py-1 transition-all"
+                  className="flex-1 resize-none text-xl md:text-2xl font-extrabold text-[#1E1A16] placeholder:text-[#847663]/50 placeholder:font-semibold outline-none bg-transparent border-b border-transparent focus:border-[#C7A15F] leading-snug transition-all"
                 />
 
                 <button
                   type="button"
                   onClick={() => setPrioridade(prioridade === 'URGENTE' ? 'MEDIA' : 'URGENTE')}
                   title={prioridade === 'URGENTE' ? 'Tarefa marcada como urgente' : 'Marcar como urgente'}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                  className={`p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
                     prioridade === 'URGENTE'
                       ? 'bg-[#B83B32]/15 text-[#B83B32] border-[#B83B32]/40 shadow-xs ring-1 ring-[#B83B32]/30'
-                      : 'text-[#8F8271] hover:text-[#B83B32] hover:bg-[#B83B32]/10 border-transparent'
+                      : 'text-[#847663] hover:text-[#B83B32] hover:bg-[#B83B32]/10 border-transparent'
                   }`}
                 >
                   <Flame className="w-5 h-5" />
@@ -417,47 +590,31 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </div>
 
               {/* Card de Descrição & Barra de Ações */}
-              <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-3.5 flex flex-col gap-2 shadow-2xs">
+              <div className="task-detail-description bg-[#FAF8F4] border border-[#DED7CC] rounded-2xl p-3.5 flex flex-col gap-2">
+                <label htmlFor="task-description" className="text-sm font-semibold text-[#1E1A16]">Descrição</label>
                 <textarea
-                  rows={3}
+                  id="task-description"
+                  rows={4}
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Descrição, instruções e links para esta tarefa..."
-                  className="w-full text-xs text-[#1E1A16] bg-transparent outline-none resize-y placeholder:text-[#8F8271]/60 leading-relaxed"
+                  className="w-full text-xs text-[#1E1A16] bg-transparent outline-none resize-y placeholder:text-[#847663]/60 leading-relaxed"
                 />
 
                 {/* Toolbar de Ações Bitrix (Anexos, CoPilot, Checklist) */}
-                <div className="flex items-center justify-between pt-2 border-t border-[#E5D9C8] text-[#8F8271] text-xs">
+                <div className="flex items-center justify-between pt-2 border-t border-[#E7E1D7] text-[#847663] text-xs">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       title="Anexar arquivo"
-                      className="p-1 hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded transition-colors cursor-pointer"
+                      className="p-1 hover:text-[#1E1A16] hover:bg-[#F2EEE7] rounded transition-colors cursor-pointer"
                     >
                       <Paperclip className="w-4 h-4" />
                     </button>
-                    <button
-                      type="button"
-                      title="Mencionar pessoa"
-                      className="p-1 hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded transition-colors"
-                    >
-                      <AtSign className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Lista de marcadores"
-                      className="p-1 hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded transition-colors"
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Lista numerada"
-                      className="p-1 hover:text-[#1E1A16] hover:bg-[#EEE7DC] rounded transition-colors"
-                    >
-                      <ListOrdered className="w-4 h-4" />
-                    </button>
+
+
+
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -465,19 +622,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       type="button"
                       onClick={handleGerarChecklistIa}
                       disabled={loadingAi}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#8F6F2D] hover:text-[#1E1A16] bg-[#C7A15F]/20 hover:bg-[#C7A15F]/30 px-2.5 py-1 rounded-lg border border-[#C7A15F]/40 transition-all cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#625746] hover:text-[#1E1A16] bg-[#F2EEE7] hover:bg-[#EAE3D8] px-2.5 py-1 rounded-lg border border-[#DED7CC] transition-all cursor-pointer disabled:opacity-50"
                     >
-                      {loadingAi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />}
-                      CoPilot IA
+                      {loadingAi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-[#847663]" />}
+                      Gerar checklist com IA
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setShowChecklistSection(!showChecklistSection)}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#4A4032] hover:text-[#1E1A16] bg-[#EEE7DC] hover:bg-[#EADFCF] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#4A4032] hover:text-[#1E1A16] bg-[#F2EEE7] hover:bg-[#EAE3D8] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                     >
-                      <CheckSquare className="w-3.5 h-3.5 text-[#C7A15F]" />
-                      Lista de Verificação ({checklistConcluidos}/{checklistTotal})
+                      <CheckSquare className="w-3.5 h-3.5 text-[#847663]" />
+                      Checklist ({checklistConcluidos}/{checklistTotal})
                     </button>
                   </div>
                 </div>
@@ -485,20 +642,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
               {/* Seção de Checklist / Subtarefas */}
               {showChecklistSection && (
-                <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 flex flex-col gap-3">
+                <div className="bg-[#FAF8F4] border border-[#DED7CC] rounded-2xl p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CheckSquare className="w-4 h-4 text-[#C7A15F]" />
+                      <CheckSquare className="w-4 h-4 text-[#847663]" />
                       <h4 className="text-xs font-bold text-[#1E1A16]">
                         Lista de Verificação
                       </h4>
-                      <span className="text-[11px] font-bold text-[#8F6F2D] bg-[#C7A15F]/20 px-2 py-0.5 rounded-full">
+                      <span className="text-[12.5px] font-bold text-[#625746] bg-[#F2EEE7] px-2 py-0.5 rounded-full">
                         {checklistConcluidos}/{checklistTotal}
                       </span>
                     </div>
 
                     {checklistTotal > 0 && (
-                      <span className="text-xs font-bold text-[#8F6F2D]">
+                      <span className="text-xs font-bold text-[#625746]">
                         {checklistPercent}%
                       </span>
                     )}
@@ -506,9 +663,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
                   {/* Barra de Progresso */}
                   {checklistTotal > 0 && (
-                    <div className="w-full bg-[#EEE7DC] h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-[#F2EEE7] h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-[#C7A15F] h-full rounded-full transition-all duration-300"
+                        className="bg-[#16A34A] h-full rounded-full transition-all duration-300"
                         style={{ width: `${checklistPercent}%` }}
                       />
                     </div>
@@ -519,18 +676,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     {tarefa?.checklist?.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between gap-2 p-2 bg-[#FFFDF8] border border-[#E5D9C8] rounded-xl hover:border-[#D8CBB8] transition-all group shadow-2xs"
+                        className="flex items-center justify-between gap-2 p-2 bg-[#FFFDF8] border border-[#E7E1D7] rounded-xl hover:border-[#DED7CC] transition-all group shadow-2xs"
                       >
                         <label className="flex items-center gap-2.5 cursor-pointer flex-1 select-none">
                           <input
                             type="checkbox"
                             checked={item.concluido}
                             onChange={() => handleToggleChecklist(item.id, item.concluido)}
-                            className="w-4 h-4 rounded text-[#C7A15F] accent-[#C7A15F] cursor-pointer"
+                            className="w-4 h-4 rounded text-[#15803D] accent-[#15803D] cursor-pointer"
                           />
                           <span
                             className={`text-xs ${
-                              item.concluido ? 'line-through text-[#8F8271]' : 'text-[#1E1A16] font-medium'
+                              item.concluido ? 'line-through text-[#847663]' : 'text-[#1E1A16] font-medium'
                             }`}
                           >
                             {item.titulo}
@@ -538,7 +695,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         </label>
                         <button
                           onClick={() => handleRemoveChecklistItem(item.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-[#8F8271] hover:text-[#B83B32] transition-opacity"
+                          className="opacity-50 group-hover:opacity-100 p-1 text-[#847663] hover:text-[#B83B32] transition-all cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -553,12 +710,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       value={novoItemChecklist}
                       onChange={(e) => setNovoItemChecklist(e.target.value)}
                       placeholder="Adicionar novo item..."
-                      className="flex-1 text-xs bg-[#FFFDF8] border border-[#E5D9C8] rounded-xl px-3 py-2 outline-none focus:border-[#C7A15F]"
+                      className="flex-1 text-xs bg-[#FFFDF8] border border-[#E7E1D7] rounded-xl px-3 py-2 outline-none focus:border-[#C7A15F]"
                     />
                     <button
                       type="submit"
                       disabled={!novoItemChecklist.trim()}
-                      className="px-3 py-2 bg-[#24201A] text-[#C7A15F] rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-[#14120E] transition-all disabled:opacity-40 cursor-pointer"
+                      className="px-3 py-2 bg-[#302921] text-[#FFFDF8] rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-[#211C16] transition-all disabled:opacity-40 cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                       Adicionar
@@ -567,15 +724,31 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
               )}
 
-              {/* Card 1: Proprietário, Responsável e Prazo */}
-              <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 space-y-3.5">
+              {/* Cabeçalho: ID, Criado, Proprietário, Responsável, Prazo, Status e Observadores */}
+              <div className="bg-[#FAF8F4] border border-[#DED7CC] rounded-2xl p-4 space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-[#E7E1D7]">
+                  <span className="font-mono text-[12.5px] text-[#847663] bg-[#F2EEE7] px-2 py-0.5 rounded">
+                    ID: #{tarefa?.id ? tarefa.id.slice(0, 8).toUpperCase() : '—'}
+                  </span>
+                  <span className="text-[12px] text-[#847663]">
+                    Criado: {tarefa?.createdAt
+                      ? new Date(tarefa.createdAt).toLocaleDateString('pt-BR', {
+                          day: 'numeric',
+                          month: 'long',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '—'}
+                  </span>
+                </div>
+
                 {/* Proprietário da Tarefa (Criador) */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#625746] font-medium w-36">
                     Proprietário da tarefa:
                   </span>
                   <div className="flex-1 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#24201A] text-[#C7A15F] border border-[#C7A15F]/40 flex items-center justify-center text-[10px] font-bold shadow-2xs">
+                    <div className="w-6 h-6 rounded-full bg-[#302921] text-[#FFFDF8] border border-[#DED7CC] flex items-center justify-center text-[12px] font-bold shadow-2xs">
                       {tarefa?.autor?.nome?.slice(0, 2).toUpperCase() || 'VK'}
                     </div>
                     <span className="font-semibold text-[#1E1A16]">
@@ -593,7 +766,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <select
                       value={responsavelId}
                       onChange={(e) => setResponsavelId(e.target.value)}
-                      className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
+                      className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
                     >
                       <option value="">Não atribuído</option>
                       {usuarios.map((u) => (
@@ -608,32 +781,126 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {/* Prazo */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#C7A15F]" />
+                    <Calendar className="w-3.5 h-3.5 text-[#847663]" />
                     Prazo:
                   </span>
                   <div className="flex-1">
                     <input
-                      type="date"
+                      type="datetime-local"
                       value={prazo}
                       onChange={(e) => setPrazo(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] text-[#1E1A16] font-semibold"
+                      disabled={!isAdmin}
+                      title={isAdmin ? undefined : 'Apenas administradores podem alterar o prazo'}
+                      className="w-full text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F] text-[#1E1A16] font-semibold disabled:bg-[#F2EEE7] disabled:text-[#847663] disabled:cursor-not-allowed"
                     />
+                    {!isAdmin && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-[#847663] mt-1">
+                        <Lock className="w-3 h-3" />
+                        Somente administradores podem alterar o prazo
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {atrasoInfo && (
+                  <div className="flex items-center justify-end -mt-2">
+                    <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#B83B32] bg-[#B83B32]/10 border border-[#B83B32]/30 px-2 py-0.5 rounded-full">
+                      <AlertTriangle className="w-3 h-3" />
+                      {atrasoInfo.texto}
+                    </span>
+                  </div>
+                )}
+
+                {/* Status */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#625746] font-medium w-36">
+                    Status:
+                  </span>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as StatusTarefa)}
+                    className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F] font-bold text-[#1E1A16]"
+                  >
+                    <option value="BACKLOG">Backlog</option>
+                    <option value="A_FAZER">A Fazer</option>
+                    <option value="EM_ANDAMENTO">Em Andamento</option>
+                    <option value="EM_REVISAO">Em Revisão</option>
+                    <option value="CONCLUIDA">Concluída</option>
+                    <option value="CANCELADA">Cancelada</option>
+                  </select>
+                </div>
+
+                {/* Observadores */}
+                <div className="flex items-center justify-between text-xs relative">
+                  <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-[#847663]" />
+                    Observadores:
+                  </span>
+                  <div className="flex-1 flex items-center flex-wrap gap-1.5">
+                    {observadorIds.length === 0 && (
+                      <span className="text-[#847663] text-[12.5px]">Nenhum</span>
+                    )}
+                    {observadorIds.map((id) => {
+                      const u = usuarios.find((us) => us.id === id);
+                      if (!u) return null;
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F2EEE7] text-[#4A4032] border border-[#DED7CC] rounded-lg text-[12.5px] font-semibold"
+                        >
+                          {u.nome}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleObservador(id)}
+                            className="hover:text-[#B83B32] font-bold cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setShowObservadorPicker((v) => !v)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FFFDF8] border border-dashed border-[#DED7CC] hover:border-[#C7A15F] text-[#847663] hover:text-[#1E1A16] rounded-lg text-[12.5px] font-semibold cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Adicionar
+                    </button>
+
+                    {showObservadorPicker && (
+                      <div className="absolute right-0 top-6 z-20 w-56 max-h-56 overflow-y-auto bg-[#FFFDF8] border border-[#DED7CC] rounded-xl shadow-lg p-2 space-y-1">
+                        {usuarios.map((u) => (
+                          <label
+                            key={u.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#F2EEE7] cursor-pointer text-xs"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={observadorIds.includes(u.id)}
+                              onChange={() => handleToggleObservador(u.id)}
+                              className="w-3.5 h-3.5 accent-[#C7A15F]"
+                            />
+                            <span className="text-[#1E1A16]">{u.nome}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Card 2: Workspace, Cliente, Status e Horas */}
-              <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4 space-y-3.5">
+              <div className="bg-[#FAF8F4] border border-[#DED7CC] rounded-2xl p-4 space-y-3.5">
                 {/* Projeto / Workspace */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
-                    <FolderKanban className="w-3.5 h-3.5 text-[#C7A15F]" />
+                    <FolderKanban className="w-3.5 h-3.5 text-[#847663]" />
                     Projeto / Workspace:
                   </span>
                   <select
                     value={projetoId}
                     onChange={(e) => setProjetoId(e.target.value)}
-                    className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-bold text-[#8F6F2D]"
+                    className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F] font-bold text-[#625746]"
                   >
                     <option value="">Nenhum (Workspace Geral)</option>
                     {workspaces.map((ws) => (
@@ -647,7 +914,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {/* Cliente */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-[#8F8271]" />
+                    <Building2 className="w-3.5 h-3.5 text-[#847663]" />
                     Cliente:
                   </span>
                   <select
@@ -658,7 +925,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       setServicoId('');
                       carregarServicosCliente(newCId);
                     }}
-                    className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-medium text-[#1E1A16]"
+                    className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F] font-medium text-[#1E1A16]"
                   >
                     <option value="">Nenhum cliente vinculado</option>
                     {clientes.map((c) => (
@@ -673,13 +940,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {clienteId && (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
-                      <FolderKanban className="w-3.5 h-3.5 text-[#C7A15F]" />
+                      <FolderKanban className="w-3.5 h-3.5 text-[#847663]" />
                       Serviço do Contrato:
                     </span>
                     <select
                       value={servicoId}
                       onChange={(e) => setServicoId(e.target.value)}
-                      className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
+                      className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F] font-semibold text-[#1E1A16]"
                     >
                       <option value="">Nenhum (Demanda Avulsa / Geral)</option>
                       {servicosCliente.map((srv) => (
@@ -691,29 +958,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </div>
                 )}
 
-                {/* Status da Tarefa */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#625746] font-medium w-36">
-                    Coluna / Status:
-                  </span>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as StatusTarefa)}
-                    className="flex-1 text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F] font-bold text-[#1E1A16]"
-                  >
-                    <option value="BACKLOG">Backlog</option>
-                    <option value="A_FAZER">A Fazer</option>
-                    <option value="EM_ANDAMENTO">Em Andamento</option>
-                    <option value="EM_REVISAO">Em Revisão</option>
-                    <option value="CONCLUIDA">Concluída</option>
-                    <option value="CANCELADA">Cancelada</option>
-                  </select>
-                </div>
-
                 {/* Horas Estimadas vs Gastas */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#625746] font-medium w-36 flex items-center gap-1">
-                    <Timer className="w-3.5 h-3.5 text-[#8F8271]" />
+                    <Timer className="w-3.5 h-3.5 text-[#847663]" />
                     Horas (Est / Gastas):
                   </span>
                   <div className="flex-1 grid grid-cols-2 gap-2">
@@ -723,7 +971,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       value={horasEstimadas}
                       onChange={(e) => setHorasEstimadas(e.target.value)}
                       placeholder="Estimado (h)"
-                      className="text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F]"
+                      className="text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F]"
                     />
                     <input
                       type="number"
@@ -731,22 +979,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       value={horasGastas}
                       onChange={(e) => setHorasGastas(e.target.value)}
                       placeholder="Gasto (h)"
-                      className="text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F]"
+                      className="text-xs py-1.5 px-2.5 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F]"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Tags / Marcadores */}
-              <div className="bg-[#FAF7F2] border border-[#D8CBB8] rounded-2xl p-4">
-                <label className="text-[11px] font-bold text-[#8F8271] uppercase tracking-wider block mb-1.5">
-                  # Marcadores & Tags (Pressione Enter)
+              <div className="bg-[#FAF8F4] border border-[#DED7CC] rounded-2xl p-4">
+                <label className="text-[12.5px] font-bold text-[#847663] uppercase tracking-wider block mb-1.5">
+                  Marcadores
                 </label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#EEE7DC] text-[#4A4032] border border-[#D8CBB8] rounded-lg text-xs font-semibold shadow-2xs"
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#F2EEE7] text-[#4A4032] border border-[#DED7CC] rounded-lg text-xs font-semibold shadow-2xs"
                     >
                       #{tag}
                       <button
@@ -764,18 +1012,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   value={novaTag}
                   onChange={(e) => setNovaTag(e.target.value)}
                   onKeyDown={handleAddTag}
-                  placeholder="Adicionar nova tag..."
-                  className="w-full text-xs py-1.5 px-3 bg-[#FFFDF8] border border-[#D8CBB8] rounded-xl outline-none focus:border-[#C7A15F]"
+                  placeholder="Adicionar marcador e pressionar Enter..."
+                  className="w-full text-xs py-1.5 px-3 bg-[#FFFDF8] border border-[#DED7CC] rounded-xl outline-none focus:border-[#C7A15F]"
                 />
               </div>
 
               {/* Botões do Rodapé Esquerdo */}
-              <div className="pt-3 border-t border-[#E5D9C8] flex items-center justify-between gap-3 mt-auto">
+              <div className="task-detail-footer pt-3 border-t border-[#E7E1D7] flex items-center justify-between gap-3 mt-auto">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleSalvarCamposPrincipais}
-                    disabled={saving}
+                    disabled={saving || loading || !tarefa || !titulo.trim()}
                     className="px-5 py-2 rounded-xl text-xs font-bold bg-[#C7A15F] hover:bg-[#B89455] text-[#1D160B] flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -784,7 +1032,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[#625746] hover:bg-[#EEE7DC] transition-all cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[#625746] hover:bg-[#F2EEE7] transition-all cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -805,19 +1053,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             {/* ======================================================== */}
             {/* PAINEL DIREITO: BATE-PAPO DA TAREFA                      */}
             {/* ======================================================== */}
-            <div className="lg:col-span-6 xl:col-span-6 bg-[#FAF7F2] flex flex-col justify-between overflow-hidden">
+            <div className="task-detail-chat bg-[#FAF8F4] flex flex-col overflow-hidden">
               {/* Header do Bate-Papo */}
-              <div className="px-6 py-3.5 bg-[#FFFDF8] border-b border-[#E5D9C8] flex items-center justify-between shrink-0">
+              <div className="px-6 py-3.5 bg-[#FFFDF8] border-b border-[#E7E1D7] flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#C7A15F]/20 text-[#8F6F2D] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-[#F2EEE7] text-[#625746] flex items-center justify-center">
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-[#1E1A16] leading-tight">
-                      Bate-papo da tarefa
+                      Conversa da tarefa
                     </h3>
-                    <span className="text-[10px] text-[#8F8271]">
-                      {tarefa?.comentarios?.length || 0} mensagens registradas
+                    <span className="text-[12px] text-[#847663]">
+                      {tarefa?.comentarios?.length || 0} registros na conversa
                     </span>
                   </div>
                 </div>
@@ -827,71 +1075,131 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
                 {(!tarefa?.comentarios || tarefa.comentarios.length === 0) ? (
                   /* Banner Vazio com Cores Vivox */
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                    <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-3xl p-6 shadow-sm max-w-sm flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#C7A15F]/20 text-[#8F6F2D] flex items-center justify-center text-xl shadow-inner">
-                        💬
-                      </div>
-                      <h4 className="text-sm font-bold text-[#1E1A16]">
-                        Bate-papo da tarefa
-                      </h4>
-                      <div className="text-left text-xs text-[#625746] space-y-2 pt-1 border-t border-[#E5D9C8] w-full">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#C7A15F]">👥</span>
-                          <span>Chamar participantes da tarefa</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#C7A15F]">📎</span>
-                          <span>Compartilhar links e atualizações</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#C7A15F]">📊</span>
-                          <span>Discutir progresso e resultados</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#C7A15F]">⚡</span>
-                          <span>Acompanhar histórico de entregas</span>
-                        </div>
-                      </div>
+                  <div className="h-full min-h-48 flex flex-col items-center justify-center text-center px-5 py-10">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F2EEE7] text-[#625746] flex items-center justify-center mb-4">
+                      <MessageSquare className="w-5 h-5" />
                     </div>
+                    <h4 className="text-sm font-semibold text-[#1E1A16]">Tudo sobre a tarefa, por aqui</h4>
+                    <p className="text-xs text-[#847663] leading-relaxed max-w-64 mt-2">
+                      Compartilhe uma atualização, tire dúvidas ou anexe arquivos para manter a equipe alinhada.
+                    </p>
                   </div>
                 ) : (
-                  tarefa.comentarios.map((com) => (
-                    <div key={com.id} className="flex items-start gap-2.5">
-                      {/* Avatar do Autor */}
-                      <div
-                        title={com.autor?.nome || 'Usuário'}
-                        className="w-8 h-8 rounded-full bg-[#181512] text-[#C7A15F] border-2 border-white shadow-2xs flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
-                      >
-                        {com.autor?.nome ? com.autor.nome.slice(0, 2).toUpperCase() : 'US'}
-                      </div>
+                  (() => {
+                    let lastDateKey = '';
+                    const nodes: React.ReactNode[] = [];
 
-                      {/* Balão da Mensagem */}
-                      <div className="bg-[#FFFDF8] border border-[#D8CBB8] rounded-2xl p-3.5 shadow-2xs flex flex-col gap-1 flex-1 max-w-[88%]">
-                        <div className="flex items-center justify-between text-[10px] text-[#8F8271]">
-                          <span className="font-bold text-[#1E1A16]">
-                            {com.autor?.nome || 'Usuário'}
-                          </span>
-                          <span>
-                            {new Date(com.createdAt).toLocaleString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
+                    tarefa.comentarios.forEach((com) => {
+                      const dataObj = new Date(com.createdAt);
+                      const dateKey = dataObj.toDateString();
+
+                      if (dateKey !== lastDateKey) {
+                        lastDateKey = dateKey;
+                        const rotulo = dataObj.toLocaleDateString('pt-BR', {
+                          weekday: 'long',
+                          day: '2-digit',
+                          month: 'long',
+                        });
+
+                        nodes.push(
+                          <div
+                            key={`data-${dateKey}`}
+                            className="sticky top-0 z-10 flex justify-center py-1.5 pointer-events-none"
+                          >
+                            <span className="pointer-events-auto text-[12px] font-bold text-[#FFFDF8] bg-[#4A4032]/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm capitalize">
+                              {rotulo}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (com.sistema) {
+                        nodes.push(
+                          <div key={com.id} className="flex justify-center py-1">
+                            <span className="text-[12px] text-[#847663] bg-[#F2EEE7] border border-[#E7E1D7] px-3 py-1 rounded-full text-center">
+                              <span className="font-semibold text-[#4A4032]">
+                                {com.autor?.nome || 'Alguém'}
+                              </span>{' '}
+                              {com.texto}
+                              {' · '}
+                              {dataObj.toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        );
+                        return;
+                      }
+
+                      nodes.push(
+                        <div key={com.id} className="flex items-start gap-2.5">
+                          {/* Avatar do Autor */}
+                          <div
+                            title={com.autor?.nome || 'Usuário'}
+                            className="w-8 h-8 rounded-full bg-[#EAE3D8] text-[#847663] border-2 border-white shadow-2xs flex items-center justify-center text-[12px] font-bold shrink-0 mt-0.5"
+                          >
+                            {com.autor?.nome ? com.autor.nome.slice(0, 2).toUpperCase() : 'US'}
+                          </div>
+
+                          {/* Balão da Mensagem */}
+                          <div className="bg-[#FFFDF8] border border-[#DED7CC] rounded-2xl p-3.5 shadow-2xs flex flex-col gap-1 flex-1 max-w-[88%] group relative">
+                            <div className="flex items-center justify-between text-[12px] text-[#847663]">
+                              <span className="font-bold text-[#1E1A16]">
+                                {com.autor?.nome || 'Usuário'}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setMensagemRespondida(com)}
+                                  className="opacity-70 group-hover:opacity-100 focus-visible:opacity-100 text-[#847663] hover:text-[#B89455] transition-opacity cursor-pointer font-semibold"
+                                >
+                                  Responder
+                                </button>
+                                <span>
+                                  {dataObj.toLocaleTimeString('pt-BR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-[#4A4032] leading-relaxed whitespace-pre-wrap mt-0.5">
+                              {renderTextoComLinks(com.texto)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-[#4A4032] leading-relaxed whitespace-pre-wrap mt-0.5">
-                          {renderTextoComLinks(com.texto)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                      );
+                    });
+
+                    return nodes;
+                  })()
                 )}
               </div>
 
               {/* Barra de Envio de Mensagem com Botão de Anexo */}
-              <div className="p-4 bg-[#FFFDF8] border-t border-[#E5D9C8] shrink-0">
+              <div className="p-4 bg-[#FFFDF8] border-t border-[#E7E1D7] shrink-0 flex flex-col gap-2">
+                {/* Preview de Resposta */}
+                {mensagemRespondida && (
+                  <div className="bg-[#FAF8F4] border border-[#DED7CC] rounded-xl p-2.5 flex items-start justify-between gap-2">
+                    <div className="flex-1 overflow-hidden">
+                      <div className="text-[12px] font-bold text-[#847663] mb-0.5">
+                        Respondendo a {mensagemRespondida.autor?.nome || 'Usuário'}
+                      </div>
+                      <div className="text-xs text-[#847663] truncate">
+                        {mensagemRespondida.texto}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMensagemRespondida(null)}
+                      className="text-[#847663] hover:text-[#B83B32] p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 <form onSubmit={handleAddComentario} className="flex items-center gap-2">
                   {/* Botão de Anexar Arquivo */}
                   <button
@@ -899,10 +1207,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile}
                     title="Anexar arquivo ou imagem"
-                    className="w-10 h-10 rounded-2xl bg-[#FAF7F2] border border-[#D8CBB8] hover:border-[#1E1A16] text-[#8F8271] hover:text-[#1E1A16] flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                    className="w-10 h-10 rounded-2xl bg-[#FAF8F4] border border-[#DED7CC] hover:border-[#1E1A16] text-[#847663] hover:text-[#1E1A16] flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-50"
                   >
                     {uploadingFile ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-[#C7A15F]" />
+                      <Loader2 className="w-4 h-4 animate-spin text-[#847663]" />
                     ) : (
                       <Paperclip className="w-4 h-4" />
                     )}
@@ -915,13 +1223,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     className="hidden"
                   />
 
-                  <div className="flex-1 bg-[#FAF7F2] border border-[#D8CBB8] focus-within:border-[#C7A15F] focus-within:bg-[#FFFDF8] rounded-2xl px-3.5 py-2 flex items-center gap-2 transition-all">
+                  <div className="flex-1 bg-[#FAF8F4] border border-[#DED7CC] focus-within:border-[#C7A15F] focus-within:bg-[#FFFDF8] rounded-2xl px-3.5 py-2 flex items-center gap-2 transition-all">
                     <input
                       type="text"
                       value={novoComentario}
                       onChange={(e) => setNovoComentario(e.target.value)}
-                      placeholder="Digite @ para mencionar, cole links ou envie mensagens..."
-                      className="flex-1 text-xs bg-transparent outline-none text-[#1E1A16] placeholder:text-[#8F8271]/60"
+                      aria-label="Mensagem para a equipe"
+                      placeholder="Escreva uma mensagem..."
+                      className="flex-1 text-xs bg-transparent outline-none text-[#1E1A16] placeholder:text-[#847663]/60"
                     />
                   </div>
 

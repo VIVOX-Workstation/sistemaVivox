@@ -47,6 +47,8 @@ function App() {
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />
               <Route path="gp" element={<VivoxGP />} />
               <Route path="gp/tarefa/:tarefaId" element={<VivoxGP />} />
+              <Route path="gp/minhas-tarefas" element={<VivoxGP />} />
+              <Route path="gp/minhas-tarefas/tarefa/:tarefaId" element={<VivoxGP />} />
               <Route path="gp/workspace/:workspaceId" element={<VivoxGP />} />
               <Route path="gp/workspace/:workspaceId/tarefa/:tarefaId" element={<VivoxGP />} />
               

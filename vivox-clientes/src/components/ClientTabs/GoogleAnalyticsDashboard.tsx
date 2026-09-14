@@ -149,7 +149,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
         <div>
           <div className="flex items-center gap-2.5">
             <h2 className="text-base font-bold text-[#1E1A16] tracking-tight">Desempenho Digital & SEO</h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
+            <span className="px-2 py-0.5 rounded-full text-[12px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
               Google APIs
             </span>
           </div>
@@ -214,7 +214,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
           </div>
           <div>
             <span className="font-bold text-[#1E1A16]">Conta de Serviço da Agência (Service Account):</span>
-            <p className="text-[#625746] font-mono text-[11px] mt-0.5 select-all">{serviceEmail}</p>
+            <p className="text-[#625746] font-mono text-[12.5px] mt-0.5 select-all">{serviceEmail}</p>
           </div>
         </div>
 
@@ -238,17 +238,17 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-[#1E1A16]">Google Analytics 4</h3>
-              <p className="text-[11px] text-[#625746]">Métricas de tráfego, audiência, engajamento e conversões</p>
+              <p className="text-[12.5px] text-[#625746]">Métricas de tráfego, audiência, engajamento e conversões</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {ga4?.configured && ga4?.success ? (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#E6F4EA] text-[#247A4A] border border-[#CEEAD6]">
+              <span className="px-2 py-0.5 rounded-full text-[12.5px] font-bold bg-[#E6F4EA] text-[#247A4A] border border-[#CEEAD6]">
                 Propriedade #{ga4.propertyId}
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#FEF7E0] text-[#B06000] border border-[#FEEFC3]">
+              <span className="px-2 py-0.5 rounded-full text-[12.5px] font-bold bg-[#FEF7E0] text-[#B06000] border border-[#FEEFC3]">
                 {ga4?.propertyId ? 'Não Conectado' : 'Não Configurado'}
               </span>
             )}
@@ -289,68 +289,68 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Usuários Ativos</span>
+                  <span className="text-[12.5px] font-semibold">Usuários Ativos</span>
                   <Users className="w-3.5 h-3.5 text-[#B89455]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {ga4.overview.activeUsers.toLocaleString('pt-BR')}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Visitantes no período</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Visitantes no período</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Novos Usuários</span>
+                  <span className="text-[12.5px] font-semibold">Novos Usuários</span>
                   <UserPlus className="w-3.5 h-3.5 text-[#247A4A]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {ga4.overview.newUsers.toLocaleString('pt-BR')}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Primeiro acesso</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Primeiro acesso</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Sessões</span>
+                  <span className="text-[12.5px] font-semibold">Sessões</span>
                   <Activity className="w-3.5 h-3.5 text-[#3b82f6]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {ga4.overview.sessions.toLocaleString('pt-BR')}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Visitas registradas</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Visitas registradas</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Pageviews</span>
+                  <span className="text-[12.5px] font-semibold">Pageviews</span>
                   <Eye className="w-3.5 h-3.5 text-[#8A6828]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {ga4.overview.screenPageViews.toLocaleString('pt-BR')}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Visualizações</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Visualizações</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Engajamento</span>
+                  <span className="text-[12.5px] font-semibold">Engajamento</span>
                   <Percent className="w-3.5 h-3.5 text-[#B89455]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {ga4.overview.engagementRate}%
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Taxa de interação</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Taxa de interação</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Tempo Médio</span>
+                  <span className="text-[12.5px] font-semibold">Tempo Médio</span>
                   <Clock className="w-3.5 h-3.5 text-[#625746]" />
                 </div>
                 <h4 className="text-lg font-bold text-[#1E1A16] tracking-tight mt-0.5">
                   {formatDuration(ga4.overview.averageSessionDuration)}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Por sessão</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Por sessão</p>
               </div>
             </div>
 
@@ -360,7 +360,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-bold text-[#1E1A16] text-xs">Evolução Diária de Usuários e Sessões</h4>
-                    <p className="text-[11px] text-[#625746]">Acessos ao site ao longo dos dias</p>
+                    <p className="text-[12.5px] text-[#625746]">Acessos ao site ao longo dos dias</p>
                   </div>
                   <div className="flex items-center gap-4 text-xs font-semibold">
                     <div className="flex items-center gap-1.5">
@@ -474,7 +474,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                             <p className="font-bold text-[#C7A15F] border-b border-[#373126] pb-1 mb-1">
                               {points[hoveredPointIndex].date}
                             </p>
-                            <div className="space-y-0.5 text-[11px]">
+                            <div className="space-y-0.5 text-[12.5px]">
                               <p className="flex justify-between gap-3 text-[#F6F0E7]">
                                 <span>Usuários:</span>
                                 <span className="font-bold text-[#C7A15F]">{points[hoveredPointIndex].activeUsers}</span>
@@ -511,7 +511,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                       <div key={idx} className="space-y-1">
                         <div className="flex justify-between text-xs font-medium">
                           <span className="text-[#1E1A16] truncate max-w-[140px]">{source.sourceMedium}</span>
-                          <span className="text-[#625746] font-mono text-[11px]">{source.percentage}%</span>
+                          <span className="text-[#625746] font-mono text-[12.5px]">{source.percentage}%</span>
                         </div>
                         <div className="w-full bg-[#EEE7DC] rounded-full h-1.5 overflow-hidden">
                           <div
@@ -547,7 +547,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                         </div>
                         <div className="text-right">
                           <span className="text-xs font-bold text-[#1E1A16]">{dev.percentage}%</span>
-                          <p className="text-[9px] text-[#847663]">{dev.activeUsers} visitas</p>
+                          <p className="text-[11px] text-[#847663]">{dev.activeUsers} visitas</p>
                         </div>
                       </div>
                     ))}
@@ -583,8 +583,8 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                   <div className="space-y-1.5">
                     {(ga4.events || []).slice(0, 5).map((ev, idx) => (
                       <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-[#EEE7DC] last:border-0">
-                        <span className="text-[#1E1A16] font-mono text-[11px] truncate max-w-[130px]">{ev.eventName}</span>
-                        <span className="font-bold text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="text-[#1E1A16] font-mono text-[12.5px] truncate max-w-[130px]">{ev.eventName}</span>
+                        <span className="font-bold text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-1.5 py-0.5 rounded text-[12px]">
                           {ev.eventCount.toLocaleString('pt-BR')}
                         </span>
                       </div>
@@ -608,17 +608,17 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-[#1E1A16]">Google Search Console</h3>
-              <p className="text-[11px] text-[#625746]">Desempenho orgânico no buscador do Google e termos ranqueados</p>
+              <p className="text-[12.5px] text-[#625746]">Desempenho orgânico no buscador do Google e termos ranqueados</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {gsc?.configured && gsc?.success ? (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#E6F4EA] text-[#247A4A] border border-[#CEEAD6] truncate max-w-xs">
+              <span className="px-2 py-0.5 rounded-full text-[12.5px] font-bold bg-[#E6F4EA] text-[#247A4A] border border-[#CEEAD6] truncate max-w-xs">
                 {gsc.siteUrl}
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#FEF7E0] text-[#B06000] border border-[#FEEFC3]">
+              <span className="px-2 py-0.5 rounded-full text-[12.5px] font-bold bg-[#FEF7E0] text-[#B06000] border border-[#FEEFC3]">
                 {gsc?.siteUrl ? 'Não Conectado' : 'Não Configurado'}
               </span>
             )}
@@ -659,46 +659,46 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Total de Cliques</span>
+                  <span className="text-[12.5px] font-semibold">Total de Cliques</span>
                   <MousePointerClick className="w-3.5 h-3.5 text-[#3b82f6]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {gsc.overview.totalClicks.toLocaleString('pt-BR')}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Visitantes do Google</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Visitantes do Google</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Total de Impressões</span>
+                  <span className="text-[12.5px] font-semibold">Total de Impressões</span>
                   <Search className="w-3.5 h-3.5 text-[#B89455]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {gsc.overview.totalImpressions.toLocaleString('pt-BR')}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Exibições na busca</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Exibições na busca</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">CTR Médio</span>
+                  <span className="text-[12.5px] font-semibold">CTR Médio</span>
                   <Percent className="w-3.5 h-3.5 text-[#247A4A]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {gsc.overview.averageCtr}%
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Taxa de clique</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Taxa de clique</p>
               </div>
 
               <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs hover:border-[#B89455] transition-colors">
                 <div className="flex items-center justify-between text-[#847663] mb-1.5">
-                  <span className="text-[11px] font-semibold">Posição Média</span>
+                  <span className="text-[12.5px] font-semibold">Posição Média</span>
                   <Award className="w-3.5 h-3.5 text-[#8A6828]" />
                 </div>
                 <h4 className="text-xl font-bold text-[#1E1A16] tracking-tight">
                   {gsc.overview.averagePosition > 0 ? `#${gsc.overview.averagePosition}` : '-'}
                 </h4>
-                <p className="text-[10px] text-[#847663] mt-0.5">Ranking no Google</p>
+                <p className="text-[12px] text-[#847663] mt-0.5">Ranking no Google</p>
               </div>
             </div>
 
@@ -709,7 +709,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[#1E1A16] text-xs">Top Termos Pesquisados (SEO)</h4>
-                    <p className="text-[11px] text-[#625746]">Palavras digitadas no Google</p>
+                    <p className="text-[12.5px] text-[#625746]">Palavras digitadas no Google</p>
                   </div>
                   <div className="w-full sm:w-40">
                     <input
@@ -743,7 +743,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                           <td className="py-1.5 px-2 text-right text-[#847663]">{q.ctr}%</td>
                           <td className="py-1.5 px-2.5 text-right">
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              className={`px-1.5 py-0.5 rounded text-[12px] font-bold ${
                                 q.position <= 3
                                   ? 'bg-[#E6F4EA] text-[#247A4A]'
                                   : q.position <= 10
@@ -773,7 +773,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[#1E1A16] text-xs">Páginas Mais Acessadas</h4>
-                    <p className="text-[11px] text-[#625746]">URLs de melhor ranking orgânico</p>
+                    <p className="text-[12.5px] text-[#625746]">URLs de melhor ranking orgânico</p>
                   </div>
                   <div className="w-full sm:w-40">
                     <input
@@ -801,13 +801,13 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
                         return (
                           <tr key={idx} className="hover:bg-[#FAF7F2] transition-colors">
                             <td className="py-1.5 px-2.5 font-medium text-[#1E1A16] truncate max-w-[190px]" title={p.page}>
-                              <span className="font-mono text-[11px] text-[#B89455]">{cleanPath}</span>
+                              <span className="font-mono text-[12.5px] text-[#B89455]">{cleanPath}</span>
                             </td>
                             <td className="py-1.5 px-2 text-right font-bold text-[#B89455]">{p.clicks}</td>
                             <td className="py-1.5 px-2 text-right text-[#625746]">{p.impressions}</td>
                             <td className="py-1.5 px-2.5 text-right">
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                className={`px-1.5 py-0.5 rounded text-[12px] font-bold ${
                                   p.position <= 3
                                     ? 'bg-[#E6F4EA] text-[#247A4A]'
                                     : p.position <= 10
@@ -855,7 +855,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
               value={ga4IdInput}
               onChange={e => setGa4IdInput(e.target.value)}
             />
-            <p className="text-[11px] text-[#847663] mt-1">
+            <p className="text-[12.5px] text-[#847663] mt-1">
               Encontrado no GA4 em <strong>Administrador ➔ Detalhes da Propriedade</strong>.
             </p>
           </div>
@@ -867,7 +867,7 @@ export function GoogleAnalyticsDashboard({ cliente, onClienteUpdated }: Props) {
               value={gscUrlInput}
               onChange={e => setGscUrlInput(e.target.value)}
             />
-            <p className="text-[11px] text-[#847663] mt-1">
+            <p className="text-[12.5px] text-[#847663] mt-1">
               URL ou Domínio cadastrado no Search Console (com https:// e barra final se for prefixo de URL).
             </p>
           </div>

@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import type { Tarefa, StatusTarefa } from '../../types';
-import { TaskCard } from './TaskCard';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { Tarefa, StatusTarefa, PrioridadeTarefa } from '../../types';
+import { tarefasApi } from '../../api/tarefas';
+import { VirtualTaskColumn } from './VirtualTaskColumn';
 import { ColumnModal } from './ColumnModal';
 import type { KanbanColumnData } from './ColumnModal';
-import { 
-  Plus, 
-  Edit3, 
-  RotateCcw, 
-  FolderKanban, 
-  CheckCircle2,
-  Calendar,
-  Layers
+import {
+  Plus,
+  Edit3,
+  Layers,
+  GripVertical,
+  Loader2,
 } from 'lucide-react';
 
-const DEFAULT_COLUNAS: (KanbanColumnData & { cardBg: string })[] = [
+export const DEFAULT_COLUNAS: (KanbanColumnData & { cardBg: string })[] = [
   {
     id: 'BACKLOG',
     titulo: 'RECEBIMENTO DE DEMANDA',
@@ -61,37 +60,70 @@ const DEFAULT_COLUNAS: (KanbanColumnData & { cardBg: string })[] = [
   },
 ];
 
+export const getKanbanStorageKey = (workspaceId?: string | null) =>
+  `vivox_kanban_columns_v3_${workspaceId || 'default'}`;
+
+export function getStoredColunas(
+  workspaceId?: string | null,
+): (KanbanColumnData & { cardBg?: string })[] {
+  try {
+    const saved = localStorage.getItem(getKanbanStorageKey(workspaceId));
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Erro ao ler colunas do localStorage:', e);
+  }
+  return DEFAULT_COLUNAS;
+}
+
+// Quantas tarefas buscar por página, por coluna, ao carregar e ao rolar até o fim.
+const PAGE_SIZE = 40;
+
+export interface KanbanFiltros {
+  search?: string;
+  responsavelId?: string;
+  prioridade?: PrioridadeTarefa;
+  // Quando a pílula rápida "Em Execução"/"Concluídas" está ativa, pina a
+  // busca num status literal — colunas com outro id ficam vazias, igual ao
+  // comportamento de quando isso era filtrado em memória.
+  statusExato?: string;
+}
+
+interface ColunaEstado {
+  items: Tarefa[];
+  total: number;
+  loading: boolean;
+  loadingMore: boolean;
+}
+
+const ESTADO_INICIAL: ColunaEstado = { items: [], total: 0, loading: true, loadingMore: false };
+
 interface KanbanBoardProps {
-  tarefas: Tarefa[];
-  workspaceId?: string | null;
+  workspaceId: string;
+  filtros: KanbanFiltros;
+  // Incrementar este número força recarregar todas as colunas do zero
+  // (usado após criar/editar/excluir tarefas ou importar do Bitrix).
+  refreshSignal: number;
   onSelectTarefa: (tarefa: Tarefa) => void;
   onUpdateStatus: (tarefaId: string, novoStatus: StatusTarefa) => void;
   onQuickCreate: (status: StatusTarefa) => void;
-  onOpenWorkspaceHub?: () => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
-  tarefas,
   workspaceId,
+  filtros,
+  refreshSignal,
   onSelectTarefa,
   onUpdateStatus,
   onQuickCreate,
-  onOpenWorkspaceHub,
 }) => {
-  const storageKey = `vivox_kanban_columns_v3_${workspaceId || 'default'}`;
+  const storageKey = getKanbanStorageKey(workspaceId);
 
-  const [colunas, setColunas] = useState<(KanbanColumnData & { cardBg?: string })[]>(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error('Erro ao ler colunas do localStorage:', e);
-    }
-    return DEFAULT_COLUNAS;
-  });
+  const [colunas, setColunas] = useState<(KanbanColumnData & { cardBg?: string })[]>(() =>
+    getStoredColunas(workspaceId),
+  );
 
   useEffect(() => {
     try {
@@ -102,33 +134,94 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, [colunas, storageKey]);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setColunas(parsed);
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('Erro ao carregar colunas:', e);
+    setColunas(getStoredColunas(workspaceId));
+  }, [storageKey, workspaceId]);
+
+  // Dados de cada coluna são carregados sob demanda (paginados), não vêm
+  // mais prontos do componente pai — cada etapa só busca o que precisa
+  // mostrar, e busca mais conforme o usuário rola até o fim da lista.
+  const [columnData, setColumnData] = useState<Record<string, ColunaEstado>>({});
+  const columnDataRef = useRef(columnData);
+  useEffect(() => {
+    columnDataRef.current = columnData;
+  }, [columnData]);
+
+  const fetchColuna = useCallback(async (colId: string, reset: boolean) => {
+    // Quando uma pílula rápida pina um status literal diferente desta coluna,
+    // o resultado é sempre vazio — não vale a pena nem consultar o servidor.
+    if (filtros.statusExato && filtros.statusExato !== colId) {
+      setColumnData((prev) => ({ ...prev, [colId]: { items: [], total: 0, loading: false, loadingMore: false } }));
+      return;
     }
-    setColunas(DEFAULT_COLUNAS);
-  }, [storageKey]);
+
+    setColumnData((prev) => {
+      const existente = prev[colId];
+      return {
+        ...prev,
+        [colId]: {
+          items: reset ? [] : existente?.items || [],
+          total: existente?.total ?? 0,
+          loading: reset,
+          loadingMore: !reset,
+        },
+      };
+    });
+
+    const skip = reset ? 0 : columnDataRef.current[colId]?.items.length || 0;
+
+    try {
+      const res = await tarefasApi.getColuna({
+        status: colId,
+        projetoId: workspaceId,
+        search: filtros.search,
+        responsavelId: filtros.responsavelId,
+        prioridade: filtros.prioridade,
+        skip,
+        take: PAGE_SIZE,
+      });
+      setColumnData((prev) => {
+        const itensAnteriores = reset ? [] : prev[colId]?.items || [];
+        return {
+          ...prev,
+          [colId]: {
+            items: [...itensAnteriores, ...res.items],
+            total: res.total,
+            loading: false,
+            loadingMore: false,
+          },
+        };
+      });
+    } catch (e) {
+      console.error(`Erro ao carregar a coluna "${colId}" do Kanban:`, e);
+      setColumnData((prev) => ({
+        ...prev,
+        [colId]: { ...(prev[colId] || ESTADO_INICIAL), loading: false, loadingMore: false },
+      }));
+    }
+  }, [workspaceId, filtros.search, filtros.responsavelId, filtros.prioridade, filtros.statusExato]);
+
+  // (Re)carrega todas as colunas do zero sempre que o workspace, os filtros
+  // ativos ou a lista de etapas mudam — ou quando o pai pede um refresh
+  // explícito após criar/editar/excluir uma tarefa em outro lugar da tela.
+  const colunaIds = colunas.map((c) => c.id).join('|');
+  useEffect(() => {
+    colunas.forEach((col) => fetchColuna(col.id, true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colunaIds, fetchColuna, refreshSignal]);
 
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [activeDropColumn, setActiveDropColumn] = useState<string | null>(null);
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
 
   // Modais de Coluna
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<KanbanColumnData | null>(null);
   const [editingIndex, setEditingIndex] = useState<number>(0);
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
+  const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
     setDraggedTaskId(id);
     e.dataTransfer.setData('text/plain', id);
-  };
+  }, []);
 
   const handleDragOver = (e: React.DragEvent, columnId: string) => {
     e.preventDefault();
@@ -141,14 +234,73 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     e.preventDefault();
   };
 
+  // Move a tarefa localmente (entre os itens já carregados de cada coluna) de
+  // forma otimista, sem precisar recarregar nada, e dispara a atualização real.
+  const moveTarefaLocal = (tarefaId: string, novaColunaId: string) => {
+    let tarefaMovida: Tarefa | undefined;
+    let colunaOrigemId: string | undefined;
+    for (const [colId, estado] of Object.entries(columnDataRef.current)) {
+      const encontrada = estado.items.find((t) => t.id === tarefaId);
+      if (encontrada) {
+        tarefaMovida = encontrada;
+        colunaOrigemId = colId;
+        break;
+      }
+    }
+    if (!tarefaMovida || colunaOrigemId === novaColunaId) return;
+
+    setColumnData((prev) => {
+      const origem = prev[colunaOrigemId!];
+      const destino = prev[novaColunaId];
+      const tarefaAtualizada = { ...tarefaMovida!, status: novaColunaId as StatusTarefa };
+      return {
+        ...prev,
+        [colunaOrigemId!]: origem
+          ? { ...origem, items: origem.items.filter((t) => t.id !== tarefaId), total: Math.max(0, origem.total - 1) }
+          : origem,
+        [novaColunaId]: destino
+          ? { ...destino, items: [tarefaAtualizada, ...destino.items], total: destino.total + 1 }
+          : { items: [tarefaAtualizada], total: 1, loading: false, loadingMore: false },
+      };
+    });
+
+    onUpdateStatus(tarefaId, novaColunaId as StatusTarefa);
+  };
+
   const handleDrop = (e: React.DragEvent, columnId: string) => {
     e.preventDefault();
     setActiveDropColumn(null);
+
+    if (draggingColumnId) {
+      handleReorderColumn(draggingColumnId, columnId);
+      setDraggingColumnId(null);
+      return;
+    }
+
     const id = e.dataTransfer.getData('text/plain') || draggedTaskId;
     if (id) {
-      onUpdateStatus(id, columnId as StatusTarefa);
+      moveTarefaLocal(id, columnId);
       setDraggedTaskId(null);
     }
+  };
+
+  const handleColumnDragStart = (e: React.DragEvent, columnId: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    setDraggingColumnId(columnId);
+  };
+
+  const handleReorderColumn = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setColunas((prev) => {
+      const fromIndex = prev.findIndex((c) => c.id === fromId);
+      const toIndex = prev.findIndex((c) => c.id === toId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const copy = [...prev];
+      const [moved] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, moved);
+      return copy;
+    });
   };
 
   const handleOpenCreateColumn = () => {
@@ -169,27 +321,42 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         prev.map((c) => (c.id === savedCol.id ? { ...c, ...savedCol } : c))
       );
     } else {
+      // A mudança na lista de colunas já dispara o efeito que recarrega
+      // todas as etapas, incluindo esta nova — não precisa buscar aqui também.
       setColunas((prev) => [...prev, { ...savedCol, cardBg: '#FFFFFF' }]);
     }
   };
 
-  const handleDeleteColumn = (colId: string) => {
-    const tarefasNaColuna = tarefas.filter((t) => t.status === colId);
-    if (tarefasNaColuna.length > 0) {
+  const handleDeleteColumn = async (colId: string) => {
+    const totalNaColuna = columnData[colId]?.total ?? 0;
+    let fallbackCol: string | null = null;
+
+    if (totalNaColuna > 0) {
       const confirmMove = window.confirm(
-        `Esta coluna possui ${tarefasNaColuna.length} tarefa(s). Deseja mover essas tarefas para a primeira etapa e excluir a coluna?`
+        `Esta coluna possui ${totalNaColuna} tarefa(s). Deseja mover essas tarefas para a primeira etapa e excluir a coluna?`
       );
       if (!confirmMove) return;
 
-      const fallbackCol = colunas.find((c) => c.id !== colId)?.id || 'A_FAZER';
-      tarefasNaColuna.forEach((t) => {
-        onUpdateStatus(t.id, fallbackCol as StatusTarefa);
-      });
+      fallbackCol = colunas.find((c) => c.id !== colId)?.id || 'A_FAZER';
+      try {
+        await tarefasApi.moverEtapa(colId, fallbackCol, workspaceId);
+      } catch (e) {
+        console.error('Erro ao mover tarefas da coluna excluída:', e);
+        window.alert('Não foi possível mover as tarefas desta coluna. Tente novamente.');
+        return;
+      }
     } else {
       if (!window.confirm('Tem certeza que deseja excluir esta coluna?')) return;
     }
 
+    // A mudança na lista de colunas já dispara o efeito que recarrega todas
+    // as etapas restantes, incluindo a etapa de destino das tarefas movidas.
     setColunas((prev) => prev.filter((c) => c.id !== colId));
+    setColumnData((prev) => {
+      const copy = { ...prev };
+      delete copy[colId];
+      return copy;
+    });
   };
 
   const handleMoveLeft = (index: number) => {
@@ -216,14 +383,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setEditingIndex(index + 1);
   };
 
-  const handleResetColumns = () => {
-    if (window.confirm('Deseja restaurar as 5 etapas padrão do Kanban?')) {
-      setColunas(DEFAULT_COLUNAS);
-    }
-  };
-
   return (
-    <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-[#FAF7F2] relative">
+    <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-[#FAF7F2] relative" onDragEnd={() => { setDraggedTaskId(null); setActiveDropColumn(null); setDraggingColumnId(null); }}>
       {/* Barra Superior Discreta de Configurações das Etapas */}
       <div className="px-6 py-2 bg-[#FFFDF8]/70 border-b border-[#E5D9C8] flex items-center justify-between shrink-0 select-none">
         <div className="flex items-center gap-3">
@@ -243,10 +404,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </div>
 
       {/* Área das Colunas com Limitações Visíveis e Scroll Horizontal */}
-      <div className="flex-1 w-full h-full flex overflow-x-auto px-6 pb-20 pt-3 gap-4">
+      <div className="flex-1 min-h-0 w-full flex overflow-x-auto px-4 lg:px-6 pb-4 pt-4 gap-4">
         {colunas.map((coluna, index) => {
-          const tarefasColuna = tarefas.filter((t) => t.status === coluna.id);
+          const estado = columnData[coluna.id] || ESTADO_INICIAL;
+          const tarefasColuna = estado.items;
           const isHovered = activeDropColumn === coluna.id;
+          const hasMore = tarefasColuna.length < estado.total;
 
           return (
             <div
@@ -254,29 +417,36 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onDragOver={(e) => handleDragOver(e, coluna.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, coluna.id)}
-              className={`flex-1 min-w-[300px] max-w-[340px] h-full flex flex-col rounded-[24px] bg-[#F6F2EA]/60 border transition-all duration-200 shrink-0 p-2.5 shadow-2xs ${
+              className={`w-[270px] sm:w-[288px] max-w-[85vw] min-h-0 h-full flex flex-col rounded-2xl bg-[#F0EDE6]/70 border transition-colors duration-150 shrink-0 p-2 ${
                 isHovered
-                  ? 'bg-[#EEE7DC] border-[#C7A15F] ring-2 ring-[#C7A15F]/20 scale-[1.01]'
-                  : 'border-[#E5D9C8]/90 hover:border-[#D8CBB8]'
+                  ? 'bg-[#EEE7DC] border-[#C7A15F] ring-2 ring-[#C7A15F]/20'
+                  : 'border-transparent'
               }`}
             >
               {/* Header da Coluna com Faixa Chevron Colorida (Cada coluna com sua cor) */}
               <div className="pb-2 shrink-0 select-none">
                 <div
-                  className="relative flex items-center justify-between px-3.5 py-2.5 rounded-l-xl text-white font-black text-[11px] uppercase tracking-wider shadow-xs overflow-hidden transition-all duration-150 hover:brightness-105 group"
+                  draggable
+                  onDragStart={(e) => handleColumnDragStart(e, coluna.id)}
+                  onDragEnd={() => setDraggingColumnId(null)}
+                  className={`flex items-center justify-between gap-2 px-2 py-2 text-[#39332A] text-[11px] font-semibold group border-t-2 rounded-t-lg cursor-grab active:cursor-grabbing transition-opacity ${
+                    draggingColumnId === coluna.id ? 'opacity-40' : 'opacity-100'
+                  }`}
                   style={{
-                    backgroundColor: coluna.headerBg,
-                    clipPath: 'polygon(0% 0%, calc(100% - 14px) 0%, 100% 50%, calc(100% - 14px) 100%, 0% 100%)',
+                    borderTopColor: coluna.headerBg,
                   }}
+                  title="Arraste para reordenar esta etapa"
                 >
+                  <GripVertical className="w-3 h-3 text-[#948877] shrink-0" />
+
                   <div
                     onClick={() => handleOpenEditColumn(coluna, index)}
-                    className="flex items-center gap-2 truncate pr-2 cursor-pointer flex-1"
+                    className="flex min-w-0 items-center gap-2 cursor-pointer flex-1"
                     title="Clique para editar esta etapa"
                   >
-                    <span className="truncate drop-shadow-2xs">{coluna.titulo}</span>
-                    <span className="text-xs font-black text-white/95 shrink-0 bg-black/20 px-1.5 py-0.2 rounded-full">
-                      {tarefasColuna.length}
+                    <span className="line-clamp-2 leading-snug" title={coluna.titulo}>{coluna.titulo}</span>
+                    <span className="text-[10px] font-semibold text-[#827869] shrink-0 bg-white/80 px-1.5 py-0.5 rounded-md tabular-nums">
+                      {estado.loading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : estado.total}
                     </span>
                   </div>
 
@@ -287,7 +457,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         handleOpenEditColumn(coluna, index);
                       }}
                       title="Editar esta coluna"
-                      className="w-5 h-5 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center transition-colors cursor-pointer"
+                      className="w-6 h-6 rounded-md hover:bg-white text-[#948877] flex items-center justify-center transition-colors cursor-pointer"
                     >
                       <Edit3 className="w-3 h-3" />
                     </button>
@@ -298,7 +468,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         onQuickCreate(coluna.id as StatusTarefa);
                       }}
                       title={`Adicionar tarefa em ${coluna.titulo}`}
-                      className="w-5 h-5 rounded-full bg-white/25 hover:bg-white/40 text-white flex items-center justify-center transition-colors cursor-pointer"
+                      className="w-6 h-6 rounded-md hover:bg-white text-[#948877] flex items-center justify-center transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
@@ -310,39 +480,43 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <div className="px-1 pb-2 flex items-center justify-center shrink-0">
                 <button
                   onClick={() => onQuickCreate(coluna.id as StatusTarefa)}
-                  className="w-full py-1.5 px-3 rounded-xl text-[11px] font-bold text-[#8F8271] hover:text-[#1E1A16] bg-white/60 hover:bg-white border border-[#D8CBB8]/70 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  className="w-full py-1 px-3 rounded-xl text-[11px] font-bold text-[#8F8271] hover:text-[#1E1A16] bg-white/60 hover:bg-white border border-[#D8CBB8]/70 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <Plus className="w-3.5 h-3.5 text-[#8F8271]" />
-                  <span>+ Tarefa rápida</span>
+                  <Plus className="w-3 h-3 text-[#8F8271]" />
+                  <span>Adicionar tarefa</span>
                 </button>
               </div>
 
               {/* Lista de Cards da Coluna com Scroll Vertical */}
-              <div className="flex-1 overflow-y-auto px-1 pb-2 flex flex-col gap-3">
-                {tarefasColuna.length === 0 ? (
+                {estado.loading ? (
+                  <div className="flex-1 flex items-center justify-center text-[#8F8271]">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : tarefasColuna.length === 0 ? (
                   <div
                     onClick={() => onQuickCreate(coluna.id as StatusTarefa)}
-                    className="h-28 rounded-[22px] border-2 border-dashed border-[#D8CBB8] bg-white/50 hover:bg-white flex flex-col items-center justify-center gap-1 text-center p-4 cursor-pointer transition-all hover:border-[#1E1A16] shadow-2xs group"
+                    className="h-24 rounded-[18px] border-2 border-dashed border-[#D8CBB8] bg-white/50 hover:bg-white flex flex-col items-center justify-center gap-1 text-center p-3 cursor-pointer transition-all hover:border-[#1E1A16] shadow-2xs group"
                   >
-                    <div className="w-7 h-7 rounded-full bg-white text-[#1E1A16] border border-[#D8CBB8] flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Plus className="w-4 h-4" />
+                    <div className="w-6 h-6 rounded-full bg-white text-[#1E1A16] border border-[#D8CBB8] flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Plus className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-[11px] font-bold text-[#8F8271] group-hover:text-[#1E1A16]">
                       Adicionar tarefa nesta etapa
                     </span>
                   </div>
                 ) : (
-                  tarefasColuna.map((tarefa) => (
-                    <TaskCard
-                      key={tarefa.id}
-                      tarefa={tarefa}
-                      cardBg="#FFFFFF"
-                      onClick={() => onSelectTarefa(tarefa)}
-                      onDragStart={handleDragStart}
-                    />
-                  ))
+                  <VirtualTaskColumn
+                    tarefas={tarefasColuna}
+                    label={`Tarefas: ${coluna.titulo}`}
+                    accentColor={coluna.headerBg}
+                    draggedTaskId={draggedTaskId}
+                    onSelectTarefa={onSelectTarefa}
+                    onDragStart={handleDragStart}
+                    hasMore={hasMore}
+                    loadingMore={estado.loadingMore}
+                    onEndReached={() => fetchColuna(coluna.id, false)}
+                  />
                 )}
-              </div>
             </div>
           );
         })}
@@ -350,40 +524,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {/* Card Final para Adicionar Nova Etapa */}
         <div
           onClick={handleOpenCreateColumn}
-          className="min-w-[260px] max-w-[280px] h-[300px] rounded-[26px] border-2 border-dashed border-[#D8CBB8] hover:border-[#1E1A16] bg-white/40 hover:bg-white p-6 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 text-center shrink-0 group select-none mt-2"
+          className="min-w-[220px] max-w-[240px] h-[260px] rounded-[22px] border-2 border-dashed border-[#D8CBB8] hover:border-[#1E1A16] bg-white/40 hover:bg-white p-5 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-2.5 text-center shrink-0 group select-none mt-2"
         >
-          <div className="w-12 h-12 rounded-full bg-[#181512] text-white flex items-center justify-center transition-transform group-hover:scale-110 shadow-xs">
-            <Plus className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-full bg-[#181512] text-white flex items-center justify-center transition-transform group-hover:scale-110 shadow-xs">
+            <Plus className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#1E1A16] group-hover:text-[#8F6F2D] transition-colors">
+            <h4 className="text-[11px] font-black uppercase tracking-wider text-[#1E1A16] group-hover:text-[#8F6F2D] transition-colors">
               Adicionar Etapa
             </h4>
             <p className="text-[11px] text-[#8F8271] mt-0.5">
               Crie uma nova coluna colorida
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Floating Bottom Quick Dock */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20">
-        <div className="bg-[#FFFDF8]/95 backdrop-blur-md border border-[#D8CBB8] rounded-full px-4 py-2 shadow-lg flex items-center gap-3 select-none">
-          <button
-            onClick={() => onOpenWorkspaceHub && onOpenWorkspaceHub()}
-            title="Ver todos os Workspaces"
-            className="w-8 h-8 rounded-full text-[#625746] hover:text-[#1E1A16] hover:bg-black/5 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <FolderKanban className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => onQuickCreate('A_FAZER')}
-            title="Criar Nova Tarefa Imediata"
-            className="w-10 h-10 rounded-full bg-[#181512] hover:bg-[#2B261F] text-white flex items-center justify-center shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
         </div>
       </div>
 

@@ -49,7 +49,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
             <h3 className="text-xs font-bold text-[#1E1A16] tracking-tight">
               Workspaces
             </h3>
-            <span className="text-[10px] font-bold text-[#8A6828] bg-[#C7A15F]/20 border border-[#C7A15F]/30 px-2 py-0.5 rounded-full">
+            <span className="text-[12px] font-bold text-[#8A6828] bg-[#C7A15F]/20 border border-[#C7A15F]/30 px-2 py-0.5 rounded-full">
               {workspaces.length}
             </span>
           </div>
@@ -95,7 +95,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
             <div className="flex-1 flex items-center justify-between truncate">
               <span className="truncate">Chamados</span>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                className={`text-[12px] px-2 py-0.5 rounded-full font-bold ${
                   selectedWorkspaceId === null
                     ? 'bg-[#C7A15F]/25 text-[#E8D7B8] border border-[#C7A15F]/30'
                     : 'bg-white text-[#625746] border border-[#D8CBB8]'
@@ -109,7 +109,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
         {/* Separador */}
         {!collapsed && (
-          <div className="pt-3 px-3 text-[10px] font-bold text-[#8F8271] uppercase tracking-wider">
+          <div className="pt-3 px-3 text-[12px] font-bold text-[#8F8271] uppercase tracking-wider">
             Seus Espaços
           </div>
         )}
@@ -139,7 +139,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                         {ws.nome}
                       </span>
                       <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        className={`text-[12px] px-1.5 py-0.2 rounded-full font-bold ${
                           isSelected
                             ? 'bg-[#C7A15F]/20 text-[#8A6828]'
                             : 'bg-black/5 text-[#8F8271]'
@@ -150,7 +150,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                     </div>
 
                     {ws.cliente && (
-                      <span className="text-[10px] text-[#8F8271] flex items-center gap-1 truncate mt-0.5">
+                      <span className="text-[12px] text-[#8F8271] flex items-center gap-1 truncate mt-0.5">
                         <Building2 className="w-2.5 h-2.5 shrink-0 text-[#C7A15F]" />
                         <span className="truncate">{ws.cliente.nomeFantasia}</span>
                       </span>

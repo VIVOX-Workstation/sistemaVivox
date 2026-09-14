@@ -172,7 +172,7 @@ export function MarketTab({ clienteId }: { clienteId: string }) {
                 <div className="space-y-3 pt-3 border-t border-slate-100">
                   {t.gancho && (
                     <div className="bg-amber-50/70 border border-amber-200/60 rounded-lg p-2.5">
-                      <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block mb-0.5">
+                      <span className="text-[12px] font-bold text-amber-900 uppercase tracking-wider block mb-0.5">
                         Gancho Sugerido (Hook)
                       </span>
                       <p className="text-xs text-amber-950 italic font-medium">"{t.gancho}"</p>
@@ -180,7 +180,7 @@ export function MarketTab({ clienteId }: { clienteId: string }) {
                   )}
 
                   <div className="bg-slate-50 rounded-lg p-2.5">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Impacto Estratégico</span>
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Impacto Estratégico</span>
                     <span className="text-xs text-slate-700">{t.impacto}</span>
                   </div>
                 </div>
