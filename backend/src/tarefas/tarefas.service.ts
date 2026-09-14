@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTarefaDto } from './dto/create-tarefa.dto';
 import { UpdateTarefaDto } from './dto/update-tarefa.dto';
@@ -709,6 +709,167 @@ Gere o checklist em formato JSON:
       ignoradasDuplicadas,
       usuariosCriados,
     };
+  }
+
+  // ============================================
+  // EXPORTAR / IMPORTAR BACKUP DO WORKSPACE
+  // (formato interno em JSON, com fidelidade total: etapa, status, dono etc.)
+  // ============================================
+
+  async exportarWorkspace(projetoId: string) {
+    return this.prisma.tarefa.findMany({
+      where: { projetoId },
+      include: {
+        responsavel: { select: { id: true, nome: true, email: true } },
+        autor: { select: { id: true, nome: true, email: true } },
+        observadores: { select: { id: true, nome: true, email: true } },
+        checklist: {
+          select: { titulo: true, concluido: true, ordem: true },
+          orderBy: { ordem: 'asc' },
+        },
+      },
+      orderBy: [{ ordem: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async importarBackup(tarefasExportadas: any[], projetoId: string) {
+    if (!Array.isArray(tarefasExportadas)) {
+      throw new BadRequestException('Arquivo de backup inválido: "tarefas" deve ser uma lista');
+    }
+
+    const PRIORIDADES_VALIDAS = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'];
+    const usuariosCriados: string[] = [];
+    const userCache = new Map<string, string>();
+
+    const resolveUsuario = async (
+      ref: { id?: string; nome?: string; email?: string } | null | undefined,
+    ): Promise<string | null> => {
+      if (!ref) return null;
+
+      // 1) Mesmo banco/instância: se o usuário original ainda existir, usa direto.
+      if (ref.id) {
+        const existente = await this.prisma.user.findUnique({ where: { id: ref.id } });
+        if (existente) return existente.id;
+      }
+
+      // 2) Reconstrói por email, que é estável entre exportações.
+      const email = ref.email?.trim().toLowerCase();
+      if (email) {
+        if (userCache.has(email)) return userCache.get(email)!;
+        const existente = await this.prisma.user.findUnique({ where: { email } });
+        if (existente) {
+          userCache.set(email, existente.id);
+          return existente.id;
+        }
+      }
+
+      // 3) Não existe mais em lugar nenhum: cria um usuário placeholder.
+      const nome = ref.nome?.trim() || email || 'Usuário importado';
+      const hashSuffix = Math.random().toString(36).substring(2, 8);
+      const slug = nome.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const emailGerado = email || `${slug || 'user'}.backup${hashSuffix}@importado.vivox.local`;
+      const randomPassword = Math.random().toString(36).slice(-10);
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      try {
+        const novo = await this.prisma.user.create({
+          data: { nome, email: emailGerado, senha: hashedPassword, role: 'COLABORADOR' },
+        });
+        if (email) userCache.set(email, novo.id);
+        if (!usuariosCriados.includes(nome)) usuariosCriados.push(nome);
+        return novo.id;
+      } catch (e: any) {
+        if (e.code === 'P2002') {
+          const existente = await this.prisma.user.findUnique({ where: { email: emailGerado } });
+          if (existente) return existente.id;
+        }
+        this.logger.error(`Erro criando usuário placeholder do backup: ${nome}`, e);
+        return null;
+      }
+    };
+
+    let criadas = 0;
+    let ignoradas = 0;
+
+    for (const t of tarefasExportadas) {
+      try {
+        const responsavelId = await resolveUsuario(t?.responsavel);
+        const autorId = await resolveUsuario(t?.autor);
+
+        const observadoresIds: string[] = [];
+        if (Array.isArray(t?.observadores)) {
+          for (const obs of t.observadores) {
+            const id = await resolveUsuario(obs);
+            if (id) observadoresIds.push(id);
+          }
+        }
+
+        // Cliente/serviço só são reaproveitados se ainda existirem neste banco
+        // (mesma instância) — não é possível reconstruí-los apenas pelo id.
+        let clienteId: string | undefined;
+        if (t?.clienteId) {
+          const cliente = await this.prisma.cliente.findUnique({ where: { id: t.clienteId } });
+          if (cliente) clienteId = cliente.id;
+        }
+        let servicoId: string | undefined;
+        if (t?.servicoId) {
+          const servico = await this.prisma.servicoContratado.findUnique({ where: { id: t.servicoId } });
+          if (servico) servicoId = servico.id;
+        }
+
+        const baseData = {
+          titulo: t?.titulo || 'Sem título',
+          descricao: t?.descricao || undefined,
+          status: t?.status || 'A_FAZER',
+          prioridade: PRIORIDADES_VALIDAS.includes(t?.prioridade) ? t.prioridade : 'MEDIA',
+          prazo: t?.prazo ? new Date(t.prazo) : undefined,
+          dataInicio: t?.dataInicio ? new Date(t.dataInicio) : undefined,
+          dataConclusao: t?.dataConclusao ? new Date(t.dataConclusao) : undefined,
+          horasEstimadas: typeof t?.horasEstimadas === 'number' ? t.horasEstimadas : undefined,
+          horasGastas: typeof t?.horasGastas === 'number' ? t.horasGastas : undefined,
+          tags: Array.isArray(t?.tags) ? t.tags : [],
+          ordem: typeof t?.ordem === 'number' ? t.ordem : undefined,
+          createdAt: t?.createdAt ? new Date(t.createdAt) : undefined,
+          projetoId,
+          clienteId,
+          servicoId,
+          responsavelId: responsavelId || undefined,
+          autorId: autorId || undefined,
+          observadores:
+            observadoresIds.length > 0 ? { connect: observadoresIds.map((id) => ({ id })) } : undefined,
+          checklist:
+            Array.isArray(t?.checklist) && t.checklist.length > 0
+              ? {
+                  create: t.checklist.map((c: any, idx: number) => ({
+                    titulo: c?.titulo || '',
+                    concluido: Boolean(c?.concluido),
+                    ordem: typeof c?.ordem === 'number' ? c.ordem : idx,
+                  })),
+                }
+              : undefined,
+        };
+
+        try {
+          await this.prisma.tarefa.create({
+            data: { ...baseData, origemBitrixId: t?.origemBitrixId || undefined },
+          });
+        } catch (e: any) {
+          // origemBitrixId ainda em uso (a tarefa original não foi apagada) —
+          // recria mesmo assim, só que sem esse vínculo, para não perder a linha.
+          if (e.code === 'P2002' && t?.origemBitrixId) {
+            await this.prisma.tarefa.create({ data: baseData });
+          } else {
+            throw e;
+          }
+        }
+
+        criadas++;
+      } catch (err) {
+        this.logger.error(`Erro ao importar tarefa do backup "${t?.titulo}":`, err);
+        ignoradas++;
+      }
+    }
+
+    return { totalLinhas: tarefasExportadas.length, criadas, ignoradas, usuariosCriados };
   }
 
   // ============================================

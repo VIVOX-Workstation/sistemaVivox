@@ -16,12 +16,14 @@ import { ChamadosBoard } from '../components/gp/ChamadosBoard';
 import { ChamadoModal } from '../components/gp/ChamadoModal';
 import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
 import { ImportBitrixModal } from '../components/gp/ImportBitrixModal';
-import { 
-  Kanban, 
-  ListTodo, 
-  CalendarClock, 
-  Plus, 
-  Search, 
+import { ImportBackupModal } from '../components/gp/ImportBackupModal';
+import { getStoredColunas, getKanbanStorageKey } from '../components/gp/KanbanBoard';
+import {
+  Kanban,
+  ListTodo,
+  CalendarClock,
+  Plus,
+  Search,
   RefreshCw,
   Edit2,
   ChevronLeft,
@@ -34,6 +36,8 @@ import {
   Sparkles,
   X,
   Upload,
+  Download,
+  FileJson,
   Loader2
 } from 'lucide-react';
 
@@ -105,6 +109,11 @@ export const VivoxGP: React.FC = () => {
   // Importação de tarefas do Bitrix
   const [isImportingBitrix, setIsImportingBitrix] = useState(false);
   const [isImportBitrixModalOpen, setIsImportBitrixModalOpen] = useState(false);
+
+  // Exportar / importar backup nativo do workspace (etapa, status, dono etc.)
+  const [isExportando, setIsExportando] = useState(false);
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
+  const [isImportBackupModalOpen, setIsImportBackupModalOpen] = useState(false);
 
   // Workspace selecionado
   const selectedWorkspaceId = useMemo(() => {
@@ -295,6 +304,82 @@ export const VivoxGP: React.FC = () => {
     if (!selectedWorkspaceId || selectedWorkspaceId === 'ALL') return null;
     return workspaces.find((w) => w.id === selectedWorkspaceId) || null;
   }, [selectedWorkspaceId, workspaces]);
+
+  // Exporta um backup fiel do workspace atual: todas as tarefas com etapa,
+  // status, dono e demais campos, mais as colunas do Kanban configuradas
+  // (que só existem no navegador, não no backend).
+  const handleExportarWorkspace = async () => {
+    if (!selectedWorkspaceId || selectedWorkspaceId === 'ALL') return;
+
+    try {
+      setIsExportando(true);
+      const tarefasExportadas = await tarefasApi.exportarWorkspace(selectedWorkspaceId);
+
+      const payload = {
+        tipo: 'vivox-workspace-backup',
+        versao: 1,
+        exportadoEm: new Date().toISOString(),
+        workspace: { id: selectedWorkspaceId, nome: activeWorkspace?.nome || '' },
+        colunas: getStoredColunas(selectedWorkspaceId),
+        tarefas: tarefasExportadas,
+      };
+
+      const slug = (activeWorkspace?.nome || 'workspace')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const dataStr = new Date().toISOString().slice(0, 10);
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vivox-${slug || 'workspace'}-${dataStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao exportar workspace:', err);
+      window.alert('Erro ao exportar este workspace. Tente novamente.');
+    } finally {
+      setIsExportando(false);
+    }
+  };
+
+  const handleImportarBackup = async (file: File, aplicarColunas: boolean) => {
+    if (!selectedWorkspaceId || selectedWorkspaceId === 'ALL') return;
+
+    try {
+      setIsImportingBackup(true);
+
+      if (aplicarColunas) {
+        try {
+          const texto = await file.text();
+          const parsed = JSON.parse(texto);
+          if (Array.isArray(parsed?.colunas) && parsed.colunas.length > 0) {
+            localStorage.setItem(getKanbanStorageKey(selectedWorkspaceId), JSON.stringify(parsed.colunas));
+          }
+        } catch (e) {
+          console.error('Não foi possível ler as etapas do arquivo de backup:', e);
+        }
+      }
+
+      const res = await tarefasApi.importarBackup(file, selectedWorkspaceId);
+      const msg = `${res.criadas} tarefas importadas.\n${res.ignoradas} ignoradas por erro.\n${res.usuariosCriados?.length ? `Novos usuários: ${res.usuariosCriados.join(', ')}` : ''}`;
+      window.alert(`Importação de backup concluída!\n\n${msg}`);
+
+      setIsImportBackupModalOpen(false);
+      carregarDados();
+    } catch (err: any) {
+      console.error(err);
+      window.alert('Erro ao importar backup: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsImportingBackup(false);
+    }
+  };
 
   // Filtragem de Tarefas
   const tarefasFiltradas = useMemo(() => {
@@ -689,6 +774,38 @@ export const VivoxGP: React.FC = () => {
               </button>
             )}
 
+            {!isMinhasTarefas && selectedWorkspaceId && selectedWorkspaceId !== 'ALL' && (
+              <button
+                type="button"
+                title="Importar backup do Vivox (etapa, status, dono etc.)"
+                onClick={() => setIsImportBackupModalOpen(true)}
+                disabled={isImportingBackup}
+                className={`p-1.5 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
+                  isImportingBackup
+                    ? 'bg-[#181512] border-[#181512] text-white'
+                    : 'bg-[#FAF7F2] border-[#D8CBB8] hover:border-[#1E1A16] text-[#1E1A16]'
+                }`}
+              >
+                {isImportingBackup ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileJson className="w-3.5 h-3.5" />}
+              </button>
+            )}
+
+            {!isMinhasTarefas && selectedWorkspaceId && selectedWorkspaceId !== 'ALL' && (
+              <button
+                type="button"
+                title="Exportar todas as tarefas deste workspace (backup)"
+                onClick={handleExportarWorkspace}
+                disabled={isExportando}
+                className={`p-1.5 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
+                  isExportando
+                    ? 'bg-[#181512] border-[#181512] text-white'
+                    : 'bg-[#FAF7F2] border-[#D8CBB8] hover:border-[#1E1A16] text-[#1E1A16]'
+                }`}
+              >
+                {isExportando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              </button>
+            )}
+
             <button
               onClick={carregarDados}
               disabled={loading}
@@ -813,6 +930,15 @@ export const VivoxGP: React.FC = () => {
           isImporting={isImportingBitrix}
           onClose={() => setIsImportBitrixModalOpen(false)}
           onImport={handleImportBitrix}
+        />
+      )}
+
+      {/* Modal de Importação de Backup do Vivox */}
+      {isImportBackupModalOpen && selectedWorkspaceId && selectedWorkspaceId !== 'ALL' && (
+        <ImportBackupModal
+          isImporting={isImportingBackup}
+          onClose={() => setIsImportBackupModalOpen(false)}
+          onImport={handleImportarBackup}
         />
       )}
     </div>

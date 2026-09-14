@@ -106,6 +106,14 @@ export class TarefasController {
     });
   }
 
+  @Get('exportar')
+  exportarWorkspace(@Query('projetoId') projetoId: string) {
+    if (!projetoId) {
+      throw new BadRequestException('O parâmetro "projetoId" é obrigatório');
+    }
+    return this.tarefasService.exportarWorkspace(projetoId);
+  }
+
   @Patch('mover-etapa')
   moverEtapa(
     @Body('projetoId') projetoId: string | undefined,
@@ -213,5 +221,26 @@ export class TarefasController {
       throw new BadRequestException('Nenhum arquivo enviado');
     }
     return this.tarefasService.importarBitrix(file.buffer, projetoId, etapa);
+  }
+
+  @Post('importar-backup')
+  @UseInterceptors(FileInterceptor('file'))
+  async importarBackup(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('projetoId') projetoId: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado');
+    }
+    if (!projetoId) {
+      throw new BadRequestException('Selecione o workspace de destino');
+    }
+    let conteudo: any;
+    try {
+      conteudo = JSON.parse(file.buffer.toString('utf-8'));
+    } catch {
+      throw new BadRequestException('Arquivo de backup inválido: não é um JSON válido');
+    }
+    return this.tarefasService.importarBackup(conteudo?.tarefas, projetoId);
   }
 }
