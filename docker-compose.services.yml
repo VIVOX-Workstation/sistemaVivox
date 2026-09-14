@@ -18,6 +18,7 @@ services:
   minio-init:
     image: quay.io/minio/mc:latest
     container_name: vivox-minio-init
+    restart: "no"
     depends_on:
       - minio
     networks:
