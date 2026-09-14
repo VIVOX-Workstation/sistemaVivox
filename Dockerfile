@@ -15,7 +15,7 @@ RUN npm install --include=dev
 COPY backend/ .
 
 # Gera o Prisma Client com os tipos corretos (Isso resolve o erro TypeScript)
-RUN npx prisma generate
+RUN ./node_modules/.bin/prisma generate
 
 # Faz o build de produção do NestJS (Gera a pasta dist)
 ENV NODE_OPTIONS="--max-old-space-size=4096"
@@ -24,4 +24,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Inicia o app: Primeiro envia as tabelas pro banco (db push) e depois liga o sistema de produção
-CMD ["/bin/sh", "-c", "npx prisma db push && node dist/src/main"]
+CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma db push && node dist/src/main"]

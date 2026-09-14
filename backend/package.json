@@ -49,7 +49,9 @@
     "rxjs": "^7.8.1",
     "tiktoken": "^1.0.22",
     "uuid": "^14.0.1",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@prisma/client": "5.22.0",
+    "prisma": "5.22.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -57,7 +59,6 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
-    "@prisma/client": "^5.22.0",
     "@types/bcrypt": "^6.0.0",
     "@types/compression": "^1.8.1",
     "@types/cron": "^2.0.1",
