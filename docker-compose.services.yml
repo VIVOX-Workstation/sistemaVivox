@@ -1,6 +1,6 @@
 services:
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: vivox-minio
     restart: unless-stopped
     ports:
@@ -16,7 +16,7 @@ services:
       - coolify
 
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     container_name: vivox-minio-init
     depends_on:
       - minio
