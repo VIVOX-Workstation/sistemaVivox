@@ -164,6 +164,23 @@ export const tarefasApi = {
     return response.data;
   },
 
+  // Exportação/importação nativa do Vivox (backup fiel de um workspace: etapa,
+  // status, dono, checklist etc.) — formato distinto do import do Bitrix.
+  exportarWorkspace: async (projetoId: string): Promise<any[]> => {
+    const response = await api.get('/tarefas/exportar', { params: { projetoId } });
+    return response.data;
+  },
+
+  importarBackup: async (file: File, projetoId: string): Promise<{ totalLinhas: number, criadas: number, ignoradas: number, usuariosCriados: string[] }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('projetoId', projetoId);
+    const response = await api.post('/tarefas/importar-backup', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
 
   gerarChecklistIa: async (payload: { titulo: string; descricao?: string; clienteId?: string }): Promise<string[]> => {
     const response = await api.post<string[]>('/tarefas/gerar-checklist-ia', payload);
