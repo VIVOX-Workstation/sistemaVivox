@@ -7,6 +7,8 @@ import { GSCService } from './google/gsc.service';
 import { AnalyticsCacheService } from './google/analytics-cache.service';
 import { OpenPanelAuthService } from './openpanel/openpanel-auth.service';
 import { OpenPanelService } from './openpanel/openpanel.service';
+import { InstagramAuthService } from './instagram/instagram-auth.service';
+import { InstagramService } from './instagram/instagram.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
@@ -20,7 +22,18 @@ import { PrismaModule } from '../prisma/prisma.module';
     AnalyticsCacheService,
     OpenPanelAuthService,
     OpenPanelService,
+    InstagramAuthService,
+    InstagramService,
   ],
-  exports: [AnalyticsService, GA4Service, GSCService, GoogleAuthService, OpenPanelService, OpenPanelAuthService],
+  exports: [
+    AnalyticsService,
+    GA4Service,
+    GSCService,
+    GoogleAuthService,
+    OpenPanelService,
+    OpenPanelAuthService,
+    InstagramAuthService,
+    InstagramService,
+  ],
 })
 export class AnalyticsModule {}

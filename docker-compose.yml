@@ -17,7 +17,7 @@ services:
       - postgres
       - redis
       - minio
-    command: npm run start:dev
+    command: sh -c "npx prisma generate && npm run start:dev"
 
   postgres:
     image: pgvector/pgvector:pg16

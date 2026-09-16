@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateMetricaDto } from './dto/create-analytics.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleAuthService } from './google/google-auth.service';
@@ -8,6 +8,9 @@ import { AnalyticsCacheService } from './google/analytics-cache.service';
 import { GoogleDashboardResult, GA4MetricsResult, GSCMetricsResult } from './google/interfaces';
 import { OpenPanelService } from './openpanel/openpanel.service';
 import { OpenPanelDashboardResult } from './openpanel/interfaces';
+import { InstagramAuthService } from './instagram/instagram-auth.service';
+import { InstagramService } from './instagram/instagram.service';
+import { InstagramDashboardData } from './instagram/interfaces';
 
 @Injectable()
 export class AnalyticsService {
@@ -20,6 +23,8 @@ export class AnalyticsService {
     private gscService: GSCService,
     private cacheService: AnalyticsCacheService,
     private openpanelService: OpenPanelService,
+    private instagramAuth: InstagramAuthService,
+    private instagramService: InstagramService,
   ) {}
 
   async saveSnapshot(dto: CreateMetricaDto) {
@@ -435,5 +440,175 @@ export class AnalyticsService {
       emDia,
       proximosVencimentos: enriquecidos.filter(e => e.nivelUrgencia !== 'SEM_DATA').slice(0, 6),
     };
+  }
+
+  /**
+   * Retorna a URL para o cliente autorizar a conta do Instagram / Facebook
+   */
+  getInstagramAuthUrl(clienteId: string, redirectUri?: string) {
+    return {
+      url: this.instagramAuth.getAuthUrl(clienteId, redirectUri),
+    };
+  }
+
+  /**
+   * Processa o callback da Meta com o code, troca por token de longa duração,
+   * descobre a conta do Instagram vinculada à página e salva no cliente.
+   */
+  async handleInstagramCallback(clienteId: string, code: string, redirectUri?: string) {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+    });
+
+    if (!cliente) {
+      throw new NotFoundException(`Cliente com ID ${clienteId} não encontrado.`);
+    }
+
+    // 1. Troca o code pelo Long-Lived Token (60 dias)
+    const longLivedToken = await this.instagramAuth.exchangeCodeForLongLivedToken(code, redirectUri);
+
+    // 2. Busca as Páginas e Contas do Instagram conectadas
+    const pages = await this.instagramAuth.getConnectedPagesAndInstagram(longLivedToken);
+
+    if (!pages || pages.length === 0) {
+      throw new NotFoundException(
+        'Nenhuma página do Facebook encontrada para esta conta de usuário. Certifique-se de ser administrador de uma página vinculada.',
+      );
+    }
+
+    // Filtra páginas que possuem conta profissional do Instagram
+    const pagesWithIg = pages.filter((p) => p.instagram_business_account?.id);
+
+    if (pagesWithIg.length === 0) {
+      // Limpa qualquer token anterior para garantir estado 100% limpo
+      await this.prisma.cliente.update({
+        where: { id: clienteId },
+        data: {
+          metaAccessToken: null,
+          facebookPageId: null,
+          instagramAccountId: null,
+          instagramUsername: null,
+        },
+      });
+
+      const pageNames = pages.map((p) => `"${p.name}"`).join(', ');
+      return {
+        success: false,
+        warning: true,
+        message: `As Páginas autorizadas (${pageNames}) não possuem uma conta Profissional (Comercial ou Criador) do Instagram vinculada. Ao fazer login no Facebook, clique em "Editar configurações" / "Editar opções anteriores" para selecionar a Página correta, ou vincule a conta no aplicativo do Instagram em Configurações > Conta > Compartilhar em outros aplicativos > Facebook.`,
+        pages: pages.map((p) => ({ id: p.id, name: p.name, hasInstagram: false })),
+      };
+    }
+
+    // Se houver múltiplas contas, seleciona a primeira por padrão mas avisa que pode escolher
+    const pageWithIg = pagesWithIg[0];
+    const igAccount = pageWithIg.instagram_business_account!;
+
+    // 3. Atualiza o cadastro do cliente com os dados do Instagram
+    const updatedCliente = await this.prisma.cliente.update({
+      where: { id: clienteId },
+      data: {
+        metaAccessToken: longLivedToken,
+        facebookPageId: pageWithIg.id,
+        instagramAccountId: igAccount.id,
+        instagramUsername: igAccount.username || null,
+      },
+    });
+
+    return {
+      success: true,
+      multiple: pagesWithIg.length > 1,
+      totalAccounts: pagesWithIg.length,
+      clienteId: updatedCliente.id,
+      instagramAccountId: igAccount.id,
+      instagramUsername: igAccount.username,
+      pageName: pageWithIg.name,
+    };
+  }
+
+  /**
+   * Retorna todas as páginas e contas do Instagram disponíveis no token da Meta do cliente
+   */
+  async getAvailableInstagramAccounts(clienteId: string) {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: { metaAccessToken: true, instagramAccountId: true },
+    });
+
+    if (!cliente || !cliente.metaAccessToken) {
+      throw new NotFoundException('Nenhum token da Meta conectado para este cliente.');
+    }
+
+    const pages = await this.instagramAuth.getConnectedPagesAndInstagram(cliente.metaAccessToken);
+    return pages.map((p) => ({
+      pageId: p.id,
+      pageName: p.name,
+      hasInstagram: !!p.instagram_business_account?.id,
+      instagramId: p.instagram_business_account?.id || null,
+      instagramUsername: p.instagram_business_account?.username || null,
+      instagramName: p.instagram_business_account?.name || null,
+      profilePictureUrl: p.instagram_business_account?.profile_picture_url || null,
+      isSelected: p.instagram_business_account?.id === cliente.instagramAccountId,
+    }));
+  }
+
+  /**
+   * Permite selecionar explicitamente qual conta do Instagram vincular a este cliente
+   */
+  async selectInstagramAccount(
+    clienteId: string,
+    dto: { pageId: string; instagramAccountId: string; instagramUsername?: string },
+  ) {
+    return this.prisma.cliente.update({
+      where: { id: clienteId },
+      data: {
+        facebookPageId: dto.pageId,
+        instagramAccountId: dto.instagramAccountId,
+        instagramUsername: dto.instagramUsername || null,
+      },
+    });
+  }
+
+  /**
+   * Retorna o dashboard consolidado de métricas do Instagram para o cliente
+   */
+  async getInstagramDashboard(clienteId: string, days = 30): Promise<InstagramDashboardData> {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: {
+        id: true,
+        nomeFantasia: true,
+        metaAccessToken: true,
+        instagramAccountId: true,
+        instagramUsername: true,
+      },
+    });
+
+    if (!cliente) {
+      throw new NotFoundException(`Cliente com ID ${clienteId} não encontrado.`);
+    }
+
+    if (!cliente.metaAccessToken || !cliente.instagramAccountId) {
+      throw new BadRequestException(
+        'Instagram não conectado para este cliente. Conecte a conta do Instagram primeiro.',
+      );
+    }
+
+    return this.instagramService.getDashboard(cliente.instagramAccountId, cliente.metaAccessToken, days);
+  }
+
+  /**
+   * Desconecta o Instagram do cliente removendo os tokens e IDs salvos
+   */
+  async disconnectInstagram(clienteId: string) {
+    return this.prisma.cliente.update({
+      where: { id: clienteId },
+      data: {
+        metaAccessToken: null,
+        instagramAccountId: null,
+        instagramUsername: null,
+        facebookPageId: null,
+      },
+    });
   }
 }

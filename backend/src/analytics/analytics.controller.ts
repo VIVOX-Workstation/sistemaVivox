@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { CreateMetricaDto } from './dto/create-analytics.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -86,5 +86,64 @@ export class AnalyticsController {
     @Body() dto: { openpanelProjectId?: string; openpanelClientId?: string; openpanelClientSecret?: string },
   ) {
     return this.analyticsService.updateClienteOpenPanelConfig(clienteId, dto);
+  }
+
+  /**
+   * Retorna a URL de autorização OAuth do Instagram para redirecionar o usuário
+   */
+  @Get('instagram/auth-url/:clienteId')
+  getInstagramAuthUrl(
+    @Param('clienteId') clienteId: string,
+    @Query('redirectUri') redirectUri?: string,
+  ) {
+    return this.analyticsService.getInstagramAuthUrl(clienteId, redirectUri);
+  }
+
+  /**
+   * Processa o callback da Meta com o code gerado na autorização
+   */
+  @Post('instagram/callback')
+  handleInstagramCallback(
+    @Body() dto: { clienteId: string; code: string; redirectUri?: string },
+  ) {
+    return this.analyticsService.handleInstagramCallback(dto.clienteId, dto.code, dto.redirectUri);
+  }
+
+  /**
+   * Retorna o dashboard com métricas consolidadas do Instagram do cliente
+   */
+  @Get('instagram/:clienteId')
+  getInstagramDashboard(
+    @Param('clienteId') clienteId: string,
+    @Query('days') days?: string,
+  ) {
+    const daysNumber = days ? parseInt(days, 10) : 30;
+    return this.analyticsService.getInstagramDashboard(clienteId, daysNumber);
+  }
+
+  /**
+   * Retorna todas as contas do Instagram disponíveis no token da Meta deste cliente
+   */
+  @Get('instagram/available-accounts/:clienteId')
+  getAvailableInstagramAccounts(@Param('clienteId') clienteId: string) {
+    return this.analyticsService.getAvailableInstagramAccounts(clienteId);
+  }
+
+  /**
+   * Permite selecionar qual conta do Instagram vincular ao cliente
+   */
+  @Post('instagram/select-account')
+  selectInstagramAccount(
+    @Body() dto: { clienteId: string; pageId: string; instagramAccountId: string; instagramUsername?: string },
+  ) {
+    return this.analyticsService.selectInstagramAccount(dto.clienteId, dto);
+  }
+
+  /**
+   * Desconecta a conta do Instagram do cliente
+   */
+  @Delete('instagram/:clienteId')
+  disconnectInstagram(@Param('clienteId') clienteId: string) {
+    return this.analyticsService.disconnectInstagram(clienteId);
   }
 }

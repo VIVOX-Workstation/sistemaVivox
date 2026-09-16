@@ -199,6 +199,10 @@ model Cliente {
   openpanelProjectId    String?
   openpanelClientId     String?
   openpanelClientSecret String?
+  metaAccessToken       String?       @db.Text
+  instagramAccountId    String?
+  instagramUsername     String?
+  facebookPageId        String?
 
   // Relações Clientes
   servicosContratados ServicoContratado[]
