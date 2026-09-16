@@ -38,6 +38,10 @@ export interface Cliente {
   ga4PropertyId?: string;
   gscSiteUrl?: string;
   openpanelProjectId?: string;
+  metaAccessToken?: string;
+  instagramAccountId?: string;
+  instagramUsername?: string;
+  facebookPageId?: string;
   responsavel?: { nome: string }; // Incluído caso o Prisma dê include
   fontesContexto?: FonteContexto[];
 }

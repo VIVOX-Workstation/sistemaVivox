@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Building2, ExternalLink, Globe } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente } from '../types';
@@ -28,9 +28,22 @@ type Tab = 'site_analytics' | 'instagram' | 'executive_report' | 'planning' | 's
 export function AnalyticsDashboard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab') as Tab;
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('site_analytics');
+  const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl || 'site_analytics');
+
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   useEffect(() => {
     loadCliente();
@@ -89,15 +102,15 @@ export function AnalyticsDashboard() {
 
         <div className="flex items-center gap-2 self-start md:self-auto">
           <button
-            onClick={() => setActiveTab('executive_report')}
-            className="px-3.5 py-2 rounded-lg bg-[#24201A] hover:bg-[#2F2922] border border-[#4A4032] text-[#C7A15F] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
+            onClick={() => handleTabChange('executive_report')}
+            className="px-3.5 py-2 rounded-lg bg-[#24201A] hover:bg-[#2F2922] border border-[#4A4032] text-[#C7A15F] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
             Relatório Executivo (IA)
           </button>
           <button
             onClick={() => navigate(`/cliente/${cliente.id}`)}
-            className="px-3.5 py-2 rounded-lg border border-[#D8CBB8] bg-[#FFFDF8] hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
+            className="px-3.5 py-2 rounded-lg border border-[#D8CBB8] bg-[#FFFDF8] hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             Ver Cadastro do Cliente
             <ExternalLink className="w-3.5 h-3.5 text-[#8A6828]" />
@@ -108,8 +121,8 @@ export function AnalyticsDashboard() {
       {/* NAVEGAÇÃO DE ABAS ABERTA E ESPECIALIZADA */}
       <div className="flex border-b border-[#D8CBB8] gap-1 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('site_analytics')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 ${
+          onClick={() => handleTabChange('site_analytics')}
+          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
             activeTab === 'site_analytics'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -120,8 +133,8 @@ export function AnalyticsDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('instagram')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 ${
+          onClick={() => handleTabChange('instagram')}
+          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
             activeTab === 'instagram'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -132,8 +145,8 @@ export function AnalyticsDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('executive_report')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 ${
+          onClick={() => handleTabChange('executive_report')}
+          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
             activeTab === 'executive_report'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -144,8 +157,8 @@ export function AnalyticsDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('planning')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap ${
+          onClick={() => handleTabChange('planning')}
+          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap cursor-pointer ${
             activeTab === 'planning'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -155,8 +168,8 @@ export function AnalyticsDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('services')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap ${
+          onClick={() => handleTabChange('services')}
+          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap cursor-pointer ${
             activeTab === 'services'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
