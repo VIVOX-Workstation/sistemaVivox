@@ -452,7 +452,10 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         destaque: idx === 0 ? '✨ Mais Recente' : undefined,
         tema: 'Feed / Conteúdo',
         permalink: m.permalink,
-        mediaUrl: m.media_url || m.thumbnail_url,
+        // Vídeos retornam media_url apontando pro arquivo .mp4 (não dá pra usar
+        // como thumbnail de imagem) — nesse caso prioriza o thumbnail_url que a
+        // API já gera como capa. Foto e carrossel usam o media_url normalmente.
+        mediaUrl: m.media_type === 'VIDEO' ? (m.thumbnail_url || m.media_url) : (m.media_url || m.thumbnail_url),
       };
     });
   }, [isConnected, realData]);
@@ -1147,9 +1150,30 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             {publicacoesFiltradas.map((post, idx) => (
               <div
                 key={post.id}
-                className="bg-[#FAF7F2] rounded-[11px] border border-[#E5D9C8] p-4 flex flex-col justify-between gap-3 hover:border-[#B89455] hover:shadow-xs transition-all group"
+                className="bg-[#FAF7F2] rounded-[11px] border border-[#E5D9C8] overflow-hidden flex flex-col justify-between gap-3 hover:border-[#B89455] hover:shadow-xs transition-all group"
               >
-                <div className="space-y-2">
+                {post.mediaUrl && (
+                  <div className="relative w-full aspect-square bg-[#EEE7DC] overflow-hidden">
+                    <img
+                      src={post.mediaUrl}
+                      alt={post.titulo}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    {post.tipo === 'REELS' && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                        <div className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center">
+                          <Play className="w-4 h-4 text-white fill-current" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className={`space-y-2 px-4 ${post.mediaUrl ? 'pt-3' : 'pt-4'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-6 h-6 rounded-full bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4] text-[12px] font-bold flex items-center justify-center">
@@ -1180,8 +1204,8 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                   </h4>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-[#E5D9C8]">
-                  <div className="flex items-center justify-between text-[12px] text-[#625746] pt-1 px-1">
+                <div className="space-y-2 pt-2 pb-4 px-4 border-t border-[#E5D9C8]">
+                  <div className="flex items-center justify-between text-[12px] text-[#625746] pt-1">
                     <span className="flex items-center gap-1 font-semibold" title="Curtidas">
                       <Heart className="w-3.5 h-3.5 text-[#B83B32] fill-current" /> {post.curtidas.toLocaleString('pt-BR')} curtidas
                     </span>
