@@ -9,6 +9,7 @@ import { GoogleDashboardResult, GA4MetricsResult, GSCMetricsResult } from './goo
 import { OpenPanelService } from './openpanel/openpanel.service';
 import { OpenPanelDashboardResult } from './openpanel/interfaces';
 import { InstagramAuthService } from './instagram/instagram-auth.service';
+import { InstagramDirectAuthService } from './instagram/instagram-direct-auth.service';
 import { InstagramService } from './instagram/instagram.service';
 import { InstagramDashboardData } from './instagram/interfaces';
 
@@ -24,6 +25,7 @@ export class AnalyticsService {
     private cacheService: AnalyticsCacheService,
     private openpanelService: OpenPanelService,
     private instagramAuth: InstagramAuthService,
+    private instagramDirectAuth: InstagramDirectAuthService,
     private instagramService: InstagramService,
   ) {}
 
@@ -452,6 +454,15 @@ export class AnalyticsService {
   }
 
   /**
+   * Retorna a URL para o cliente autorizar o Instagram Business Login diretamente
+   */
+  getInstagramDirectAuthUrl(clienteId: string, redirectUri?: string) {
+    return {
+      url: this.instagramDirectAuth.getAuthUrl(clienteId, redirectUri),
+    };
+  }
+
+  /**
    * Processa o callback da Meta com o code, troca por token de longa duração,
    * descobre a conta do Instagram vinculada à página e salva no cliente.
    */
@@ -527,6 +538,61 @@ export class AnalyticsService {
   }
 
   /**
+   * Processa o callback da Meta via Direct Login, troca por token longo e salva os dados
+   */
+  async handleInstagramDirectCallback(clienteId: string, code: string, redirectUri?: string) {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+    });
+
+    if (!cliente) {
+      throw new NotFoundException(`Cliente com ID ${clienteId} não encontrado.`);
+    }
+
+    try {
+      // 1. Troca code pelo token longo e recupera o user_id (Instagram Account ID)
+      const tokenResponse = await this.instagramDirectAuth.exchangeCodeForToken(code, redirectUri);
+      
+      let instagramAccountId = tokenResponse.user_id;
+      let instagramUsername: string | null = null;
+
+      // 2. Tenta recuperar o username do perfil
+      try {
+        const profile = await this.instagramDirectAuth.getProfile(tokenResponse.access_token);
+        instagramAccountId = profile.id;
+        instagramUsername = profile.username;
+      } catch (e) {
+        this.logger.warn(`Não foi possível recuperar o perfil inicial para o cliente ${clienteId}. Usando o user_id do token.`, e);
+      }
+
+      // 3. Atualiza cliente com os dados do Instagram direto
+      const updatedCliente = await this.prisma.cliente.update({
+        where: { id: clienteId },
+        data: {
+          metaAccessToken: tokenResponse.access_token,
+          facebookPageId: null, // Sem vínculo com página neste fluxo
+          instagramAccountId: instagramAccountId,
+          instagramUsername: instagramUsername,
+          metaAuthMethod: 'INSTAGRAM',
+        },
+      });
+
+      return {
+        success: true,
+        clienteId: updatedCliente.id,
+        instagramAccountId: instagramAccountId,
+        instagramUsername: instagramUsername,
+      };
+    } catch (err: any) {
+      this.logger.error(`Erro ao processar callback direto do Instagram para ${clienteId}: ${err.message}`);
+      return {
+        success: false,
+        message: err.message || 'Erro interno ao conectar Instagram Direto.',
+      };
+    }
+  }
+
+  /**
    * Retorna todas as páginas e contas do Instagram disponíveis no token da Meta do cliente
    */
   async getAvailableInstagramAccounts(clienteId: string) {
@@ -581,6 +647,7 @@ export class AnalyticsService {
         metaAccessToken: true,
         instagramAccountId: true,
         instagramUsername: true,
+        metaAuthMethod: true,
       },
     });
 
@@ -594,7 +661,12 @@ export class AnalyticsService {
       );
     }
 
-    return this.instagramService.getDashboard(cliente.instagramAccountId, cliente.metaAccessToken, days);
+    return this.instagramService.getDashboard(
+      cliente.instagramAccountId, 
+      cliente.metaAccessToken, 
+      days, 
+      cliente.metaAuthMethod
+    );
   }
 
   /**

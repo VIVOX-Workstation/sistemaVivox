@@ -91,4 +91,50 @@ export class AuthController {
       return res.redirect(`${frontendBaseUrl}/analytics?error=${encodeURIComponent(err?.message || 'Erro interno')}`);
     }
   }
+
+  /**
+   * Endpoint de redirecionamento público do OAuth do Instagram (Business Login)
+   */
+  @Get('instagram/callback/direct')
+  async instagramDirectCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error: string,
+    @Query('error_description') errorDesc: string,
+    @Res() res: Response,
+  ) {
+    const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    if (error) {
+      return res.redirect(`${frontendBaseUrl}/analytics?error=${encodeURIComponent(errorDesc || error)}`);
+    }
+
+    let clienteId = '';
+    try {
+      if (state) {
+        try {
+          const parsed = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
+          clienteId = parsed.clienteId;
+        } catch {
+          clienteId = state;
+        }
+      }
+
+      if (!clienteId || !code) {
+        return res.redirect(`${frontendBaseUrl}/analytics${clienteId ? `/${clienteId}?tab=instagram&` : '?'}error=Parametros_invalidos`);
+      }
+
+      const result = await this.analyticsService.handleInstagramDirectCallback(clienteId, code);
+      if (result && !result.success) {
+        return res.redirect(
+          `${frontendBaseUrl}/analytics/${clienteId}?tab=instagram&warning=${encodeURIComponent(result.message || 'Erro ao conectar Instagram.')}`,
+        );
+      }
+      return res.redirect(`${frontendBaseUrl}/analytics/${clienteId}?tab=instagram&connected=true`);
+    } catch (err: any) {
+      if (clienteId) {
+        return res.redirect(`${frontendBaseUrl}/analytics/${clienteId}?tab=instagram&error=${encodeURIComponent(err?.message || 'Erro interno')}`);
+      }
+      return res.redirect(`${frontendBaseUrl}/analytics?error=${encodeURIComponent(err?.message || 'Erro interno')}`);
+    }
+  }
 }

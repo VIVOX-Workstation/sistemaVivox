@@ -6,18 +6,34 @@ import {
   InstagramMediaItem,
   InstagramMediaListResponse,
 } from './interfaces';
+import { MetaAuthMethod } from '@prisma/client';
 
 @Injectable()
 export class InstagramService {
   private readonly logger = new Logger(InstagramService.name);
-  private readonly graphApiVersion = 'v26.0';
-  private readonly graphApiBase = 'https://graph.facebook.com';
+  private readonly fbGraphApiVersion = 'v26.0';
+  private readonly igGraphApiVersion = 'v22.0';
+  private readonly fbGraphApiBase = 'https://graph.facebook.com';
+  private readonly igGraphApiBase = 'https://graph.instagram.com';
+
+  private getGraphApiBase(authMethod?: MetaAuthMethod | null) {
+    return authMethod === 'INSTAGRAM' ? this.igGraphApiBase : this.fbGraphApiBase;
+  }
+
+  private getGraphApiVersion(authMethod?: MetaAuthMethod | null) {
+    return authMethod === 'INSTAGRAM' ? this.igGraphApiVersion : this.fbGraphApiVersion;
+  }
 
   /**
    * Obtém o perfil básico da conta profissional do Instagram
    */
-  async getProfile(instagramAccountId: string, accessToken: string): Promise<InstagramAccountProfile> {
-    const url = new URL(`${this.graphApiBase}/${this.graphApiVersion}/${instagramAccountId}`);
+  async getProfile(instagramAccountId: string, accessToken: string, authMethod?: MetaAuthMethod | null): Promise<InstagramAccountProfile> {
+    const base = this.getGraphApiBase(authMethod);
+    const version = this.getGraphApiVersion(authMethod);
+    const url = new URL(`${base}/${version}/${instagramAccountId}`);
+    
+    // API Direta (graph.instagram.com) vs API Graph via Pages (graph.facebook.com)
+    // Para API Direta v22.0, os fields de username, profile_picture_url, followers_count e media_count existem, mas follows_count existe tb.
     url.searchParams.set(
       'fields',
       'id,username,name,profile_picture_url,followers_count,follows_count,media_count',
@@ -50,6 +66,7 @@ export class InstagramService {
     instagramAccountId: string,
     accessToken: string,
     days: number = 30,
+    authMethod?: MetaAuthMethod | null,
   ): Promise<{
     overview: {
       reach: number;
@@ -62,7 +79,9 @@ export class InstagramService {
     const until = Math.floor(Date.now() / 1000);
     const since = until - days * 24 * 60 * 60;
 
-    const url = new URL(`${this.graphApiBase}/${this.graphApiVersion}/${instagramAccountId}/insights`);
+    const base = this.getGraphApiBase(authMethod);
+    const version = this.getGraphApiVersion(authMethod);
+    const url = new URL(`${base}/${version}/${instagramAccountId}/insights`);
     url.searchParams.set('metric', 'impressions,reach,profile_views,accounts_engaged');
     url.searchParams.set('period', 'day');
     url.searchParams.set('since', String(since));
@@ -147,8 +166,11 @@ export class InstagramService {
     instagramAccountId: string,
     accessToken: string,
     limit: number = 12,
+    authMethod?: MetaAuthMethod | null,
   ): Promise<InstagramMediaItem[]> {
-    const url = new URL(`${this.graphApiBase}/${this.graphApiVersion}/${instagramAccountId}/media`);
+    const base = this.getGraphApiBase(authMethod);
+    const version = this.getGraphApiVersion(authMethod);
+    const url = new URL(`${base}/${version}/${instagramAccountId}/media`);
     url.searchParams.set(
       'fields',
       'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count',
@@ -189,11 +211,12 @@ export class InstagramService {
     instagramAccountId: string,
     accessToken: string,
     days: number = 30,
+    authMethod?: MetaAuthMethod | null,
   ): Promise<InstagramDashboardData> {
     const [profile, insightsData, recentMedia] = await Promise.all([
-      this.getProfile(instagramAccountId, accessToken),
-      this.getAccountInsights(instagramAccountId, accessToken, days),
-      this.getRecentMedia(instagramAccountId, accessToken, 12),
+      this.getProfile(instagramAccountId, accessToken, authMethod),
+      this.getAccountInsights(instagramAccountId, accessToken, days, authMethod),
+      this.getRecentMedia(instagramAccountId, accessToken, 12, authMethod),
     ]);
 
     return {

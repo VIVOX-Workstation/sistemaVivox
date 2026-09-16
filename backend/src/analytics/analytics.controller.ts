@@ -100,6 +100,17 @@ export class AnalyticsController {
   }
 
   /**
+   * Retorna a URL de autorização OAuth do Instagram Direto para redirecionar o usuário
+   */
+  @Get('instagram/auth-url-direto/:clienteId')
+  getInstagramDirectAuthUrl(
+    @Param('clienteId') clienteId: string,
+    @Query('redirectUri') redirectUri?: string,
+  ) {
+    return this.analyticsService.getInstagramDirectAuthUrl(clienteId, redirectUri);
+  }
+
+  /**
    * Processa o callback da Meta com o code gerado na autorização
    */
   @Post('instagram/callback')
