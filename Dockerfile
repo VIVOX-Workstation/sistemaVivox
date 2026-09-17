@@ -23,5 +23,5 @@ RUN npm run build
 
 EXPOSE 3000
 
-# Inicia o app: Primeiro envia as tabelas pro banco (db push) e depois liga o sistema de produção
-CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma db push && node dist/src/main"]
+# Inicia o app: Primeiro aplica as migrations (migrate deploy) e depois liga o sistema de produção
+CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/src/main"]
