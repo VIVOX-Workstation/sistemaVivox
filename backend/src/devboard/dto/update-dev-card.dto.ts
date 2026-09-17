@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, IsInt } from 'class-validator';
 import { DevCardTag, DevCardColuna } from '@prisma/client';
 
 export class UpdateDevCardDto {
@@ -33,4 +33,8 @@ export class UpdateDevCardDto {
   @IsArray()
   @IsOptional()
   checklist?: { label: string; done: boolean }[];
+
+  @IsInt()
+  @IsOptional()
+  githubPrNumber?: number | null;
 }

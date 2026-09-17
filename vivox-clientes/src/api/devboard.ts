@@ -20,6 +20,7 @@ export interface DevCard {
   targetBranch: string;
   description: string | null;
   checklist: DevChecklistItem[];
+  githubPrNumber: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,7 +34,7 @@ export const devboardApi = {
     const res = await api.post('/devboard', dto);
     return res.data;
   },
-  update: async (id: string, dto: Partial<Pick<DevCard, 'title' | 'tag' | 'coluna' | 'assignee' | 'branch' | 'targetBranch' | 'description' | 'checklist'>>): Promise<DevCard> => {
+  update: async (id: string, dto: Partial<Pick<DevCard, 'title' | 'tag' | 'coluna' | 'assignee' | 'branch' | 'targetBranch' | 'description' | 'checklist' | 'githubPrNumber'>>): Promise<DevCard> => {
     const res = await api.patch(`/devboard/${id}`, dto);
     return res.data;
   },
