@@ -1,0 +1,67 @@
+import { InstagramService } from './instagram.service';
+
+describe('Instagram management data', () => {
+  let service: InstagramService;
+  let fetchMock: jest.SpyInstance;
+  const reply = (data: unknown, ok = true) => Promise.resolve({ ok, json: async () => data } as Response);
+  beforeEach(() => {
+    service = new InstagramService();
+    fetchMock = jest.spyOn(global, 'fetch');
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-09-16T15:00:00Z'));
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('keeps unsupported metrics null and real zero intact without summing daily unique reach', async () => {
+    fetchMock.mockImplementation((input: URL) => {
+      const name = input.searchParams.get('metric');
+      if (name === 'views') return reply({ data: [{ name, total_value: { value: 0 } }] });
+      if (name === 'reach') return reply({ data: [{ name, values: [{ value: 100 }, { value: 100 }] }] });
+      if (name === 'accounts_engaged') return reply({ data: [{ name, total_value: { value: 25 } }] });
+      return reply({}, false);
+    });
+    expect(await service.getAccountInsights('account', 'test-token', 1, 2)).toEqual({ reach: null, views: 0, accountsEngaged: 25, profileViews: null });
+  });
+
+  it('uses equal non-overlapping UTC windows, paginates media, filters dates and caches by account/token/period', async () => {
+    const media = (id: string, timestamp: string) => ({ id, timestamp, media_type: 'IMAGE', permalink: 'https://www.instagram.com/p/test', like_count: 0, comments_count: 0 });
+    fetchMock.mockImplementation((input: URL) => {
+      if (input.pathname.endsWith('/media')) return input.searchParams.has('after')
+        ? reply({ data: [media('second', '2026-09-10T12:00:00Z'), media('old', '2026-09-08T00:00:00Z')] })
+        : reply({ data: [media('today', '2026-09-16T01:00:00Z'), media('first', '2026-09-15T12:00:00Z')], paging: { next: 'ignored', cursors: { after: 'cursor' } } });
+      if (input.pathname.endsWith('/insights')) {
+        const metrics = input.searchParams.get('metric')!.split(',');
+        return reply({ data: metrics.map(name => ({ name, total_value: { value: 10 } })) });
+      }
+      return reply({ id: 'account', username: 'test', followers_count: 12 });
+    });
+    const data = await service.getDashboard('account', 'test-token', 7);
+    expect(data.period.since).toBe('2026-09-09T00:00:00.000Z');
+    expect(data.period.until).toBe('2026-09-16T00:00:00.000Z');
+    expect(data.previousPeriod).toEqual({ since: '2026-09-02T00:00:00.000Z', until: data.period.since });
+    expect(data.recentMedia.map(item => item.id)).toEqual(['first', 'second']);
+    expect(data.recentMedia[0].insights?.saved).toBe(10);
+    expect(data.mediaCoverage.complete).toBe(true);
+    const calls = fetchMock.mock.calls.length;
+    await service.getDashboard('account', 'test-token', 7);
+    expect(fetchMock).toHaveBeenCalledTimes(calls);
+    await service.getDashboard('account', 'test-token', 7, true);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(calls);
+    const refreshedCalls = fetchMock.mock.calls.length;
+    await service.getDashboard('account', 'different-token', 7);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(refreshedCalls);
+  });
+
+  it('reports media failures separately from an empty period', async () => {
+    fetchMock.mockImplementation((input: URL) => input.pathname.endsWith('/account') ? reply({ id: 'account' }) : reply({}, false));
+    const data = await service.getDashboard('account', 'test-token', 30);
+    expect(data.mediaCoverage.available).toBe(false);
+    expect(data.mediaCoverage.complete).toBe(false);
+    expect(data.overview.reach).toBeNull();
+    expect(data.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('rejects invalid periods before calling Meta', async () => {
+    for (const days of [0, -1, NaN, 31, 7.5]) await expect(service.getDashboard('account', 'test-token', days)).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

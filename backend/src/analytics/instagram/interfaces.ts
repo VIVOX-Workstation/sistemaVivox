@@ -60,11 +60,12 @@ export interface InstagramMediaItem {
   like_count?: number;
   comments_count?: number;
   insights?: {
-    reach?: number;
-    impressions?: number;
-    saved?: number;
+    reach?: number | null;
+    impressions?: number | null;
+    views?: number | null;
+    saved?: number | null;
     video_views?: number;
-    shares?: number;
+    shares?: number | null;
   };
 }
 
@@ -79,22 +80,22 @@ export interface InstagramMediaListResponse {
   };
 }
 
+export interface InstagramOverview {
+  reach: number | null;
+  views: number | null;
+  accountsEngaged: number | null;
+  profileViews: number | null;
+}
+
 export interface InstagramDashboardData {
   account: InstagramAccountProfile;
-  period: {
-    days: number;
-  };
-  overview: {
-    reach: number;
-    impressions: number;
-    accountsEngaged: number;
-    totalFollowers: number;
-    profileViews: number;
-  };
-  insightsHistory: Array<{
-    date: string;
-    reach: number;
-    impressions: number;
-  }>;
+  period: { days: number; since: string; until: string; timezone: 'UTC' };
+  previousPeriod: { since: string; until: string };
+  overview: InstagramOverview & { totalFollowers: number | null };
+  previousOverview: InstagramOverview;
+  syncedAt: string;
+  warnings: string[];
+  mediaCoverage: { complete: boolean; fetched: number; enriched: number; limit: number; available: boolean };
+  insightsHistory: Array<{ date: string; reach: number }>;
   recentMedia: InstagramMediaItem[];
 }
