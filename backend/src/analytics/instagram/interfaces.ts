@@ -88,6 +88,11 @@ export interface InstagramOverview {
 }
 
 export interface InstagramDashboardData {
+  followers: {
+    current: import('./follower-history').FollowerChange;
+    previous: import('./follower-history').FollowerChange;
+    historySince?: string;
+  };
   account: InstagramAccountProfile;
   period: { days: number; since: string; until: string; timezone: 'UTC' };
   previousPeriod: { since: string; until: string };

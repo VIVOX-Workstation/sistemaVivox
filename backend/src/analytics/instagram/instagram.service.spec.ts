@@ -72,5 +72,23 @@ describe('Instagram management data', () => {
     const data = await service.getDashboard('account', 'test-token', { since, until });
     expect(data.period.since).toBe('2026-08-01T00:00:00.000Z');
     expect(data.period.until).toBe('2026-08-08T00:00:00.000Z');
+    expect(data.previousPeriod).toEqual({ since: '2026-07-25T00:00:00.000Z', until: '2026-08-01T00:00:00.000Z' });
+  });
+
+  it('rejects incomplete, reversed, non-midnight and future custom dates', async () => {
+    const day = 86400;
+    const today = Date.parse('2026-09-16T00:00:00Z') / 1000;
+    for (const period of [{ since: today }, { until: today }, { since: today, until: today }, { since: today + day, until: today + 2 * day }, { since: today - day + 1, until: today }]) {
+      await expect(service.getDashboard('account', 'test-token', period)).rejects.toThrow();
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps independent Instagram and Facebook hosts', async () => {
+    fetchMock.mockImplementation(() => reply({ id: 'account' }));
+    await service.getProfile('account', 'token', 'INSTAGRAM');
+    expect((fetchMock.mock.calls[0][0] as URL).hostname).toBe('graph.instagram.com');
+    await service.getProfile('account', 'token', 'FACEBOOK');
+    expect((fetchMock.mock.calls[1][0] as URL).hostname).toBe('graph.facebook.com');
   });
 });

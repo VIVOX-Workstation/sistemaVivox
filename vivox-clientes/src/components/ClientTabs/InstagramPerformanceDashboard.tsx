@@ -1,18 +1,11 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstagramManagementInsights, MetricComparison } from './InstagramManagementInsights';
+import { InstagramManagementInsights, MetricComparison, FollowersSummary } from './InstagramManagementInsights';
 import { periodLabel } from './instagramInsights';
 import type { Cliente } from '../../types';
 import { api } from '../../api/client';
 import {
   Info,
-  Heart,
-  MessageCircle,
-  Play,
-  Layers,
-  Image as ImageIcon,
-  ExternalLink,
   Flame,
-  Sparkles,
   Calendar,
   RefreshCw,
   Trophy,
@@ -56,31 +49,12 @@ interface TimelineItem {
   reels: boolean;
 }
 
-interface PublicacaoItem {
-  id: string;
-  tipo: string;
-  titulo: string;
-  data: string;
-  alcance: number;
-  visualizacoesVideo: number;
-  curtidas: number;
-  comentarios: number;
-  compartilhamentos: number;
-  salvos: number;
-  taxaEngajamento: number;
-  destaque?: string;
-  tema: string;
-  permalink?: string;
-  mediaUrl?: string;
-}
-
 function toDateInputValue(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
 export function InstagramPerformanceDashboard({ cliente }: Props) {
   const [periodo, setPeriodo] = useState<string>('30d');
-  const [filtroTipo, setFiltroTipo] = useState<string>('TODOS');
   const [loading, setLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<YearDay | null>(null);
 
@@ -88,6 +62,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [profilePicError, setProfilePicError] = useState(false);
 
   const [customFrom, setCustomFrom] = useState(() => toDateInputValue(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
   const [customTo, setCustomTo] = useState(() => toDateInputValue(new Date()));
@@ -181,6 +156,10 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     return () => { requestId.current++; };
   }, [isConnected, cliente.instagramAccountId, cliente.metaAccessToken, loadInstagramMetrics]);
 
+  useEffect(() => {
+    setProfilePicError(false);
+  }, [realData?.account?.profile_picture_url]);
+
   const handleRefresh = () => { if (isConnected) loadInstagramMetrics(true); };
 
   const handleConnectInstagram = async () => {
@@ -228,7 +207,6 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     const reach = ov?.reach ?? null;
     const engaged = ov?.accountsEngaged ?? null;
     return {
-      seguidores: ov?.totalFollowers ?? realData?.account?.followers_count ?? null,
       alcance: reach,
       impressoes: ov?.views ?? null,
       interacoes: engaged,
@@ -406,47 +384,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     };
   }, [isConnected, realData]);
 
-  // Melhores Publicações do Instagram (Sincronizadas em tempo real ou Vazias quando desconectadas)
-  const publicacoes = useMemo<PublicacaoItem[]>(() => {
-    if (!isConnected || !realData?.recentMedia || !Array.isArray(realData.recentMedia)) {
-      return [];
-    }
 
-    return realData.recentMedia.map((m: any, idx: number): PublicacaoItem => {
-      const tipo = m.media_type === 'VIDEO' ? 'REELS' : m.media_type === 'CAROUSEL_ALBUM' ? 'CARROSSEL' : 'POST';
-      const dataLabel = m.timestamp
-        ? new Date(m.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-        : '';
-      const curtidas = m.like_count ?? 0;
-      const comentarios = m.comments_count ?? 0;
-
-      return {
-        id: m.id || String(idx),
-        tipo,
-        titulo: m.caption ? (m.caption.length > 90 ? m.caption.slice(0, 90) + '...' : m.caption) : 'Publicação no Instagram',
-        data: dataLabel,
-        alcance: 0,
-        visualizacoesVideo: 0,
-        curtidas,
-        comentarios,
-        compartilhamentos: 0,
-        salvos: 0,
-        taxaEngajamento: 0,
-        destaque: idx === 0 ? '✨ Mais Recente' : undefined,
-        tema: 'Feed / Conteúdo',
-        permalink: m.permalink,
-        // Vídeos retornam media_url apontando pro arquivo .mp4 (não dá pra usar
-        // como thumbnail de imagem) — nesse caso prioriza o thumbnail_url que a
-        // API já gera como capa. Foto e carrossel usam o media_url normalmente.
-        mediaUrl: m.media_type === 'VIDEO' ? (m.thumbnail_url || m.media_url) : (m.media_url || m.thumbnail_url),
-      };
-    });
-  }, [isConnected, realData]);
-
-  const publicacoesFiltradas = useMemo<PublicacaoItem[]>(() => {
-    if (filtroTipo === 'TODOS') return publicacoes;
-    return publicacoes.filter((p: PublicacaoItem) => p.tipo === filtroTipo);
-  }, [filtroTipo, publicacoes]);
 
   // Cores OFICIAIS do Vivox Design System para os níveis do Heatmap
   const getVivoxLevelColor = (level: 0 | 1 | 2 | 3 | 4, isFuture: boolean) => {
@@ -559,11 +497,40 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         )
       ) : (
         <div className="px-5 py-3 rounded-[11px] bg-white border border-[#E8E7E4] text-[#1E1A16] flex flex-wrap items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#247A4A] "></span>
-            <span className="text-xs font-semibold text-[#716C64]">
-              {fetchError ? 'Conexão precisa de atenção: ' : 'Conta vinculada: '}<strong className="text-[#8A6828]">@{cliente.instagramUsername || realData?.account?.username || 'instagram_conectado'}</strong>
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              {realData?.account?.profile_picture_url && !profilePicError ? (
+                <img
+                  src={realData.account.profile_picture_url}
+                  alt={`@${cliente.instagramUsername || realData?.account?.username || 'instagram'}`}
+                  className="w-8 h-8 rounded-full object-cover border border-[#B89455]/40 shadow-xs"
+                  onError={() => setProfilePicError(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#FAF7F0] border border-[#E5D9C8] flex items-center justify-center text-[#8A6828] shadow-xs">
+                  <InstagramIcon className="w-4 h-4" />
+                </div>
+              )}
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                  fetchError ? 'bg-amber-500' : 'bg-[#247A4A]'
+                }`}
+                title={fetchError ? 'Conexão precisa de atenção' : 'Conta conectada e ativa'}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-medium text-[#716C64]">
+                {fetchError ? 'Conexão precisa de atenção: ' : 'Conta vinculada: '}
+              </span>
+              <a
+                href={`https://www.instagram.com/${cliente.instagramUsername || realData?.account?.username || ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#8A6828] hover:underline"
+              >
+                @{cliente.instagramUsername || realData?.account?.username || 'instagram_conectado'}
+              </a>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -762,8 +729,24 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-y-3 px-4 py-7 sm:px-6 sm:py-9">
+          <div className="flex flex-col items-center justify-center text-center min-h-36 px-3 py-5">
+            {loading ? (
+              <>
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-[#46433E]">Número de seguidores</div>
+                <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums text-[#242823]">…</p>
+                <p className="mt-2 text-xs text-[#8A867F]">Atualizando dados</p>
+              </>
+            ) : isConnected && realData ? (
+              <FollowersSummary data={realData} />
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-[#46433E]">Número de seguidores</div>
+                <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums text-[#242823]">—</p>
+                <p className="mt-2 text-xs text-[#8A867F]">Aguardando dados</p>
+              </>
+            )}
+          </div>
           {[
-            { label: 'Número de seguidores', value: metricas.seguidores, caption: 'Total atual do perfil', info: 'Quantidade atual de seguidores. Não representa a variação no período.' },
             { label: 'Contas alcançadas', value: metricas.alcance, comparisonKey: 'reach', caption: 'No período selecionado', info: 'Alcance informado pelo Instagram para o período selecionado.' },
             { label: 'Visualizações', value: metricas.impressoes, comparisonKey: 'views', caption: 'No período selecionado', info: 'Número de exibições do conteúdo, incluindo repetições.' },
             { label: 'Visitas ao perfil', value: metricas.visitasPerfil, comparisonKey: 'profileViews', caption: 'No período selecionado', info: 'Visitas ao perfil informadas pelo Instagram.' },
@@ -1068,135 +1051,6 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         </div>
       </div>
 
-      {/* LINHA 4: PUBLICAÇÕES DO INSTAGRAM */}
-      <div className="bg-white p-6 rounded-2xl border border-[#E8E7E4] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEEDEB] pb-3">
-          <div>
-            <h3 className="text-sm font-semibold text-[#1E1A16] flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#B89455]" />
-              Publicações do período
-            </h3>
-            <p className="text-xs text-[#625746] mt-0.5">
-              {isConnected
-                ? 'Conteúdos publicados no intervalo selecionado. Contadores acumulados até a consulta.'
-                : 'Conecte a conta do Instagram para visualizar as publicações deste cliente.'}
-            </p>
-          </div>
-
-          {/* Filtro de Formato */}
-          <div className="flex items-center gap-1.5 self-start sm:self-auto bg-[#FAFAF9] p-1 rounded-lg border border-[#E8E7E4]">
-            {['TODOS', 'REELS', 'CARROSSEL', 'POST'].map((tipo) => (
-              <button
-                key={tipo}
-                onClick={() => setFiltroTipo(tipo)}
-                className={`px-3 py-1 rounded-md text-[12px] font-bold transition-colors cursor-pointer ${
-                  filtroTipo === tipo
-                    ? 'bg-white text-[#8A6828] shadow-xs'
-                    : 'text-[#625746] hover:text-[#1E1A16]'
-                }`}
-              >
-                {tipo}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* GRID DE CARDS DAS PUBLICAÇÕES OU EMPTY STATE */}
-        {publicacoesFiltradas.length === 0 ? (
-          <div className="py-12 px-4 rounded-xl border border-dashed border-[#E8E7E4] bg-[#FAFAF9] text-center space-y-2">
-            <InstagramIcon className="w-8 h-8 text-[#8A6828] mx-auto opacity-50" />
-            <h4 className="text-sm font-bold text-[#1E1A16]">Nenhuma publicação disponível</h4>
-            <p className="text-xs text-[#625746] max-w-md mx-auto">
-              {isConnected
-                ? 'Não foram encontradas publicações na amostra deste período. Consulte a disponibilidade dos dados acima ou escolha outro intervalo.'
-                : 'Conecte a conta do Instagram deste cliente para visualizar o ranking de posts, curtidas e comentários.'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {publicacoesFiltradas.map((post, idx) => (
-              <div
-                key={post.id}
-                className="bg-[#FAFAF9] rounded-[11px] border border-[#E5D9C8] overflow-hidden flex flex-col justify-between gap-3 hover:border-[#B89455] hover:shadow-xs transition-all group"
-              >
-                {post.mediaUrl && (
-                  <div className="relative w-full aspect-square bg-[#EEE7DC] overflow-hidden">
-                    <img
-                      src={post.mediaUrl}
-                      alt={post.titulo}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                    {post.tipo === 'REELS' && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                        <div className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center">
-                          <Play className="w-4 h-4 text-white fill-current" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className={`space-y-2 px-4 ${post.mediaUrl ? 'pt-3' : 'pt-4'}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4] text-[12px] font-bold flex items-center justify-center">
-                        #{idx + 1}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#14120E] text-[#C7A15F] flex items-center gap-1">
-                        {post.tipo === 'REELS' ? (
-                          <Play className="w-2.5 h-2.5 fill-current" />
-                        ) : post.tipo === 'CARROSSEL' ? (
-                          <Layers className="w-2.5 h-2.5" />
-                        ) : (
-                          <ImageIcon className="w-2.5 h-2.5" />
-                        )}
-                        {post.tipo}
-                      </span>
-                    </div>
-                    <span className="text-[12px] text-[#847663] font-mono">{post.data}</span>
-                  </div>
-
-                  {post.destaque && (
-                    <span className="inline-block text-[12px] font-bold text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded">
-                      {post.destaque}
-                    </span>
-                  )}
-
-                  <h4 className="font-bold text-xs text-[#1E1A16] group-hover:text-[#8A6828] transition-colors leading-snug line-clamp-2">
-                    {post.titulo}
-                  </h4>
-                </div>
-
-                <div className="space-y-2 pt-2 pb-4 px-4 border-t border-[#E5D9C8]">
-                  <div className="flex items-center justify-between text-[12px] text-[#625746] pt-1">
-                    <span className="flex items-center gap-1 font-semibold" title="Curtidas">
-                      <Heart className="w-3.5 h-3.5 text-[#B83B32] fill-current" /> {post.curtidas.toLocaleString('pt-BR')} curtidas
-                    </span>
-                    <span className="flex items-center gap-1 font-semibold" title="Comentários">
-                      <MessageCircle className="w-3.5 h-3.5 text-[#3b82f6]" /> {post.comentarios.toLocaleString('pt-BR')} comentários
-                    </span>
-                  </div>
-
-                  {post.permalink && (
-                    <a
-                      href={post.permalink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] text-[#8A6828] hover:underline flex items-center gap-1 pt-1 justify-end font-semibold"
-                    >
-                      Ver no Instagram <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
       </>}
     </div>
   );

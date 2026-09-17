@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { InstagramAccountProfile, InstagramDashboardData, InstagramMediaItem, InstagramOverview } from './interfaces';
 import { MetaAuthMethod } from '@prisma/client';
+import { followerChangeFromMeta } from './follower-history';
 
 const DAY = 86400;
 const emptyOverview = (): InstagramOverview => ({ reach: null, views: null, accountsEngaged: null, profileViews: null });
@@ -113,8 +114,8 @@ export class InstagramService {
 
   private resolvePeriod(period: InstagramPeriodInput): { since: number; until: number; cacheKey: string } {
     const todayUntil = Math.floor(Date.now() / (DAY * 1000)) * DAY;
-    if (period.since != null && period.until != null) {
-      if (!Number.isFinite(period.since) || !Number.isFinite(period.until) || period.until <= period.since) {
+    if (period.since != null || period.until != null) {
+      if (period.since == null || period.until == null || !Number.isFinite(period.since) || !Number.isFinite(period.until) || period.until <= period.since || period.since >= todayUntil + DAY || period.until > todayUntil + DAY || period.since % DAY !== 0 || period.until % DAY !== 0) {
         throw new BadRequestException('Intervalo de datas inválido. A data final deve ser depois da data inicial.');
       }
       const until = Math.min(period.until, todayUntil + DAY);
@@ -166,6 +167,10 @@ export class InstagramService {
       this.media(id, token, since, until, authMethod),
       this.graph(`${id}/insights`, token, { metric: 'reach', period: 'day', metric_type: 'time_series', since: String(since), until: String(until) }, authMethod),
     ]);
+    const followersFor = async (start: number, end: number) => followerChangeFromMeta(await this.graph(`${id}/insights`, token, {
+      metric: 'follows_and_unfollows', period: 'day', metric_type: 'total_value', breakdown: 'follow_type', since: String(start), until: String(end),
+    }, authMethod));
+    const [currentFollowers, previousFollowers] = await Promise.all([followersFor(since, until), followersFor(previousSince, since)]);
     const warnings: string[] = [];
     if (Object.values(overview).some(value => value === null)) warnings.push('Algumas métricas do período não foram disponibilizadas pela Meta. Elas aparecem como “—”, e não como zero.');
     if (Object.values(previousOverview).some(value => value === null)) warnings.push('A comparação está disponível apenas nas métricas retornadas para os dois períodos.');
@@ -179,6 +184,7 @@ export class InstagramService {
       period: { days: Math.round((until - since) / DAY), since: new Date(since * 1000).toISOString(), until: new Date(until * 1000).toISOString(), timezone: 'UTC' },
       previousPeriod: { since: new Date(previousSince * 1000).toISOString(), until: new Date(since * 1000).toISOString() },
       overview: { ...overview, totalFollowers: numeric(profile.followers_count) }, previousOverview,
+      followers: { current: currentFollowers, previous: previousFollowers },
       syncedAt: new Date().toISOString(), warnings, mediaCoverage: media.coverage,
       insightsHistory: history.filter((item: any) => numeric(item.value) !== null && Number.isFinite(Date.parse(item.end_time)))
         .map((item: any) => ({ date: new Date(Date.parse(item.end_time) - DAY * 1000).toISOString().slice(0, 10), reach: item.value }))

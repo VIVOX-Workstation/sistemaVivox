@@ -12,6 +12,7 @@ import { InstagramAuthService } from './instagram/instagram-auth.service';
 import { InstagramDirectAuthService } from './instagram/instagram-direct-auth.service';
 import { InstagramService, InstagramPeriodInput } from './instagram/instagram.service';
 import { InstagramDashboardData } from './instagram/interfaces';
+import { followerChangeFromSnapshots, SNAPSHOT_TOLERANCE_MS } from './instagram/follower-history';
 
 @Injectable()
 export class AnalyticsService {
@@ -667,17 +668,43 @@ export class AnalyticsService {
       );
     }
 
-    return this.instagramService.getDashboard(
+    const dashboard = await this.instagramService.getDashboard(
       cliente.instagramAccountId,
       cliente.metaAccessToken,
       this.parseInstagramPeriod(period),
       refresh,
       cliente.metaAuthMethod,
     );
+    // Clone the cached response before adding client-specific persistent history.
+    const data = structuredClone(dashboard);
+    try {
+      const account = { clienteId, instagramAccountId: cliente.instagramAccountId };
+      const capturedAt = new Date(data.syncedAt);
+      if (data.overview.totalFollowers !== null) {
+        await this.prisma.instagramFollowerSnapshot.upsert({
+          where: { clienteId_instagramAccountId_capturedAt: { ...account, capturedAt } },
+          create: { ...account, capturedAt, followersCount: data.overview.totalFollowers }, update: {},
+        });
+      }
+      const boundaries = [data.previousPeriod.since, data.period.since, data.period.until];
+      const [snapshots, first] = await Promise.all([
+        this.prisma.instagramFollowerSnapshot.findMany({ where: { ...account, OR: boundaries.map(value => ({ capturedAt: { gte: new Date(Date.parse(value) - SNAPSHOT_TOLERANCE_MS), lte: new Date(value) } })) }, select: { capturedAt: true, followersCount: true } }),
+        this.prisma.instagramFollowerSnapshot.findFirst({ where: account, orderBy: { capturedAt: 'asc' }, select: { capturedAt: true } }),
+      ]);
+      if (data.followers.current.net === null) data.followers.current = followerChangeFromSnapshots(snapshots, data.period.since, data.period.until);
+      if (data.followers.previous.net === null) data.followers.previous = followerChangeFromSnapshots(snapshots, data.previousPeriod.since, data.previousPeriod.until);
+      data.followers.historySince = first?.capturedAt.toISOString();
+    } catch {
+      this.logger.warn('Não foi possível registrar ou consultar o histórico de seguidores.');
+      data.warnings.push('O histórico local de seguidores está temporariamente indisponível.');
+    }
+    return data;
   }
 
   private parseInstagramPeriod(period: { days?: string; since?: string; until?: string }): InstagramPeriodInput {
-    if (period.since && period.until) {
+    if (period.since !== undefined || period.until !== undefined) {
+      const validDate = (value?: string) => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+      if (!validDate(period.since) || !validDate(period.until)) throw new BadRequestException('Informe as duas datas válidas no formato AAAA-MM-DD.');
       const sinceTs = Math.floor(Date.parse(`${period.since}T00:00:00Z`) / 1000);
       const untilTs = Math.floor(Date.parse(`${period.until}T00:00:00Z`) / 1000) + 86400; // até o fim do dia final (exclusivo)
       if (Number.isNaN(sinceTs) || Number.isNaN(untilTs)) {

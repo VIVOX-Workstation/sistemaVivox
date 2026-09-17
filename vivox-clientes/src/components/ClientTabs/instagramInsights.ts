@@ -2,10 +2,16 @@ export type MetricKey = 'reach' | 'views' | 'accountsEngaged' | 'profileViews';
 export type Overview = Record<MetricKey, number | null>;
 export interface InsightMedia {
   id: string; caption?: string; timestamp: string; permalink?: string; media_type: string;
+  media_url?: string; thumbnail_url?: string;
   like_count?: number; comments_count?: number;
   insights?: { reach?: number | null; saved?: number | null; shares?: number | null; views?: number | null };
 }
 export interface ManagementData {
+  followers?: {
+    current: FollowerChange;
+    previous: FollowerChange;
+    historySince?: string;
+  };
   period: { days: number; since: string; until: string; timezone: string };
   previousPeriod: { since: string; until: string };
   overview: Overview;
@@ -15,12 +21,24 @@ export interface ManagementData {
   warnings: string[];
   mediaCoverage: { complete: boolean; available: boolean; enriched: number; limit: number };
 }
+export interface FollowerChange {
+  gained: number | null; lost: number | null; net: number | null;
+  source: 'meta' | 'snapshots' | 'unavailable';
+  observedSince?: string; observedUntil?: string;
+}
 export const numberLabel = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
 export function comparison(current: number | null | undefined, previous: number | null | undefined) {
   if (current == null || previous == null) return { label: 'Sem comparação', tone: 'neutral', percent: null };
   if (previous === 0) return { label: current === 0 ? 'Sem alteração' : 'Base anterior zero', tone: 'neutral', percent: null };
   const percent = (current - previous) / previous * 100;
   return { label: percent === 0 ? 'Sem alteração' : `${percent > 0 ? '+' : '−'}${numberLabel(Math.abs(percent))}%`, tone: percent > 0 ? 'up' : percent < 0 ? 'down' : 'neutral', percent };
+}
+export function metricDelta(current: number | null | undefined, previous: number | null | undefined, mode: 'percent' | 'points' | 'absolute' = 'percent') {
+  if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous)) return null;
+  const delta = current - previous;
+  const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+  const absolute = `${sign}${numberLabel(Math.abs(delta))}${mode === 'points' ? ' p.p.' : ''}`;
+  return { delta, absolute, label: mode === 'percent' && previous > 0 ? `${sign}${numberLabel(Math.abs(delta / previous * 100))}%` : absolute, tone: delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral' };
 }
 export function periodLabel(period: { since: string; until: string }) {
   const format = (date: Date) => date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
