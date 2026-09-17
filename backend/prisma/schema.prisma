@@ -322,6 +322,7 @@ model DevBoardCard {
   targetBranch String            @default("main")
   description  String?
   checklist    Json              @default("[]")
+  githubPrNumber Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

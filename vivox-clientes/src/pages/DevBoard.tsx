@@ -72,8 +72,12 @@ function statusBadgeForColuna(coluna: DevCardColuna): { label: string; bg: strin
 
 export type BoardItem =
   | { type: 'local'; data: DevCard; coluna: DevCardColuna; id: string }
-  | { type: 'github-pr'; data: GithubPR; coluna: DevCardColuna; id: string }
   | { type: 'github-issue'; data: GithubIssue; coluna: DevCardColuna; id: string };
+
+function findPrByNumber(prs: GithubPR[], number: number | null | undefined): GithubPR | undefined {
+  if (number == null) return undefined;
+  return prs.find((pr) => pr.number === number);
+}
 
 // ============================================================================
 // Página
@@ -94,6 +98,8 @@ export function DevBoard() {
   const [githubSyncing, setGithubSyncing] = useState(false);
   const [githubPRs, setGithubPRs] = useState<GithubPR[]>([]);
   const [githubIssues, setGithubIssues] = useState<GithubIssue[]>([]);
+  const [linkPrModalForCard, setLinkPrModalForCard] = useState<string | null>(null);
+  const [linkCardModalForPr, setLinkCardModalForPr] = useState<number | null>(null);
 
   const loadCards = useCallback(async () => {
     if (!servicoId) return;
@@ -165,15 +171,6 @@ export function DevBoard() {
 
   const allBoardItems = useMemo(() => {
     const items: BoardItem[] = cards.map(c => ({ type: 'local', data: c, coluna: c.coluna, id: c.id }));
-    
-    githubPRs.forEach(pr => {
-      if (pr.state === 'closed' && !pr.merged) return;
-      let coluna: DevCardColuna = 'EM_PROGRESSO';
-      if (pr.merged) coluna = 'CONCLUIDO';
-      else if (pr.labels.some(l => l.toLowerCase().includes('review'))) coluna = 'EM_REVISAO';
-      
-      items.push({ type: 'github-pr', data: pr, coluna, id: `gh-pr-${pr.number}` });
-    });
 
     githubIssues.forEach(issue => {
       if (issue.state === 'closed') return;
@@ -181,7 +178,18 @@ export function DevBoard() {
     });
 
     return items;
-  }, [cards, githubPRs, githubIssues]);
+  }, [cards, githubIssues]);
+
+  // PRs do GitHub ainda não vinculados a nenhum card local -- ficam na coluna "Pull Requests"
+  // até alguém explicitamente vincular (fluxo manual, não automático por branch).
+  const linkedPrNumbers = useMemo(
+    () => new Set(cards.filter((c) => c.githubPrNumber != null).map((c) => c.githubPrNumber as number)),
+    [cards],
+  );
+  const unlinkedPRs = useMemo(
+    () => githubPRs.filter((pr) => !(pr.state === 'closed' && !pr.merged) && !linkedPrNumbers.has(pr.number)),
+    [githubPRs, linkedPrNumbers],
+  );
 
   const repoSlug = useMemo(() => {
     const base = (nomeCliente || 'cliente').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -222,6 +230,16 @@ export function DevBoard() {
     setSelectedCardId(null);
   };
 
+  const linkCardToPr = (cardId: string, prNumber: number) => {
+    handleUpdateCard(cardId, { githubPrNumber: prNumber });
+    setLinkPrModalForCard(null);
+    setLinkCardModalForPr(null);
+  };
+
+  const unlinkCard = (cardId: string) => {
+    handleUpdateCard(cardId, { githubPrNumber: null });
+  };
+
   const openPrsCount = githubConnected 
     ? githubPRs.filter(pr => pr.state === 'open').length 
     : cards.filter((c) => c.coluna === 'EM_PROGRESSO' || c.coluna === 'EM_REVISAO').length;
@@ -246,6 +264,7 @@ export function DevBoard() {
       {selectedCard ? (
         <DevBoardDetail
           card={selectedCard}
+          linkedPr={findPrByNumber(githubPRs, selectedCard.githubPrNumber)}
           repoSlug={repoSlug}
           currentUserName={user?.nome || null}
           onBack={() => setSelectedCardId(null)}
@@ -253,10 +272,13 @@ export function DevBoard() {
           onAssumir={() => assumirCard(selectedCard.id)}
           onUpdate={(patch) => handleUpdateCard(selectedCard.id, patch)}
           onDelete={() => handleDeleteCard(selectedCard.id)}
+          onRequestLinkPr={() => setLinkPrModalForCard(selectedCard.id)}
+          onUnlinkPr={() => unlinkCard(selectedCard.id)}
         />
       ) : (
         <DevBoardKanban
           items={allBoardItems}
+          unlinkedPRs={unlinkedPRs}
           repoSlug={repoSlug}
           nomeCliente={nomeCliente}
           currentUserName={user?.nome || null}
@@ -273,10 +295,24 @@ export function DevBoard() {
           onAssumirCard={assumirCard}
           onNovaIssue={() => setCreateModalOpen(true)}
           onBack={() => navigate(`/cliente/${clienteId}?tab=services`)}
+          onRequestLinkCard={(prNumber) => setLinkCardModalForPr(prNumber)}
         />
       )}
 
       <NovaIssueModal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} onSubmit={handleCreateCard} />
+
+      <LinkPrModal
+        isOpen={!!linkPrModalForCard}
+        onClose={() => setLinkPrModalForCard(null)}
+        prs={unlinkedPRs}
+        onSelect={(prNumber) => linkPrModalForCard && linkCardToPr(linkPrModalForCard, prNumber)}
+      />
+      <LinkCardModal
+        isOpen={linkCardModalForPr != null}
+        onClose={() => setLinkCardModalForPr(null)}
+        cards={cards.filter((c) => c.githubPrNumber == null)}
+        onSelect={(cardId) => linkCardModalForPr != null && linkCardToPr(cardId, linkCardModalForPr)}
+      />
     </div>
   );
 }
@@ -326,20 +362,77 @@ function NovaIssueModal({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClos
 }
 
 // ============================================================================
+// Modais — Vincular card ↔ PR
+// ============================================================================
+
+function LinkPrModal({ isOpen, onClose, prs, onSelect }: { isOpen: boolean; onClose: () => void; prs: GithubPR[]; onSelect: (prNumber: number) => void }) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Vincular a um PR do GitHub">
+      <div className="space-y-2 max-h-[420px] overflow-y-auto">
+        {prs.length === 0 && (
+          <p className="text-xs text-stone-400 text-center py-8">Nenhum PR disponível para vincular no momento.</p>
+        )}
+        {prs.map((pr) => (
+          <button
+            key={pr.number}
+            onClick={() => onSelect(pr.number)}
+            className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:border-[#C7A15F] hover:bg-[#FAF2E4]/40 transition-colors cursor-pointer"
+          >
+            <GithubIcon className="w-4 h-4 text-stone-500 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-stone-800 truncate">{pr.title}</p>
+              <p className="text-[11px] font-mono text-stone-400 truncate">#{pr.number} · {pr.headBranch}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
+function LinkCardModal({ isOpen, onClose, cards, onSelect }: { isOpen: boolean; onClose: () => void; cards: DevCard[]; onSelect: (cardId: string) => void }) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Vincular a um card do board">
+      <div className="space-y-2 max-h-[420px] overflow-y-auto">
+        {cards.length === 0 && (
+          <p className="text-xs text-stone-400 text-center py-8">Nenhum card sem vínculo disponível. Crie um card primeiro.</p>
+        )}
+        {cards.map((card) => {
+          const tag = TAG_STYLE[card.tag];
+          return (
+            <button
+              key={card.id}
+              onClick={() => onSelect(card.id)}
+              className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:border-[#C7A15F] hover:bg-[#FAF2E4]/40 transition-colors cursor-pointer"
+            >
+              <span className={`inline-flex items-center rounded-full ${tag.bg} ${tag.text} border ${tag.border} px-2 py-0.5 text-[10px] font-bold uppercase shrink-0`}>{tag.label}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-stone-800 truncate">{card.title}</p>
+                <p className="text-[11px] font-mono text-stone-400 truncate">{card.branch}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================================
 // Tela 1 — Board Kanban principal
 // ============================================================================
 
 function DevBoardKanban({
-  items, repoSlug, nomeCliente, currentUserName, openPrsCount, activeBranches, contributors,
+  items, unlinkedPRs, repoSlug, nomeCliente, currentUserName, openPrsCount, activeBranches, contributors,
   githubConnected, githubRepo, githubSyncing, onConnectGithub, onSyncGithub,
-  onOpenCard, onMoveCard, onAssumirCard, onNovaIssue, onBack,
+  onOpenCard, onMoveCard, onAssumirCard, onNovaIssue, onBack, onRequestLinkCard,
 }: {
-  items: BoardItem[]; repoSlug: string; nomeCliente: string; currentUserName: string | null;
+  items: BoardItem[]; unlinkedPRs: GithubPR[]; repoSlug: string; nomeCliente: string; currentUserName: string | null;
   openPrsCount: number; activeBranches: number; contributors: number;
   githubConnected: boolean; githubRepo: string | null; githubSyncing: boolean;
   onConnectGithub: () => void; onSyncGithub: () => void;
   onOpenCard: (id: string) => void; onMoveCard: (id: string, coluna: DevCardColuna) => void; onAssumirCard: (id: string) => void;
-  onNovaIssue: () => void; onBack: () => void;
+  onNovaIssue: () => void; onBack: () => void; onRequestLinkCard: (prNumber: number) => void;
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DevCardColuna | null>(null);
@@ -403,6 +496,58 @@ function DevBoardKanban({
 
       {/* COLUNAS DO KANBAN */}
       <div className="flex gap-5 overflow-x-auto pb-2" onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}>
+        {/* COLUNA DE PULL REQUESTS — inbox de PRs sincronizados do GitHub ainda sem vínculo manual */}
+        <div className="w-[300px] shrink-0 flex flex-col">
+          <div className="flex items-center justify-between rounded-t-2xl border border-stone-300 bg-stone-100 px-4 py-3">
+            <span className="flex items-center gap-2 text-sm font-bold text-stone-700">
+              <GithubIcon className="w-4 h-4" />
+              Pull Requests
+              <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-bold">{unlinkedPRs.length}</span>
+            </span>
+          </div>
+          <div className="flex-1 bg-white/60 border border-t-0 border-stone-300 rounded-b-2xl p-3 space-y-3 min-h-[200px]">
+            {unlinkedPRs.length === 0 && (
+              <p className="text-center text-[11px] text-stone-400 py-6">Nenhum PR aguardando vínculo</p>
+            )}
+            {unlinkedPRs.map((pr) => (
+              <div key={pr.number} className="w-full text-left bg-white rounded-xl border border-stone-200 border-l-4 border-stone-400 hover:border-l-[#1E1A16] hover:shadow-md transition-all p-3.5 group">
+                <a href={pr.htmlUrl} target="_blank" rel="noreferrer" className="w-full text-left block outline-none">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 text-stone-700 border border-stone-200 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide">
+                    <GithubIcon className="w-3 h-3" /> PR do GitHub
+                  </span>
+                  <h4 className="mt-2 text-[13px] font-semibold text-stone-800 leading-snug group-hover:text-[#8A6828] transition-colors line-clamp-2">
+                    {pr.title}
+                  </h4>
+                  <div className="mt-3 flex items-center gap-2 text-[11px] text-stone-500">
+                    {pr.authorAvatarUrl ? (
+                      <img src={pr.authorAvatarUrl} alt={pr.author} className="h-5 w-5 rounded-full border border-stone-200" />
+                    ) : (
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-stone-100 text-[9.5px] font-bold text-stone-600 border border-stone-200">
+                        {initials(pr.author)}
+                      </span>
+                    )}
+                    <span className="font-medium text-stone-600">{pr.author}</span>
+                    <span>·</span>
+                    <span>{timeAgo(pr.createdAt)}</span>
+                  </div>
+                  <p className="mt-2 font-mono text-[10.5px] text-stone-400 truncate">{pr.headBranch} → {pr.baseBranch}</p>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-stone-500">
+                    <span className="flex items-center gap-1 font-semibold text-stone-600">
+                      <GitPullRequest className="w-3 h-3" /> #{pr.number}
+                    </span>
+                  </div>
+                </a>
+                <button
+                  onClick={() => onRequestLinkCard(pr.number)}
+                  className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-[#D8CBB8] text-[11px] font-bold text-[#8A6828] hover:bg-[#FAF2E4] hover:border-solid transition-all cursor-pointer"
+                >
+                  <GitBranch className="w-3 h-3" /> Vincular a um card
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {COLUMNS.map((col) => {
           const colCards = items.filter((c) => c.coluna === col.id);
           const Icon = col.icon;
@@ -471,9 +616,15 @@ function DevBoardKanban({
                           </div>
                           <p className="mt-2 font-mono text-[10.5px] text-stone-400 truncate">{card.branch}</p>
                           <div className="mt-2 flex items-center justify-between text-[11px] text-stone-500">
-                            <span className="flex items-center gap-1 font-semibold text-[#8A6828]">
-                              <GitPullRequest className="w-3 h-3" /> PR #{card.prNumber}
-                            </span>
+                            {card.githubPrNumber != null ? (
+                              <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                                <GithubIcon className="w-3 h-3" /> PR #{card.githubPrNumber} vinculado
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 font-semibold text-stone-400">
+                                <GitPullRequest className="w-3 h-3" /> Card #{card.prNumber}
+                              </span>
+                            )}
                           </div>
                           {progress != null && (
                             <div className="mt-2.5 w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
@@ -489,40 +640,6 @@ function DevBoardKanban({
                             <UserPlus className="w-3 h-3" /> Assumir
                           </button>
                         )}
-                      </div>
-                    );
-                  }
-
-                  if (item.type === 'github-pr') {
-                    const pr = item.data;
-                    return (
-                      <div key={item.id} className={`w-full text-left bg-white rounded-xl border border-stone-200 border-l-4 ${col.border} hover:border-l-[#1E1A16] hover:shadow-md transition-all p-3.5 group`}>
-                        <a href={pr.htmlUrl} target="_blank" rel="noreferrer" className="w-full text-left block outline-none">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 text-stone-700 border border-stone-200 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide">
-                            <GithubIcon className="w-3 h-3" /> PR do GitHub
-                          </span>
-                          <h4 className="mt-2 text-[13px] font-semibold text-stone-800 leading-snug group-hover:text-[#8A6828] transition-colors line-clamp-2">
-                            {pr.title}
-                          </h4>
-                          <div className="mt-3 flex items-center gap-2 text-[11px] text-stone-500">
-                            {pr.authorAvatarUrl ? (
-                              <img src={pr.authorAvatarUrl} alt={pr.author} className="h-5 w-5 rounded-full border border-stone-200" />
-                            ) : (
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-stone-100 text-[9.5px] font-bold text-stone-600 border border-stone-200">
-                                {initials(pr.author)}
-                              </span>
-                            )}
-                            <span className="font-medium text-stone-600">{pr.author}</span>
-                            <span>·</span>
-                            <span>{timeAgo(pr.createdAt)}</span>
-                          </div>
-                          <p className="mt-2 font-mono text-[10.5px] text-stone-400 truncate">{pr.headBranch} → {pr.baseBranch}</p>
-                          <div className="mt-2 flex items-center justify-between text-[11px] text-stone-500">
-                            <span className="flex items-center gap-1 font-semibold text-stone-600">
-                              <GitPullRequest className="w-3 h-3" /> #{pr.number}
-                            </span>
-                          </div>
-                        </a>
                       </div>
                     );
                   }
@@ -585,11 +702,12 @@ function DevBoardKanban({
 // ============================================================================
 
 function DevBoardDetail({
-  card, repoSlug, currentUserName, onBack, onMove, onAssumir, onUpdate, onDelete,
+  card, linkedPr, repoSlug, currentUserName, onBack, onMove, onAssumir, onUpdate, onDelete, onRequestLinkPr, onUnlinkPr,
 }: {
-  card: DevCard; repoSlug: string; currentUserName: string | null;
+  card: DevCard; linkedPr: GithubPR | undefined; repoSlug: string; currentUserName: string | null;
   onBack: () => void; onMove: (coluna: DevCardColuna) => void; onAssumir: () => void;
   onUpdate: (patch: Partial<DevCard>) => void; onDelete: () => void;
+  onRequestLinkPr: () => void; onUnlinkPr: () => void;
 }) {
   const status = statusBadgeForColuna(card.coluna);
   const jaAssumido = currentUserName && card.assignee === currentUserName;
@@ -636,9 +754,21 @@ function DevBoardDetail({
       {/* CABEÇALHO DO PR */}
       <div className="bg-white border border-[#E8E7E4] rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full ${status.bg} ${status.text} px-2.5 py-1 text-xs font-bold`}>
-            <GitPullRequest className="w-3.5 h-3.5" /> {status.label}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 rounded-full ${status.bg} ${status.text} px-2.5 py-1 text-xs font-bold`}>
+              <GitPullRequest className="w-3.5 h-3.5" /> {status.label}
+            </span>
+            {linkedPr && (
+              <a
+                href={linkedPr.htmlUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#14120E] text-[#C7A15F] hover:bg-[#2B261F] transition-colors px-2.5 py-1 text-xs font-bold"
+              >
+                <GithubIcon className="w-3.5 h-3.5" /> PR #{linkedPr.number} no GitHub
+              </a>
+            )}
+          </div>
           <button onClick={onDelete} title="Excluir card" className="flex items-center gap-1.5 text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors cursor-pointer">
             <Trash2 className="w-3.5 h-3.5" /> Excluir
           </button>
@@ -732,6 +862,28 @@ function DevBoardDetail({
                 <CircleCheckBig className="w-3.5 h-3.5" /> Você assumiu este card
               </p>
             )}
+
+            {linkedPr ? (
+              <div className="space-y-1.5">
+                <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
+                  <GithubIcon className="w-3.5 h-3.5" /> Vinculado ao PR #{linkedPr.number}
+                </p>
+                <button
+                  onClick={onUnlinkPr}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-stone-300 text-[11px] font-bold text-stone-500 hover:bg-stone-50 hover:border-solid transition-all cursor-pointer"
+                >
+                  Desvincular PR
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onRequestLinkPr}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-[#D8CBB8] text-xs font-bold text-[#8A6828] hover:bg-[#FAF2E4] hover:border-solid transition-all cursor-pointer"
+              >
+                <GithubIcon className="w-3.5 h-3.5" /> Vincular a um PR
+              </button>
+            )}
+
             <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide mb-1.5 mt-3">Mover para</p>
             <div className="space-y-1.5">
               {COLUMNS.map((col) => (

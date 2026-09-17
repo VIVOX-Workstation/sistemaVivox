@@ -21,42 +21,15 @@ const TAG_BRANCH_PREFIX: Record<DevCardTag, string> = {
   DOCS: 'docs',
 };
 
-const SEED_CARDS: { title: string; tag: DevCardTag; description: string }[] = [
-  { title: 'Adicionar tela de onboarding com autenticação social', tag: 'FEATURE', description: 'Criar o fluxo inicial de onboarding do app, incluindo login social (Google e Apple).' },
-  { title: 'Corrigir crash ao abrir notificações em Android 14', tag: 'BUG', description: 'Usuários em Android 14 relatam fechamento inesperado do app ao tocar em notificações push.' },
-  { title: 'Implementar checkout via Pix com QR Code dinâmico', tag: 'FEATURE', description: 'Integra o gateway de pagamento Pix ao fluxo de checkout, com geração de QR Code dinâmico.' },
-];
-
 @Injectable()
 export class DevboardService {
   constructor(private prisma: PrismaService) {}
 
   async findByServico(servicoId: string) {
-    const existentes = await this.prisma.devBoardCard.count({ where: { servicoId } });
-    if (existentes === 0) {
-      await this.seed(servicoId);
-    }
     return this.prisma.devBoardCard.findMany({
       where: { servicoId },
       orderBy: { createdAt: 'asc' },
     });
-  }
-
-  private async seed(servicoId: string) {
-    for (let i = 0; i < SEED_CARDS.length; i++) {
-      const card = SEED_CARDS[i];
-      await this.prisma.devBoardCard.create({
-        data: {
-          servicoId,
-          prNumber: i + 1,
-          title: card.title,
-          tag: card.tag,
-          description: card.description,
-          branch: `${TAG_BRANCH_PREFIX[card.tag]}/${slugify(card.title)}`,
-          checklist: [],
-        },
-      });
-    }
   }
 
   async create(dto: CreateDevCardDto) {
