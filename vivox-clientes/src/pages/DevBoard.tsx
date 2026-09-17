@@ -591,7 +591,7 @@ function DevBoardKanban({
                         key={item.id}
                         draggable
                         onDragStart={(e) => { setDraggedId(card.id); e.dataTransfer.setData('text/plain', card.id); }}
-                        className={`w-full text-left bg-white rounded-xl border border-stone-200 border-l-4 ${col.border} hover:border-l-[#B89455] hover:shadow-md transition-all p-3.5 cursor-grab active:cursor-grabbing group`}
+                        className={`w-full text-left bg-white rounded-xl border border-stone-200 border-l-4 ${col.border} hover:border-l-[#B89455] hover:shadow-md transition-all p-3.5 cursor-grab active:cursor-grabbing group ${col.id === 'CONCLUIDO' ? 'opacity-55 hover:opacity-100' : ''}`}
                       >
                         <button onClick={() => onOpenCard(card.id)} className="w-full text-left cursor-pointer">
                           <span className={`inline-flex items-center rounded-full ${tag.bg} ${tag.text} border ${tag.border} px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide`}>
