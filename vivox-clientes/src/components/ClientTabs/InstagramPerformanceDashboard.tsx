@@ -194,6 +194,19 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     }
   };
 
+  const handleConnectInstagramDireto = async () => {
+    setConnecting(true);
+    try {
+      const res = await api.get(`/analytics/instagram/auth-url-direto/${cliente.id}`);
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erro ao gerar URL de autorização direta do Instagram');
+      setConnecting(false);
+    }
+  };
+
   const handleDisconnectInstagram = async () => {
     if (!confirm('Deseja realmente desconectar a conta do Instagram deste cliente? Todos os dados serão limpos.')) return;
     setDisconnecting(true);
@@ -553,14 +566,25 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
               </div>
             </div>
 
-            <button
-              onClick={handleConnectInstagram}
-              disabled={connecting}
-              className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#B89455] to-[#8A6828] hover:from-[#C7A15F] hover:to-[#9B7733] text-[#1E1A16] font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-md hover:scale-[1.02] cursor-pointer shrink-0 disabled:opacity-50"
-            >
-              <Link2 className="w-4 h-4" />
-              {connecting ? 'Iniciando login...' : 'Conectar Instagram / Facebook'}
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+              <button
+                onClick={handleConnectInstagramDireto}
+                disabled={connecting}
+                className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#E1306C] to-[#C13584] hover:from-[#F56040] hover:to-[#833AB4] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-md hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+              >
+                <InstagramIcon className="w-4 h-4" />
+                {connecting ? 'Iniciando...' : 'Login Instagram (Direto)'}
+              </button>
+              
+              <button
+                onClick={handleConnectInstagram}
+                disabled={connecting}
+                className="px-5 py-3 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-md hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+              >
+                <Link2 className="w-4 h-4" />
+                {connecting ? 'Iniciando...' : 'Login via Facebook Pages'}
+              </button>
+            </div>
           </div>
         )
       ) : (

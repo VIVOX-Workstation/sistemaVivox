@@ -8,6 +8,7 @@ import { AnalyticsCacheService } from './google/analytics-cache.service';
 import { OpenPanelAuthService } from './openpanel/openpanel-auth.service';
 import { OpenPanelService } from './openpanel/openpanel.service';
 import { InstagramAuthService } from './instagram/instagram-auth.service';
+import { InstagramDirectAuthService } from './instagram/instagram-direct-auth.service';
 import { InstagramService } from './instagram/instagram.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
@@ -23,6 +24,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     OpenPanelAuthService,
     OpenPanelService,
     InstagramAuthService,
+    InstagramDirectAuthService,
     InstagramService,
   ],
   exports: [
@@ -33,6 +35,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     OpenPanelService,
     OpenPanelAuthService,
     InstagramAuthService,
+    InstagramDirectAuthService,
     InstagramService,
   ],
 })
