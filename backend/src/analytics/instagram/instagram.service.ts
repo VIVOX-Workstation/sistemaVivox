@@ -1,213 +1,132 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import {
-  InstagramAccountProfile,
-  InstagramDashboardData,
-  InstagramInsightsResponse,
-  InstagramMediaItem,
-  InstagramMediaListResponse,
-} from './interfaces';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import type { InstagramAccountProfile, InstagramDashboardData, InstagramMediaItem, InstagramOverview } from './interfaces';
+
+const DAY = 86400;
+const emptyOverview = (): InstagramOverview => ({ reach: null, views: null, accountsEngaged: null, profileViews: null });
+const numeric = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 
 @Injectable()
 export class InstagramService {
-  private readonly logger = new Logger(InstagramService.name);
-  private readonly graphApiVersion = 'v26.0';
-  private readonly graphApiBase = 'https://graph.facebook.com';
+  private readonly cache = new Map<string, { expires: number; data: InstagramDashboardData }>();
+  private readonly pending = new Map<string, Promise<InstagramDashboardData>>();
 
-  /**
-   * Obtém o perfil básico da conta profissional do Instagram
-   */
-  async getProfile(instagramAccountId: string, accessToken: string): Promise<InstagramAccountProfile> {
-    const url = new URL(`${this.graphApiBase}/${this.graphApiVersion}/${instagramAccountId}`);
-    url.searchParams.set(
-      'fields',
-      'id,username,name,profile_picture_url,followers_count,follows_count,media_count',
-    );
-    url.searchParams.set('access_token', accessToken);
-
-    const res = await fetch(url.toString());
-    const data = await res.json();
-
-    if (!res.ok) {
-      this.logger.error(`Erro ao buscar perfil do Instagram ${instagramAccountId}: ${data.error?.message}`);
-      throw new BadRequestException(`Erro no Instagram: ${data.error?.message}`);
-    }
-
-    return {
-      id: data.id,
-      username: data.username,
-      name: data.name,
-      profile_picture_url: data.profile_picture_url,
-      followers_count: data.followers_count ?? 0,
-      follows_count: data.follows_count ?? 0,
-      media_count: data.media_count ?? 0,
-    };
+  // Never log URLs or raw Graph errors: they can contain access tokens.
+  private async graph(path: string, token: string, params: Record<string, string> = {}): Promise<any | null> {
+    const url = new URL(`https://graph.facebook.com/v26.0/${path}`);
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    try {
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.error ? null : data;
+    } catch { return null; }
   }
 
-  /**
-   * Busca métricas históricas de alcance e impressões da conta
-   */
-  async getAccountInsights(
-    instagramAccountId: string,
-    accessToken: string,
-    days: number = 30,
-  ): Promise<{
-    overview: {
-      reach: number;
-      impressions: number;
-      accountsEngaged: number;
-      profileViews: number;
-    };
-    history: Array<{ date: string; reach: number; impressions: number }>;
-  }> {
-    const until = Math.floor(Date.now() / 1000);
-    const since = until - days * 24 * 60 * 60;
+  async getProfile(id: string, token: string): Promise<InstagramAccountProfile> {
+    const data = await this.graph(id, token, { fields: 'id,username,name,profile_picture_url,followers_count,follows_count,media_count' });
+    if (!data?.id) throw new BadRequestException('Não foi possível consultar o Instagram. Verifique a conexão e as permissões da conta.');
+    return data;
+  }
 
-    const url = new URL(`${this.graphApiBase}/${this.graphApiVersion}/${instagramAccountId}/insights`);
-    url.searchParams.set('metric', 'impressions,reach,profile_views,accounts_engaged');
-    url.searchParams.set('period', 'day');
-    url.searchParams.set('since', String(since));
-    url.searchParams.set('until', String(until));
-    url.searchParams.set('access_token', accessToken);
-
-    try {
-      const res = await fetch(url.toString());
-      const data = (await res.json()) as InstagramInsightsResponse & { error?: any };
-
-      if (!res.ok) {
-        this.logger.warn(`Aviso ao buscar insights de ${instagramAccountId}: ${data.error?.message}`);
-        return {
-          overview: { reach: 0, impressions: 0, accountsEngaged: 0, profileViews: 0 },
-          history: [],
-        };
-      }
-
-      let totalReach = 0;
-      let totalImpressions = 0;
-      let totalEngaged = 0;
-      let totalProfileViews = 0;
-
-      const historyMap = new Map<string, { date: string; reach: number; impressions: number }>();
-
-      (data.data || []).forEach((item) => {
-        if (item.name === 'reach') {
-          item.values?.forEach((v) => {
-            totalReach += v.value || 0;
-            const dateStr = v.end_time ? v.end_time.split('T')[0] : '';
-            if (dateStr) {
-              const current = historyMap.get(dateStr) || { date: dateStr, reach: 0, impressions: 0 };
-              current.reach = v.value || 0;
-              historyMap.set(dateStr, current);
-            }
-          });
-        } else if (item.name === 'impressions') {
-          item.values?.forEach((v) => {
-            totalImpressions += v.value || 0;
-            const dateStr = v.end_time ? v.end_time.split('T')[0] : '';
-            if (dateStr) {
-              const current = historyMap.get(dateStr) || { date: dateStr, reach: 0, impressions: 0 };
-              current.impressions = v.value || 0;
-              historyMap.set(dateStr, current);
-            }
-          });
-        } else if (item.name === 'accounts_engaged') {
-          item.values?.forEach((v) => {
-            totalEngaged += v.value || 0;
-          });
-        } else if (item.name === 'profile_views') {
-          item.values?.forEach((v) => {
-            totalProfileViews += v.value || 0;
-          });
-        }
+  async getAccountInsights(id: string, token: string, since: number, until: number): Promise<InstagramOverview> {
+    const metrics = { reach: 'reach', views: 'views', accountsEngaged: 'accounts_engaged', profileViews: 'profile_views' } as const;
+    const overview = emptyOverview();
+    // Independent requests isolate unsupported metrics. Unique audiences are never summed across days.
+    await Promise.all(Object.entries(metrics).map(async ([key, metric]) => {
+      const data = await this.graph(`${id}/insights`, token, {
+        metric, period: 'day', metric_type: 'total_value', since: String(since), until: String(until),
       });
-
-      const history = Array.from(historyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-
-      return {
-        overview: {
-          reach: totalReach,
-          impressions: totalImpressions,
-          accountsEngaged: totalEngaged,
-          profileViews: totalProfileViews,
-        },
-        history,
-      };
-    } catch (err: any) {
-      this.logger.error(`Exceção ao buscar insights do Instagram: ${err.message}`);
-      return {
-        overview: { reach: 0, impressions: 0, accountsEngaged: 0, profileViews: 0 },
-        history: [],
-      };
-    }
+      const item = data?.data?.find((entry: any) => entry.name === metric);
+      overview[key as keyof InstagramOverview] = numeric(item?.total_value?.value);
+    }));
+    return overview;
   }
 
-  /**
-   * Busca publicações e reels recentes com contadores de engajamento
-   */
-  async getRecentMedia(
-    instagramAccountId: string,
-    accessToken: string,
-    limit: number = 12,
-  ): Promise<InstagramMediaItem[]> {
-    const url = new URL(`${this.graphApiBase}/${this.graphApiVersion}/${instagramAccountId}/media`);
-    url.searchParams.set(
-      'fields',
-      'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count',
-    );
-    url.searchParams.set('limit', String(limit));
-    url.searchParams.set('access_token', accessToken);
-
-    try {
-      const res = await fetch(url.toString());
-      const data = (await res.json()) as InstagramMediaListResponse & { error?: any };
-
-      if (!res.ok) {
-        this.logger.warn(`Erro ao buscar mídias de ${instagramAccountId}: ${data.error?.message}`);
-        return [];
+  private async media(id: string, token: string, since: number, until: number) {
+    const items = new Map<string, InstagramMediaItem>();
+    let after: string | undefined;
+    let complete = false;
+    let available = true;
+    let fetched = 0;
+    for (let page = 0; page < 3; page++) {
+      const data = await this.graph(`${id}/media`, token, {
+        fields: 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count',
+        limit: '100', ...(after ? { after } : {}),
+      });
+      if (!Array.isArray(data?.data)) { available = false; break; }
+      fetched += data.data.length;
+      for (const item of data.data) {
+        const timestamp = Date.parse(item.timestamp) / 1000;
+        if (timestamp >= since && timestamp < until) items.set(item.id, item);
       }
-
-      return (data.data || []).map((item) => ({
-        id: item.id,
-        caption: item.caption,
-        media_type: item.media_type,
-        media_url: item.media_url,
-        permalink: item.permalink,
-        thumbnail_url: item.thumbnail_url,
-        timestamp: item.timestamp,
-        like_count: item.like_count ?? 0,
-        comments_count: item.comments_count ?? 0,
-      }));
-    } catch (err: any) {
-      this.logger.error(`Exceção ao buscar mídias do Instagram: ${err.message}`);
-      return [];
+      const crossedStart = data.data.some((item: any) => Date.parse(item.timestamp) / 1000 < since);
+      if (!data.paging?.next || crossedStart) { complete = true; break; }
+      const cursor = data.paging?.cursors?.after;
+      if (!cursor || cursor === after) break;
+      after = cursor;
     }
+    const recentMedia = [...items.values()].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+    const sample = recentMedia.slice(0, 30);
+    for (let index = 0; index < sample.length; index += 5) {
+      await Promise.all(sample.slice(index, index + 5).map(async (item) => {
+        const data = await this.graph(`${item.id}/insights`, token, { metric: 'reach,saved,shares,views' });
+        const value = (name: string) => {
+          const entry = data?.data?.find((metric: any) => metric.name === name);
+          return numeric(entry?.total_value?.value ?? entry?.values?.[0]?.value);
+        };
+        item.insights = { reach: value('reach'), saved: value('saved'), shares: value('shares'), views: value('views') };
+      }));
+    }
+    return { recentMedia, coverage: { complete, available, fetched, enriched: sample.length, limit: 30 } };
   }
 
-  /**
-   * Monta o dashboard consolidado para exibição no frontend
-   */
-  async getDashboard(
-    instagramAccountId: string,
-    accessToken: string,
-    days: number = 30,
-  ): Promise<InstagramDashboardData> {
-    const [profile, insightsData, recentMedia] = await Promise.all([
-      this.getProfile(instagramAccountId, accessToken),
-      this.getAccountInsights(instagramAccountId, accessToken, days),
-      this.getRecentMedia(instagramAccountId, accessToken, 12),
-    ]);
+  async getDashboard(id: string, token: string, days = 30, refresh = false): Promise<InstagramDashboardData> {
+    if (![7, 30, 90].includes(days)) throw new BadRequestException('Escolha um período de 7, 30 ou 90 dias.');
+    const until = Math.floor(Date.now() / (DAY * 1000)) * DAY;
+    const key = `${id}:${createHash('sha256').update(token).digest('hex')}:${days}:${until}`;
+    const cached = this.cache.get(key);
+    if (!refresh && cached && cached.expires > Date.now()) return cached.data;
+    const pending = this.pending.get(key);
+    if (pending) return pending;
+    const request = this.collect(id, token, days, until);
+    this.pending.set(key, request);
+    try {
+      const data = await request;
+      if (this.cache.size >= 100) this.cache.delete(this.cache.keys().next().value!);
+      this.cache.set(key, { data, expires: Date.now() + 5 * 60 * 1000 });
+      return data;
+    } finally { this.pending.delete(key); }
+  }
 
+  private async collect(id: string, token: string, days: number, until: number): Promise<InstagramDashboardData> {
+    const since = until - days * DAY;
+    const previousSince = since - days * DAY;
+    const profile = await this.getProfile(id, token);
+    const [overview, previousOverview, media, daily] = await Promise.all([
+      this.getAccountInsights(id, token, since, until),
+      this.getAccountInsights(id, token, previousSince, since),
+      this.media(id, token, since, until),
+      this.graph(`${id}/insights`, token, { metric: 'reach', period: 'day', metric_type: 'time_series', since: String(since), until: String(until) }),
+    ]);
+    const warnings: string[] = [];
+    if (Object.values(overview).some(value => value === null)) warnings.push('Algumas métricas do período não foram disponibilizadas pela Meta. Elas aparecem como “—”, e não como zero.');
+    if (Object.values(previousOverview).some(value => value === null)) warnings.push('A comparação está disponível apenas nas métricas retornadas para os dois períodos.');
+    if (!media.coverage.available) warnings.push('A consulta de publicações falhou. O ranking pode estar incompleto.');
+    else if (!media.coverage.complete) warnings.push('Foram consultadas até 300 publicações. O ranking representa apenas a amostra recuperada.');
+    if (media.recentMedia.length > 30) warnings.push('Alcance, salvamentos e compartilhamentos consultados nas 30 publicações mais recentes do período.');
+    if (media.recentMedia.slice(0, 30).some(item => item.insights?.reach == null || item.insights?.saved == null || item.insights?.shares == null)) warnings.push('Algumas publicações não retornaram todas as métricas. Confira a cobertura ao selecionar cada ranking.');
+    const history = daily?.data?.find((item: any) => item.name === 'reach')?.values || [];
     return {
       account: profile,
-      period: { days },
-      overview: {
-        reach: insightsData.overview.reach,
-        impressions: insightsData.overview.impressions,
-        accountsEngaged: insightsData.overview.accountsEngaged,
-        totalFollowers: profile.followers_count ?? 0,
-        profileViews: insightsData.overview.profileViews,
-      },
-      insightsHistory: insightsData.history,
-      recentMedia,
+      period: { days, since: new Date(since * 1000).toISOString(), until: new Date(until * 1000).toISOString(), timezone: 'UTC' },
+      previousPeriod: { since: new Date(previousSince * 1000).toISOString(), until: new Date(since * 1000).toISOString() },
+      overview: { ...overview, totalFollowers: numeric(profile.followers_count) }, previousOverview,
+      syncedAt: new Date().toISOString(), warnings, mediaCoverage: media.coverage,
+      insightsHistory: history.filter((item: any) => numeric(item.value) !== null && Number.isFinite(Date.parse(item.end_time)))
+        .map((item: any) => ({ date: new Date(Date.parse(item.end_time) - DAY * 1000).toISOString().slice(0, 10), reach: item.value }))
+        .filter((item: any) => Date.parse(item.date) / 1000 >= since && Date.parse(item.date) / 1000 < until),
+      recentMedia: media.recentMedia,
     };
   }
 }

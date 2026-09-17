@@ -116,9 +116,10 @@ export class AnalyticsController {
   getInstagramDashboard(
     @Param('clienteId') clienteId: string,
     @Query('days') days?: string,
+    @Query('refresh') refresh?: string,
   ) {
-    const daysNumber = days ? parseInt(days, 10) : 30;
-    return this.analyticsService.getInstagramDashboard(clienteId, daysNumber);
+    const daysNumber = days ? Number(days) : 30;
+    return this.analyticsService.getInstagramDashboard(clienteId, daysNumber, refresh === 'true');
   }
 
   /**

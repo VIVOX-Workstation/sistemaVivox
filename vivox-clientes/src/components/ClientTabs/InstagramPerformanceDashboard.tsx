@@ -1,21 +1,17 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { InstagramManagementInsights, MetricComparison } from './InstagramManagementInsights';
+import { periodLabel } from './instagramInsights';
 import type { Cliente } from '../../types';
 import { api } from '../../api/client';
 import {
-  TrendingUp,
-  TrendingDown,
-  Users,
-  Eye,
+  Info,
   Heart,
   MessageCircle,
-  Share2,
-  Bookmark,
   Play,
   Layers,
   Image as ImageIcon,
   ExternalLink,
   Flame,
-  Clock,
   Sparkles,
   Calendar,
   RefreshCw,
@@ -91,20 +87,22 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
   const isConnected = !!(cliente.instagramAccountId && cliente.metaAccessToken);
 
-  const loadInstagramMetrics = async () => {
+  const requestId = useRef(0);
+  const loadInstagramMetrics = useCallback(async (refresh = false) => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
+    setRealData(null);
     setFetchError(null);
     try {
       const days = periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30;
-      const res = await api.get(`/analytics/instagram/${cliente.id}?days=${days}`);
-      setRealData(res.data);
+      const res = await api.get(`/analytics/instagram/${cliente.id}?days=${days}&refresh=${refresh}`);
+      if (requestId.current === currentRequest) setRealData(res.data);
     } catch (err: any) {
-      console.warn('Aviso ao carregar dados do Instagram:', err);
-      setFetchError(err.response?.data?.message || 'Falha ao buscar dados na Meta API');
+      if (requestId.current === currentRequest) setFetchError(err.response?.data?.message || 'Falha ao buscar dados na Meta API');
     } finally {
-      setLoading(false);
+      if (requestId.current === currentRequest) setLoading(false);
     }
-  };
+  }, [cliente.id, periodo]);
 
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [availableAccounts, setAvailableAccounts] = useState<any[]>([]);
@@ -167,19 +165,12 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
   }, []);
 
   useEffect(() => {
-    if (isConnected) {
-      loadInstagramMetrics();
-    }
-  }, [cliente.id, cliente.instagramAccountId, cliente.metaAccessToken, periodo]);
+    if (isConnected) loadInstagramMetrics();
+    else { setRealData(null); setLoading(false); }
+    return () => { requestId.current++; };
+  }, [isConnected, cliente.instagramAccountId, cliente.metaAccessToken, loadInstagramMetrics]);
 
-  const handleRefresh = () => {
-    if (isConnected) {
-      loadInstagramMetrics();
-    } else {
-      setLoading(true);
-      setTimeout(() => setLoading(false), 400);
-    }
-  };
+  const handleRefresh = () => { if (isConnected) loadInstagramMetrics(true); };
 
   const handleConnectInstagram = async () => {
     setConnecting(true);
@@ -208,51 +199,19 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     }
   };
 
-  // Métricas Consolidadas do Instagram (Reais quando conectadas ou Zeradas quando desconectadas)
   const metricas = useMemo(() => {
-    if (isConnected && realData) {
-      const ov = realData.overview || {};
-      const reach = ov.reach || 0;
-      const engaged = ov.accountsEngaged || 0;
-      const taxa = reach > 0 ? Number(((engaged / reach) * 100).toFixed(2)) : 0;
-
-      return {
-        seguidores: ov.totalFollowers || realData.account?.followers_count || 0,
-        novosSeguidores: 0,
-        varSeguidores: 0,
-        alcance: reach,
-        varAlcance: 0,
-        impressoes: ov.impressions || 0,
-        varImpressoes: 0,
-        interacoes: engaged,
-        varInteracoes: 0,
-        taxaEngajamento: taxa,
-        varTaxaEngajamento: 0,
-        cliquesBio: 0,
-        varCliquesBio: 0,
-        visitasPerfil: ov.profileViews || 0,
-        varVisitasPerfil: 0,
-      };
-    }
-
+    const ov = realData?.overview;
+    const reach = ov?.reach ?? null;
+    const engaged = ov?.accountsEngaged ?? null;
     return {
-      seguidores: 0,
-      novosSeguidores: 0,
-      varSeguidores: 0,
-      alcance: 0,
-      varAlcance: 0,
-      impressoes: 0,
-      varImpressoes: 0,
-      interacoes: 0,
-      varInteracoes: 0,
-      taxaEngajamento: 0,
-      varTaxaEngajamento: 0,
-      cliquesBio: 0,
-      varCliquesBio: 0,
-      visitasPerfil: 0,
-      varVisitasPerfil: 0,
+      seguidores: ov?.totalFollowers ?? realData?.account?.followers_count ?? null,
+      alcance: reach,
+      impressoes: ov?.views ?? null,
+      interacoes: engaged,
+      taxaEngajamento: reach != null && reach > 0 && engaged != null ? Number((engaged / reach * 100).toFixed(2)) : null,
+      visitasPerfil: ov?.profileViews ?? null,
     };
-  }, [isConnected, realData, periodo, cliente.id]);
+  }, [realData]);
 
   // Evolução Diária de Alcance no Instagram
   const timelineAlcance = useMemo<TimelineItem[]>(() => {
@@ -323,7 +282,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
   // Heatmap do Ano
   const yearHeatmap = useMemo(() => {
-    const year = 2026;
+    const year = new Date().getFullYear();
     const today = new Date();
     
     const startDate = new Date(year, 0, 1);
@@ -415,7 +374,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     return {
       weeks,
       monthsPositions,
-      totalPostsYear: isConnected ? (realData?.account?.media_count || totalPostsYear) : 0,
+      totalPostsYear,
       daysWithPosts,
       currentStreak: 0,
       longestStreak: 0,
@@ -467,7 +426,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
   // Cores OFICIAIS do Vivox Design System para os níveis do Heatmap
   const getVivoxLevelColor = (level: 0 | 1 | 2 | 3 | 4, isFuture: boolean) => {
-    if (isFuture) return 'bg-[#FAF7F2] border-[#E8DFC0] opacity-40'; // Futuro
+    if (isFuture) return 'bg-[#FAFAF9] border-[#E8DFC0] opacity-40'; // Futuro
     switch (level) {
       case 4:
         return 'bg-[#5C4418] border-[#3D2D10] shadow-2xs'; // 4+ posts (âmbar escuro intenso)
@@ -488,19 +447,19 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
       {/* BANNER DE STATUS / CONEXÃO COM A META */}
       {!isConnected ? (
         cliente.metaAccessToken ? (
-          <div className="p-6 rounded-[14px] bg-gradient-to-r from-[#241E15] via-[#2F261B] to-[#1E1912] border border-[#B89455]/40 text-[#F6F0E7] shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="p-6 rounded-[14px] bg-white border border-[#E8E7E4] text-[#1E1A16] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-1.5 max-w-2xl">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-[#B89455]/20 text-[#C7A15F] border border-[#B89455]/30">
-                  Meta Graph API
+                <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-[#B89455]/20 text-[#8A6828] border border-[#B89455]/30">
+                  Integração Instagram
                 </span>
-                <span className="text-xs text-[#EAB308] font-bold">• Facebook Autorizado / Seleção Pendente</span>
+                <span className="text-xs text-[#8A6828] font-bold">• Facebook Autorizado / Seleção Pendente</span>
               </div>
-              <h3 className="text-lg font-bold text-[#FAF7F2] flex items-center gap-2">
-                <InstagramIcon className="w-5 h-5 text-[#E1306C]" />
+              <h3 className="text-lg font-bold text-[#1E1A16] flex items-center gap-2">
+                <InstagramIcon className="w-5 h-5 text-[#B89455]" />
                 Vincular Conta do Instagram à {cliente.nomeFantasia}
               </h3>
-              <p className="text-xs text-[#C5B5A0] leading-relaxed">
+              <p className="text-xs text-[#716C64] leading-relaxed">
                 Seu Facebook já foi autorizado. Clique no botão abaixo para escolher qual das suas contas do Instagram pertence a este cliente, ou faça um novo login.
               </p>
             </div>
@@ -509,7 +468,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
               <button
                 onClick={fetchAvailableAccounts}
                 disabled={loadingAccounts}
-                className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#B89455] to-[#8A6828] hover:from-[#C7A15F] hover:to-[#9B7733] text-[#1E1A16] font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-md hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                className="px-5 py-3 rounded-xl bg-[#B89455] hover:bg-[#C7A15F] text-[#1E1A16] font-semibold text-xs flex items-center gap-2.5 transition-all  cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 {loadingAccounts ? 'Buscando contas...' : 'Escolher Conta do Instagram'}
@@ -517,7 +476,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
               <button
                 onClick={handleConnectInstagram}
                 disabled={connecting}
-                className="px-4 py-3 rounded-xl border border-[#4A4032] hover:bg-[#2F2A22] text-[#C5B5A0] font-semibold text-xs transition-colors cursor-pointer"
+                className="px-4 py-3 rounded-xl border border-[#E8E7E4] hover:bg-[#FAFAF9] text-[#716C64] font-semibold text-xs transition-colors cursor-pointer"
               >
                 Novo Login Facebook
               </button>
@@ -532,22 +491,22 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             </div>
           </div>
         ) : (
-          <div className="p-6 rounded-[14px] bg-gradient-to-r from-[#241E15] via-[#2F261B] to-[#1E1912] border border-[#B89455]/40 text-[#F6F0E7] shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="p-6 rounded-[14px] bg-white border border-[#E8E7E4] text-[#1E1A16] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-1.5 max-w-2xl">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-[#B89455]/20 text-[#C7A15F] border border-[#B89455]/30">
-                  Meta Graph API
+                <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-[#B89455]/20 text-[#8A6828] border border-[#B89455]/30">
+                  Integração Instagram
                 </span>
                 <span className="text-xs text-[#8F8271]">• Desconectado</span>
               </div>
-              <h3 className="text-lg font-bold text-[#FAF7F2] flex items-center gap-2">
-                <InstagramIcon className="w-5 h-5 text-[#E1306C]" />
+              <h3 className="text-lg font-bold text-[#1E1A16] flex items-center gap-2">
+                <InstagramIcon className="w-5 h-5 text-[#B89455]" />
                 Conectar Conta Profissional do Instagram
               </h3>
-              <p className="text-xs text-[#C5B5A0] leading-relaxed">
+              <p className="text-xs text-[#716C64] leading-relaxed">
                 Vincule a conta comercial ou de criador de conteúdo do Instagram conectada à Página do Facebook deste cliente para sincronizar métricas oficiais de alcance, impressões, seguidores e publicações.
               </p>
-              <div className="pt-1 text-[11px] text-[#C7A15F] flex items-center gap-1.5">
+              <div className="pt-1 text-[11px] text-[#8A6828] flex items-center gap-1.5">
                 <span>💡</span>
                 <span>Cada cliente possui integração independente. No login do Facebook, use a opção <strong>"Editar configurações"</strong> caso precise marcar a Página vinculada a este cliente.</span>
               </div>
@@ -556,7 +515,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             <button
               onClick={handleConnectInstagram}
               disabled={connecting}
-              className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#B89455] to-[#8A6828] hover:from-[#C7A15F] hover:to-[#9B7733] text-[#1E1A16] font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-md hover:scale-[1.02] cursor-pointer shrink-0 disabled:opacity-50"
+              className="px-5 py-3 rounded-xl bg-[#B89455] hover:bg-[#C7A15F] text-[#1E1A16] font-semibold text-xs flex items-center gap-2.5 transition-all  cursor-pointer shrink-0 disabled:opacity-50"
             >
               <Link2 className="w-4 h-4" />
               {connecting ? 'Iniciando login...' : 'Conectar Instagram / Facebook'}
@@ -564,18 +523,18 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           </div>
         )
       ) : (
-        <div className="px-5 py-3 rounded-[11px] bg-[#241E15]/80 border border-[#B89455]/30 text-[#F6F0E7] flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        <div className="px-5 py-3 rounded-[11px] bg-white border border-[#E8E7E4] text-[#1E1A16] flex flex-wrap items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#247A4A] animate-pulse"></span>
-            <span className="text-xs font-semibold text-[#D8CBB8]">
-              Conta conectada: <strong className="text-[#C7A15F]">@{cliente.instagramUsername || realData?.account?.username || 'instagram_conectado'}</strong>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#247A4A] "></span>
+            <span className="text-xs font-semibold text-[#716C64]">
+              {fetchError ? 'Conexão precisa de atenção: ' : 'Conta vinculada: '}<strong className="text-[#8A6828]">@{cliente.instagramUsername || realData?.account?.username || 'instagram_conectado'}</strong>
             </span>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={fetchAvailableAccounts}
               disabled={loadingAccounts}
-              className="text-[12px] font-semibold text-[#C7A15F] hover:text-[#E8DFC0] flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="text-[12px] font-semibold text-[#8A6828] hover:text-[#6E5018] flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingAccounts ? 'animate-spin' : ''}`} />
               Trocar / Escolher Conta
@@ -584,7 +543,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             <button
               onClick={handleDisconnectInstagram}
               disabled={disconnecting}
-              className="text-[12px] font-semibold text-[#C5B5A0] hover:text-[#DC2626] flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="text-[12px] font-semibold text-[#716C64] hover:text-[#DC2626] flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Unlink className="w-3.5 h-3.5" />
               {disconnecting ? 'Desconectando...' : 'Desconectar'}
@@ -708,133 +667,91 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         </div>
       )}
 
-      {/* CABEÇALHO DO INSTAGRAM DASHBOARD (STICKY) */}
-      <div className="sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14120E]/95 backdrop-blur-md text-[#F6F0E7] p-4 sm:p-5 rounded-[11px] border border-[#2B261F] shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
-          <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-[#247A4A] animate-pulse' : 'bg-[#8F8271]'}`}></span>
-            <span className={`text-[12px] font-bold uppercase tracking-[0.14em] ${isConnected ? 'text-[#C7A15F]' : 'text-[#A89885]'}`}>
-              {isConnected
-                ? `Desempenho de Redes Sociais • @${cliente.instagramUsername || realData?.account?.username || 'instagram'}`
-                : 'Desempenho de Redes Sociais • Nenhuma conta conectada'}
-            </span>
+          <div className="flex items-center gap-2 text-[#8A6828] mb-1.5">
+            <InstagramIcon className="w-4 h-4" />
+            <span className="text-xs font-medium">Instagram</span>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-[#FAF7F2] mt-0.5 flex items-center gap-2">
-            <InstagramIcon className={`w-5 h-5 ${isConnected ? 'text-[#C7A15F]' : 'text-[#8F8271]'}`} />
-            INSTAGRAM INSIGHTS & ENGAJAMENTO — {isConnected ? 'DADOS EM TEMPO REAL' : 'DESCONECTADO'}
-          </h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1E1A16]">Visão geral do perfil</h2>
+          <p className="text-sm text-[#78746D] mt-1">Acompanhe sua audiência e o desempenho dos seus conteúdos.</p>
         </div>
-
         <div className="flex items-center gap-2.5">
-          <select
-            value={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}
-            disabled={!isConnected}
-            className="h-9 px-3 rounded-lg bg-[#24201A] border border-[#4A4032] text-xs font-semibold text-[#C7A15F] focus:outline-none focus:border-[#C7A15F] disabled:opacity-50"
-          >
-            <option value="30d">🗓️ Últimos 30 dias</option>
-            <option value="7d">🗓️ Últimos 7 dias</option>
-            <option value="90d">🗓️ Últimos 90 dias</option>
+          <select aria-label="Período das métricas" value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!isConnected}
+            className="h-10 px-3 rounded-lg bg-white border border-[#E8E7E4] text-sm text-[#625746] focus:outline-none focus:ring-2 focus:ring-[#B89455]/40 disabled:opacity-50">
+            <option value="30d">Últimos 30 dias</option>
+            <option value="7d">Últimos 7 dias</option>
+            <option value="90d">Últimos 90 dias</option>
           </select>
-
-          <button
-            onClick={handleRefresh}
-            disabled={loading || !isConnected}
-            className="h-9 px-3 rounded-lg border border-[#4A4032] bg-[#24201A] hover:bg-[#2F2A22] text-[#F6F0E7] text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-[#C7A15F] ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={handleRefresh} disabled={loading || !isConnected}
+            className="h-10 px-3 rounded-lg border border-[#E8E7E4] bg-white hover:bg-[#FAFAF9] text-[#625746] text-sm flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer">
+            <RefreshCw className={`w-3.5 h-3.5 text-[#8A6828] ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Atualizando...' : 'Atualizar'}
           </button>
         </div>
       </div>
 
-      {/* LINHA 1: KPIS DO INSTAGRAM (MTD COM % DE VARIAÇÃO) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Seguidores */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Seguidores</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {isConnected ? metricas.seguidores.toLocaleString('pt-BR') : '—'}
-          </h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? `${metricas.seguidores} no perfil` : 'Sem dados'}</span>
+      {fetchError && (
+        <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Não foi possível atualizar as métricas. {realData ? 'Exibindo os últimos dados carregados. ' : ''}{fetchError}</p>
+        </div>
+      )}
+
+      {isConnected && <InstagramManagementInsights data={realData} loading={loading} />}
+
+      <section aria-label="Métricas do Instagram" aria-busy={loading} className="bg-white rounded-2xl border border-[#E8E7E4]">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[#F0EFED]">
+          <h3 className="text-sm font-semibold text-[#1E1A16]">Resumo do desempenho</h3>
+          <span className="flex items-center gap-1.5 text-xs text-[#78746D]">
+            <Calendar className="w-3.5 h-3.5 text-[#A28B64]" />
+            {realData?.period?.since ? periodLabel(realData.period) + ' · UTC' : `Últimos ${periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30} dias completos`}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-y-3 px-4 py-7 sm:px-6 sm:py-9">
+          {[
+            { label: 'Número de seguidores', value: metricas.seguidores, caption: 'Total atual do perfil', info: 'Quantidade atual de seguidores. Não representa a variação no período.' },
+            { label: 'Contas alcançadas', value: metricas.alcance, comparisonKey: 'reach', caption: 'No período selecionado', info: 'Alcance informado pelo Instagram para o período selecionado.' },
+            { label: 'Visualizações', value: metricas.impressoes, comparisonKey: 'views', caption: 'No período selecionado', info: 'Número de exibições do conteúdo, incluindo repetições.' },
+            { label: 'Visitas ao perfil', value: metricas.visitasPerfil, comparisonKey: 'profileViews', caption: 'No período selecionado', info: 'Visitas ao perfil informadas pelo Instagram.' },
+            { label: 'Contas engajadas', value: metricas.interacoes, comparisonKey: 'accountsEngaged', caption: 'No período selecionado', info: 'Contas que interagiram com o conteúdo, conforme os dados do Instagram.' },
+            { label: 'Taxa de engajamento', value: metricas.taxaEngajamento, suffix: '%', caption: 'Contas engajadas / alcance', info: 'Proporção de contas engajadas em relação ao alcance.' },
+            { label: 'Total de publicações', value: realData?.account?.media_count ?? null, caption: 'Total atual do perfil', info: 'Total de mídias do perfil, independentemente do período selecionado.' },
+          ].map((metric) => (
+            <div key={metric.label} className="flex flex-col items-center justify-center text-center min-h-36 px-3 py-5">
+              <div className="flex items-center justify-center gap-2 text-sm font-medium text-[#46433E]">
+                {metric.label}
+                <span tabIndex={0} aria-label={metric.info} className="relative group cursor-help rounded-full focus:outline-none focus:ring-2 focus:ring-[#B89455]">
+                  <Info className="w-3.5 h-3.5 text-[#AAA69F]" />
+                  <span role="tooltip" className="pointer-events-none absolute bottom-full right-0 mb-2 w-44 rounded-lg bg-[#24201A] p-2.5 text-xs font-normal leading-relaxed text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity z-10">{metric.info}</span>
+                </span>
+              </div>
+              <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums text-[#242823]">
+                {loading ? '…' : isConnected && realData && metric.value != null ? `${metric.value.toLocaleString('pt-BR')}${metric.suffix || ''}` : '—'}
+              </p>
+              {metric.comparisonKey && realData && !loading && <MetricComparison current={metric.value} previous={realData.previousOverview?.[metric.comparisonKey]} />}
+              <p className="mt-2 text-xs text-[#8A867F]">{loading ? 'Atualizando dados' : isConnected && realData ? metric.value == null ? 'Indisponível neste período' : metric.caption : 'Aguardando dados'}</p>
+            </div>
+          ))}
+          <div className="flex flex-col items-center justify-center text-center min-h-36 px-5 py-5 rounded-xl bg-[#FAFAF9]">
+            <Info className="w-4 h-4 text-[#B89455] mb-3" />
+            <p className="text-xs leading-relaxed text-[#78746D]">Comparação entre períodos de mesma duração. “—” indica dado indisponível; zero indica um valor retornado pela Meta.</p>
           </div>
         </div>
+      </section>
 
-        {/* Alcance de Contas */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Contas Alcançadas</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {isConnected ? metricas.alcance.toLocaleString('pt-BR') : '—'}
-          </h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? `${metricas.alcance} no período` : 'Sem dados'}</span>
-          </div>
-        </div>
+      {isConnected && <InstagramManagementInsights data={realData} loading={loading} section="ranking" />}
 
-        {/* Impressões */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Impressões Totais</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {isConnected ? metricas.impressoes.toLocaleString('pt-BR') : '—'}
-          </h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? `${metricas.impressoes} impressões` : 'Sem dados'}</span>
-          </div>
-        </div>
-
-        {/* Interações */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Contas Engajadas</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {isConnected ? metricas.interacoes.toLocaleString('pt-BR') : '—'}
-          </h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? `${metricas.interacoes} contas` : 'Sem dados'}</span>
-          </div>
-        </div>
-
-        {/* Taxa de Engajamento */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Taxa Engajamento</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">{isConnected ? `${metricas.taxaEngajamento}%` : '—'}</h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? 'Engajadas / Alcance' : 'Sem dados'}</span>
-          </div>
-        </div>
-
-        {/* Total de Mídias */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Total de Mídias</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {isConnected ? (realData?.account?.media_count ?? 0) : '—'}
-          </h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? 'Posts publicados' : 'Sem dados'}</span>
-          </div>
-        </div>
-
-        {/* Visitas ao Perfil */}
-        <div className="bg-[#FFFDF8] p-3.5 rounded-[11px] border border-[#D8CBB8] shadow-2xs flex flex-col justify-between">
-          <span className="text-[12.5px] font-semibold text-[#847663]">Visitas ao Perfil</span>
-          <h3 className="text-xl font-black text-[#1E1A16] mt-2">
-            {isConnected ? metricas.visitasPerfil.toLocaleString('pt-BR') : '—'}
-          </h3>
-          <div className="flex items-center gap-1 text-[12px] font-bold mt-1 text-[#847663]">
-            <span>{isConnected ? `${metricas.visitasPerfil} visitas` : 'Sem dados'}</span>
-          </div>
-        </div>
-      </div>
-
+      {realData && !loading && <>
       {/* 📊 LINHA 2: EVOLUÇÃO DIÁRIA DE ALCANCE + DESEMPENHO POR FORMATO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* GRÁFICO: ALCANCE DIÁRIO NO INSTAGRAM (2 COLUNAS) */}
-        <div className="lg:col-span-2 bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-[#E8E7E4] flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <InstagramIcon className="w-4 h-4 text-[#B89455]" />
-              <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-                Evolução Diária de Alcance (Contas Alcançadas)
+              <h3 className="text-sm font-semibold text-[#1E1A16]">
+                Evolução do alcance
               </h3>
             </div>
             <div className="flex items-center gap-3 text-[12.5px] font-mono text-[#847663]">
@@ -848,21 +765,21 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
           {/* Área do Gráfico */}
           {timelineAlcance.length === 0 ? (
-            <div className="h-52 flex flex-col items-center justify-center border-b border-[#EEE7DC] text-[#847663] text-xs gap-2 py-8">
+            <div className="h-52 flex flex-col items-center justify-center border-b border-[#EEEDEB] text-[#847663] text-xs gap-2 py-8">
               <InstagramIcon className="w-8 h-8 text-[#B89455] opacity-40" />
               <span className="font-semibold text-[#1E1A16]">
                 {isConnected ? 'Sem histórico de alcance para o período selecionado.' : 'Nenhum dado de alcance disponível.'}
               </span>
               <span className="text-[11px] text-[#847663] text-center max-w-sm">
                 {isConnected
-                  ? 'Os dados diários de alcance são disponibilizados pela Meta a partir do momento em que a conta recebe novos acessos.'
+                  ? 'A Meta não retornou histórico diário para este intervalo. Isso não significa alcance zero.'
                   : 'Conecte a conta do Instagram para visualizar o gráfico de evolução de alcance.'}
               </span>
             </div>
           ) : (
-            <div className="h-52 flex items-end justify-between gap-1.5 pt-6 pb-2 border-b border-[#EEE7DC]">
+            <div className="h-52 flex items-end justify-between gap-1.5 pt-6 pb-2 border-b border-[#EEEDEB]">
               {timelineAlcance.map((d, index) => {
-                const heightPercent = maxAlcance > 0 ? Math.max((d.alcance / maxAlcance) * 100, 8) : 8;
+                const heightPercent = maxAlcance > 0 ? (d.alcance / maxAlcance) * 100 : 0;
 
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center h-full justify-end group relative">
@@ -894,10 +811,10 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
         </div>
 
         {/* GRÁFICO EM PIZZA / DONUT: DIVISÃO DE ALCANCE POR FORMATO */}
-        <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-6 rounded-2xl border border-[#E8E7E4] flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-[#1E1A16] uppercase tracking-wider">
-              Distribuição por Formato
+            <h3 className="text-sm font-semibold text-[#1E1A16]">
+              Conteúdo por formato
             </h3>
             <span className="text-[12px] text-[#8A6828] font-bold">{isConnected ? 'Mídias Ativas' : 'Desconectado'}</span>
           </div>
@@ -915,19 +832,16 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
                   stroke="#EEE7DC"
                   strokeWidth="14"
                 />
-                {isConnected && formatosDesempenho[0]?.porcentagem > 0 && (
+                {isConnected && formatosDesempenho.map((formato, index) => (
                   <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="transparent"
-                    stroke="#B89455"
-                    strokeWidth="14"
-                    strokeDasharray="238.76"
-                    strokeDashoffset={238.76 * (1 - formatosDesempenho[0].porcentagem / 100)}
+                    key={formato.formato}
+                    cx="50" cy="50" r="38" fill="transparent"
+                    stroke={formato.cor} strokeWidth="14"
+                    strokeDasharray={`${238.76 * formato.porcentagem / 100} 238.76`}
+                    strokeDashoffset={-238.76 * formatosDesempenho.slice(0, index).reduce((total, item) => total + item.porcentagem, 0) / 100}
                     className="transition-all hover:opacity-85"
                   />
-                )}
+                ))}
               </svg>
 
               {/* Centro do Donut */}
@@ -958,25 +872,25 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             </div>
           </div>
 
-          <div className="pt-2.5 border-t border-[#EEE7DC] text-[12.5px] text-[#625746] bg-[#FAF6F0] p-2 rounded-lg flex items-center justify-between">
+          <div className="pt-2.5 border-t border-[#EEEDEB] text-[12.5px] text-[#625746] bg-[#FAF6F0] p-2 rounded-lg flex items-center justify-between">
             <span>Formato com maior frequência:</span>
-            <strong className="text-[#8A6828] font-bold">{isConnected ? (formatosDesempenho[0]?.formato || '—') : '—'}</strong>
+            <strong className="text-[#8A6828] font-bold">{isConnected ? (formatosDesempenho.reduce((maior, formato) => formato.posts > maior.posts ? formato : maior).posts > 0 ? formatosDesempenho.reduce((maior, formato) => formato.posts > maior.posts ? formato : maior).formato : '—') : '—'}</strong>
           </div>
         </div>
       </div>
 
       {/* 🚀 LINHA 3: HEATMAP DO ANO INTEIRO */}
-      <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE7DC] pb-3">
+      <div className="bg-white p-6 rounded-2xl border border-[#E8E7E4] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEEDEB] pb-3">
           <div>
-            <h3 className="text-sm font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-[#1E1A16] flex items-center gap-2">
               <Activity className="w-4 h-4 text-[#B89455]" />
-              Frequência de Postagens 2026 (Ano Inteiro)
+              Publicações no calendário · {new Date().getFullYear()}
             </h3>
             <p className="text-xs text-[#625746] mt-0.5">
               {isConnected ? (
                 <>
-                  <strong className="text-[#1E1A16]">{yearHeatmap.totalPostsYear} publicações</strong> registradas no perfil
+                  <strong className="text-[#1E1A16]">{yearHeatmap.totalPostsYear} publicações</strong> na amostra do período selecionado
                 </>
               ) : (
                 'Nenhuma conta conectada • Conecte o Instagram para sincronizar o calendário de postagens.'
@@ -1069,7 +983,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             </div>
 
             {/* RODAPÉ */}
-            <div className="flex items-center justify-between text-[12.5px] text-[#847663] pt-3 mt-2 border-t border-[#EEE7DC]">
+            <div className="flex items-center justify-between text-[12.5px] text-[#847663] pt-3 mt-2 border-t border-[#EEEDEB]">
               <span>Legenda de Frequência de Postagens</span>
 
               <div className="flex items-center gap-1.5 text-[12px]">
@@ -1084,7 +998,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             </div>
 
             {selectedDay && (
-              <div className="mt-3 bg-[#FAF7F2] p-2.5 rounded-lg border border-[#E5D9C8] flex items-center justify-between text-xs text-[#1E1A16]">
+              <div className="mt-3 bg-[#FAFAF9] p-2.5 rounded-lg border border-[#E5D9C8] flex items-center justify-between text-xs text-[#1E1A16]">
                 <span className="flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-[#B89455]" />
                   {selectedDay.dataLabel}: <strong className="text-[#8A6828]">{selectedDay.detalhes}</strong>
@@ -1102,29 +1016,29 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
       </div>
 
       {/* LINHA 4: PUBLICAÇÕES DO INSTAGRAM */}
-      <div className="bg-[#FFFDF8] p-5 rounded-[11px] border border-[#D8CBB8] shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE7DC] pb-3">
+      <div className="bg-white p-6 rounded-2xl border border-[#E8E7E4] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEEDEB] pb-3">
           <div>
-            <h3 className="text-sm font-bold text-[#1E1A16] uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-[#1E1A16] flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#B89455]" />
-              Publicações Recentes do Instagram
+              Publicações do período
             </h3>
             <p className="text-xs text-[#625746] mt-0.5">
               {isConnected
-                ? 'Publicações sincronizadas em tempo real com curtidas e comentários atualizados.'
+                ? 'Conteúdos publicados no intervalo selecionado. Contadores acumulados até a consulta.'
                 : 'Conecte a conta do Instagram para visualizar as publicações deste cliente.'}
             </p>
           </div>
 
           {/* Filtro de Formato */}
-          <div className="flex items-center gap-1.5 self-start sm:self-auto bg-[#FAF7F2] p-1 rounded-lg border border-[#D8CBB8]">
+          <div className="flex items-center gap-1.5 self-start sm:self-auto bg-[#FAFAF9] p-1 rounded-lg border border-[#E8E7E4]">
             {['TODOS', 'REELS', 'CARROSSEL', 'POST'].map((tipo) => (
               <button
                 key={tipo}
                 onClick={() => setFiltroTipo(tipo)}
                 className={`px-3 py-1 rounded-md text-[12px] font-bold transition-colors cursor-pointer ${
                   filtroTipo === tipo
-                    ? 'bg-[#B89455] text-[#1D160B] shadow-2xs'
+                    ? 'bg-white text-[#8A6828] shadow-xs'
                     : 'text-[#625746] hover:text-[#1E1A16]'
                 }`}
               >
@@ -1136,12 +1050,12 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
 
         {/* GRID DE CARDS DAS PUBLICAÇÕES OU EMPTY STATE */}
         {publicacoesFiltradas.length === 0 ? (
-          <div className="py-12 px-4 rounded-xl border border-dashed border-[#D8CBB8] bg-[#FAF7F2] text-center space-y-2">
+          <div className="py-12 px-4 rounded-xl border border-dashed border-[#E8E7E4] bg-[#FAFAF9] text-center space-y-2">
             <InstagramIcon className="w-8 h-8 text-[#8A6828] mx-auto opacity-50" />
             <h4 className="text-sm font-bold text-[#1E1A16]">Nenhuma publicação disponível</h4>
             <p className="text-xs text-[#625746] max-w-md mx-auto">
               {isConnected
-                ? 'Não foram encontradas publicações recentes retornadas pela Meta para esta conta.'
+                ? 'Não foram encontradas publicações na amostra deste período. Consulte a disponibilidade dos dados acima ou escolha outro intervalo.'
                 : 'Conecte a conta do Instagram deste cliente para visualizar o ranking de posts, curtidas e comentários.'}
             </p>
           </div>
@@ -1150,7 +1064,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             {publicacoesFiltradas.map((post, idx) => (
               <div
                 key={post.id}
-                className="bg-[#FAF7F2] rounded-[11px] border border-[#E5D9C8] overflow-hidden flex flex-col justify-between gap-3 hover:border-[#B89455] hover:shadow-xs transition-all group"
+                className="bg-[#FAFAF9] rounded-[11px] border border-[#E5D9C8] overflow-hidden flex flex-col justify-between gap-3 hover:border-[#B89455] hover:shadow-xs transition-all group"
               >
                 {post.mediaUrl && (
                   <div className="relative w-full aspect-square bg-[#EEE7DC] overflow-hidden">
@@ -1230,6 +1144,7 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           </div>
         )}
       </div>
+      </>}
     </div>
   );
 }

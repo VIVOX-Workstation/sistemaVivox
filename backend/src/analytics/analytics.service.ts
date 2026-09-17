@@ -572,7 +572,7 @@ export class AnalyticsService {
   /**
    * Retorna o dashboard consolidado de métricas do Instagram para o cliente
    */
-  async getInstagramDashboard(clienteId: string, days = 30): Promise<InstagramDashboardData> {
+  async getInstagramDashboard(clienteId: string, days = 30, refresh = false): Promise<InstagramDashboardData> {
     const cliente = await this.prisma.cliente.findUnique({
       where: { id: clienteId },
       select: {
@@ -594,7 +594,7 @@ export class AnalyticsService {
       );
     }
 
-    return this.instagramService.getDashboard(cliente.instagramAccountId, cliente.metaAccessToken, days);
+    return this.instagramService.getDashboard(cliente.instagramAccountId, cliente.metaAccessToken, days, refresh);
   }
 
   /**
