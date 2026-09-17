@@ -7,6 +7,7 @@ import { ClientProfile } from './pages/ClientProfile';
 import { AnalyticsIndex } from './pages/AnalyticsIndex';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { PlanejamentoServico } from './pages/PlanejamentoServico';
+import { DevBoard } from './pages/DevBoard';
 import { Configuracoes } from './pages/Configuracoes';
 import { VivoxGP } from './pages/VivoxGP';
 import { EducacionalHome } from './pages/EducacionalHome';
@@ -42,6 +43,7 @@ function App() {
               <Route path="clientes/:id" element={<ClientProfile />} />
               <Route path="cliente/:id/servicos/:servicoId/planejamento" element={<PlanejamentoServico />} />
               <Route path="cliente/:id/servicos/:servicoId/planejamento/:itemId" element={<PlanejamentoServico />} />
+              <Route path="cliente/:id/servicos/:servicoId/devboard" element={<DevBoard />} />
               
               <Route path="analytics" element={<AnalyticsIndex />} />
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />

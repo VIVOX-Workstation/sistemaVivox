@@ -43,6 +43,20 @@ enum StatusServico {
   CANCELADO
 }
 
+enum DevCardTag {
+  FEATURE
+  BUG
+  ENHANCEMENT
+  DOCS
+}
+
+enum DevCardColuna {
+  BACKLOG
+  EM_PROGRESSO
+  EM_REVISAO
+  CONCLUIDO
+}
+
 enum TipoProducao {
   POST
   VIDEO
@@ -284,9 +298,36 @@ model ServicoContratado {
   planejamento    PlanejamentoServico?
   tarefas         Tarefa[]
   chamados        Chamado[]
+  devBoardCards   DevBoardCard[]
+
+  githubInstallationId String?
+  githubRepoOwner      String?
+  githubRepoName       String?
+  githubConnectedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DevBoardCard {
+  id           String            @id @default(uuid())
+  servicoId    String
+  servico      ServicoContratado @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  prNumber     Int
+  title        String
+  tag          DevCardTag        @default(FEATURE)
+  coluna       DevCardColuna     @default(BACKLOG)
+  assignee     String?
+  branch       String
+  targetBranch String            @default("main")
+  description  String?
+  checklist    Json              @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([servicoId, prNumber])
+  @@index([servicoId])
 }
 
 model ServicoHistorico {

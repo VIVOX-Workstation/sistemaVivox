@@ -127,6 +127,10 @@ export function ServicesTab({ cliente }: Props) {
   };
 
   const openPlanejamento = (s: ServicoContratado) => {
+    if (s.tipoServico === 'APP' || s.tipo_servico === 'APP') {
+      navigate(`/cliente/${cliente.id}/servicos/${s.id}/devboard`);
+      return;
+    }
     navigate(`/cliente/${cliente.id}/servicos/${s.id}/planejamento`);
   };
 

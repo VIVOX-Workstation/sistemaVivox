@@ -17,12 +17,13 @@ import { TarefasModule } from './tarefas/tarefas.module';
 import { QuadrosModule } from './quadros/quadros.module';
 import { ChamadosModule } from './chamados/chamados.module';
 import { CursosModule } from './cursos/cursos.module';
+import { DevboardModule } from './devboard/devboard.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, QuadrosModule, ChamadosModule, CursosModule
+    PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, QuadrosModule, ChamadosModule, CursosModule, DevboardModule
   ],
   controllers: [AppController],
   providers: [AppService],
