@@ -34,7 +34,7 @@ describe('Instagram management data', () => {
       }
       return reply({ id: 'account', username: 'test', followers_count: 12 });
     });
-    const data = await service.getDashboard('account', 'test-token', 7);
+    const data = await service.getDashboard('account', 'test-token', { days: 7 });
     expect(data.period.since).toBe('2026-09-09T00:00:00.000Z');
     expect(data.period.until).toBe('2026-09-16T00:00:00.000Z');
     expect(data.previousPeriod).toEqual({ since: '2026-09-02T00:00:00.000Z', until: data.period.since });
@@ -42,26 +42,42 @@ describe('Instagram management data', () => {
     expect(data.recentMedia[0].insights?.saved).toBe(10);
     expect(data.mediaCoverage.complete).toBe(true);
     const calls = fetchMock.mock.calls.length;
-    await service.getDashboard('account', 'test-token', 7);
+    await service.getDashboard('account', 'test-token', { days: 7 });
     expect(fetchMock).toHaveBeenCalledTimes(calls);
-    await service.getDashboard('account', 'test-token', 7, true);
+    await service.getDashboard('account', 'test-token', { days: 7 }, true);
     expect(fetchMock.mock.calls.length).toBeGreaterThan(calls);
     const refreshedCalls = fetchMock.mock.calls.length;
-    await service.getDashboard('account', 'different-token', 7);
+    await service.getDashboard('account', 'different-token', { days: 7 });
     expect(fetchMock.mock.calls.length).toBeGreaterThan(refreshedCalls);
   });
 
   it('reports media failures separately from an empty period', async () => {
     fetchMock.mockImplementation((input: URL) => input.pathname.endsWith('/account') ? reply({ id: 'account' }) : reply({}, false));
-    const data = await service.getDashboard('account', 'test-token', 30);
+    const data = await service.getDashboard('account', 'test-token', { days: 30 });
     expect(data.mediaCoverage.available).toBe(false);
     expect(data.mediaCoverage.complete).toBe(false);
     expect(data.overview.reach).toBeNull();
     expect(data.warnings.length).toBeGreaterThan(0);
   });
 
-  it('rejects invalid periods before calling Meta', async () => {
-    for (const days of [0, -1, NaN, 31, 7.5]) await expect(service.getDashboard('account', 'test-token', days)).rejects.toThrow();
+  it('rejects invalid preset periods before calling Meta', async () => {
+    for (const days of [0, -1, NaN, 31, 7.5]) await expect(service.getDashboard('account', 'test-token', { days })).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('skips the previous-period comparison for the "all" overview', async () => {
+    fetchMock.mockImplementation((input: URL) => input.pathname.endsWith('/account') ? reply({ id: 'account' }) : reply({}, false));
+    const data = await service.getDashboard('account', 'test-token', { all: true });
+    expect(data.previousOverview).toEqual({ reach: null, views: null, accountsEngaged: null, profileViews: null });
+    expect(data.warnings).toContain('Esta visão não possui um período anterior equivalente para comparação.');
+  });
+
+  it('accepts a custom since/until range', async () => {
+    fetchMock.mockImplementation((input: URL) => input.pathname.endsWith('/account') ? reply({ id: 'account' }) : reply({}, false));
+    const since = Math.floor(Date.parse('2026-08-01T00:00:00Z') / 1000);
+    const until = Math.floor(Date.parse('2026-08-08T00:00:00Z') / 1000);
+    const data = await service.getDashboard('account', 'test-token', { since, until });
+    expect(data.period.since).toBe('2026-08-01T00:00:00.000Z');
+    expect(data.period.until).toBe('2026-08-08T00:00:00.000Z');
   });
 });

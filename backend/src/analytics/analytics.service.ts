@@ -10,7 +10,7 @@ import { OpenPanelService } from './openpanel/openpanel.service';
 import { OpenPanelDashboardResult } from './openpanel/interfaces';
 import { InstagramAuthService } from './instagram/instagram-auth.service';
 import { InstagramDirectAuthService } from './instagram/instagram-direct-auth.service';
-import { InstagramService } from './instagram/instagram.service';
+import { InstagramService, InstagramPeriodInput } from './instagram/instagram.service';
 import { InstagramDashboardData } from './instagram/interfaces';
 
 @Injectable()
@@ -636,9 +636,15 @@ export class AnalyticsService {
   }
 
   /**
-   * Retorna o dashboard consolidado de métricas do Instagram para o cliente
+   * Retorna o dashboard consolidado de métricas do Instagram para o cliente.
+   * `period.days` aceita um preset (7/30/90) ou "all" (visão geral); `since`/`until`
+   * (AAAA-MM-DD) definem um intervalo personalizado e têm prioridade sobre `days`.
    */
-  async getInstagramDashboard(clienteId: string, days = 30, refresh = false): Promise<InstagramDashboardData> {
+  async getInstagramDashboard(
+    clienteId: string,
+    period: { days?: string; since?: string; until?: string } = {},
+    refresh = false,
+  ): Promise<InstagramDashboardData> {
     const cliente = await this.prisma.cliente.findUnique({
       where: { id: clienteId },
       select: {
@@ -664,10 +670,23 @@ export class AnalyticsService {
     return this.instagramService.getDashboard(
       cliente.instagramAccountId,
       cliente.metaAccessToken,
-      days,
+      this.parseInstagramPeriod(period),
       refresh,
       cliente.metaAuthMethod,
     );
+  }
+
+  private parseInstagramPeriod(period: { days?: string; since?: string; until?: string }): InstagramPeriodInput {
+    if (period.days === 'all') return { all: true };
+    if (period.since && period.until) {
+      const sinceTs = Math.floor(Date.parse(`${period.since}T00:00:00Z`) / 1000);
+      const untilTs = Math.floor(Date.parse(`${period.until}T00:00:00Z`) / 1000) + 86400; // até o fim do dia final (exclusivo)
+      if (Number.isNaN(sinceTs) || Number.isNaN(untilTs)) {
+        throw new BadRequestException('Datas inválidas. Use o formato AAAA-MM-DD.');
+      }
+      return { since: sinceTs, until: untilTs };
+    }
+    return { days: period.days ? Number(period.days) : 30 };
   }
 
   /**

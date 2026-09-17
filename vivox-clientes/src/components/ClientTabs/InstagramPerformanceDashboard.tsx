@@ -74,6 +74,10 @@ interface PublicacaoItem {
   mediaUrl?: string;
 }
 
+function toDateInputValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 export function InstagramPerformanceDashboard({ cliente }: Props) {
   const [periodo, setPeriodo] = useState<string>('30d');
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS');
@@ -85,24 +89,32 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
   const [disconnecting, setDisconnecting] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const [customFrom, setCustomFrom] = useState(() => toDateInputValue(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
+  const [customTo, setCustomTo] = useState(() => toDateInputValue(new Date()));
+
   const isConnected = !!(cliente.instagramAccountId && cliente.metaAccessToken);
+  const isCustomRangeValid = !!customFrom && !!customTo && customFrom <= customTo;
 
   const requestId = useRef(0);
   const loadInstagramMetrics = useCallback(async (refresh = false) => {
+    if (periodo === 'custom' && !isCustomRangeValid) return;
     const currentRequest = ++requestId.current;
     setLoading(true);
     setRealData(null);
     setFetchError(null);
     try {
-      const days = periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30;
-      const res = await api.get(`/analytics/instagram/${cliente.id}?days=${days}&refresh=${refresh}`);
+      const params =
+        periodo === 'custom' ? `since=${customFrom}&until=${customTo}` :
+        periodo === 'all' ? 'days=all' :
+        `days=${periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30}`;
+      const res = await api.get(`/analytics/instagram/${cliente.id}?${params}&refresh=${refresh}`);
       if (requestId.current === currentRequest) setRealData(res.data);
     } catch (err: any) {
       if (requestId.current === currentRequest) setFetchError(err.response?.data?.message || 'Falha ao buscar dados na Meta API');
     } finally {
       if (requestId.current === currentRequest) setLoading(false);
     }
-  }, [cliente.id, periodo]);
+  }, [cliente.id, periodo, customFrom, customTo, isCustomRangeValid]);
 
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [availableAccounts, setAvailableAccounts] = useState<any[]>([]);
@@ -700,20 +712,37 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           <h2 className="text-2xl font-semibold tracking-tight text-[#1E1A16]">Visão geral do perfil</h2>
           <p className="text-sm text-[#78746D] mt-1">Acompanhe sua audiência e o desempenho dos seus conteúdos.</p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <select aria-label="Período das métricas" value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!isConnected}
             className="h-10 px-3 rounded-lg bg-white border border-[#E8E7E4] text-sm text-[#625746] focus:outline-none focus:ring-2 focus:ring-[#B89455]/40 disabled:opacity-50">
             <option value="30d">Últimos 30 dias</option>
             <option value="7d">Últimos 7 dias</option>
             <option value="90d">Últimos 90 dias</option>
+            <option value="custom">Personalizado</option>
+            <option value="all">Visão geral (todos)</option>
           </select>
-          <button onClick={handleRefresh} disabled={loading || !isConnected}
+          {periodo === 'custom' && (
+            <div className="flex items-center gap-1.5">
+              <input type="date" aria-label="Data inicial" value={customFrom} max={customTo || undefined}
+                onChange={(e) => setCustomFrom(e.target.value)} disabled={!isConnected}
+                className="h-10 px-2.5 rounded-lg bg-white border border-[#E8E7E4] text-sm text-[#625746] focus:outline-none focus:ring-2 focus:ring-[#B89455]/40 disabled:opacity-50" />
+              <span className="text-xs text-[#8F8271]">até</span>
+              <input type="date" aria-label="Data final" value={customTo} min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)} disabled={!isConnected}
+                className="h-10 px-2.5 rounded-lg bg-white border border-[#E8E7E4] text-sm text-[#625746] focus:outline-none focus:ring-2 focus:ring-[#B89455]/40 disabled:opacity-50" />
+            </div>
+          )}
+          <button onClick={handleRefresh} disabled={loading || !isConnected || (periodo === 'custom' && !isCustomRangeValid)}
             className="h-10 px-3 rounded-lg border border-[#E8E7E4] bg-white hover:bg-[#FAFAF9] text-[#625746] text-sm flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer">
             <RefreshCw className={`w-3.5 h-3.5 text-[#8A6828] ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Atualizando...' : 'Atualizar'}
           </button>
         </div>
       </div>
+
+      {periodo === 'custom' && !isCustomRangeValid && (
+        <p className="text-xs text-amber-700 -mt-2">Selecione uma data inicial anterior ou igual à data final.</p>
+      )}
 
       {fetchError && (
         <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -729,7 +758,10 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
           <h3 className="text-sm font-semibold text-[#1E1A16]">Resumo do desempenho</h3>
           <span className="flex items-center gap-1.5 text-xs text-[#78746D]">
             <Calendar className="w-3.5 h-3.5 text-[#A28B64]" />
-            {realData?.period?.since ? periodLabel(realData.period) + ' · UTC' : `Últimos ${periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30} dias completos`}
+            {realData?.period?.since ? periodLabel(realData.period) + ' · UTC' :
+              periodo === 'custom' ? 'Período personalizado' :
+              periodo === 'all' ? 'Visão geral (todos os dados)' :
+              `Últimos ${periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30} dias completos`}
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-y-3 px-4 py-7 sm:px-6 sm:py-9">

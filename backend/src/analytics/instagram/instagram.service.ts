@@ -7,6 +7,14 @@ const DAY = 86400;
 const emptyOverview = (): InstagramOverview => ({ reach: null, views: null, accountsEngaged: null, profileViews: null });
 const numeric = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 
+// days = preset (7/30/90); since/until = intervalo customizado (timestamps em segundos, until exclusivo); all = visão geral (todos os dados)
+export interface InstagramPeriodInput {
+  days?: number;
+  since?: number;
+  until?: number;
+  all?: boolean;
+}
+
 @Injectable()
 export class InstagramService {
   private readonly cache = new Map<string, { expires: number; data: InstagramDashboardData }>();
@@ -104,21 +112,45 @@ export class InstagramService {
     return { recentMedia, coverage: { complete, available, fetched, enriched: sample.length, limit: 30 } };
   }
 
+  // "all" cobre a janela máxima de retenção de insights de conta da Meta (~2 anos).
+  private readonly ALL_TIME_DAYS = 730;
+
+  private resolvePeriod(period: InstagramPeriodInput): { since: number; until: number; comparePrevious: boolean; cacheKey: string } {
+    const todayUntil = Math.floor(Date.now() / (DAY * 1000)) * DAY;
+    if (period.all) {
+      const until = todayUntil;
+      const since = until - this.ALL_TIME_DAYS * DAY;
+      return { since, until, comparePrevious: false, cacheKey: `all:${until}` };
+    }
+    if (period.since != null && period.until != null) {
+      if (!Number.isFinite(period.since) || !Number.isFinite(period.until) || period.until <= period.since) {
+        throw new BadRequestException('Intervalo de datas inválido. A data final deve ser depois da data inicial.');
+      }
+      const until = Math.min(period.until, todayUntil + DAY);
+      const since = period.since;
+      return { since, until, comparePrevious: true, cacheKey: `custom:${since}:${until}` };
+    }
+    const days = period.days ?? 30;
+    if (![7, 30, 90].includes(days)) throw new BadRequestException('Escolha um período de 7, 30 ou 90 dias.');
+    const until = todayUntil;
+    const since = until - days * DAY;
+    return { since, until, comparePrevious: true, cacheKey: `preset:${days}:${until}` };
+  }
+
   async getDashboard(
     id: string,
     token: string,
-    days = 30,
+    period: InstagramPeriodInput = {},
     refresh = false,
     authMethod?: MetaAuthMethod | null,
   ): Promise<InstagramDashboardData> {
-    if (![7, 30, 90].includes(days)) throw new BadRequestException('Escolha um período de 7, 30 ou 90 dias.');
-    const until = Math.floor(Date.now() / (DAY * 1000)) * DAY;
-    const key = `${id}:${createHash('sha256').update(token).digest('hex')}:${days}:${until}:${authMethod ?? 'FACEBOOK'}`;
+    const resolved = this.resolvePeriod(period);
+    const key = `${id}:${createHash('sha256').update(token).digest('hex')}:${resolved.cacheKey}:${authMethod ?? 'FACEBOOK'}`;
     const cached = this.cache.get(key);
     if (!refresh && cached && cached.expires > Date.now()) return cached.data;
     const pending = this.pending.get(key);
     if (pending) return pending;
-    const request = this.collect(id, token, days, until, authMethod);
+    const request = this.collect(id, token, resolved, authMethod);
     this.pending.set(key, request);
     try {
       const data = await request;
@@ -128,19 +160,25 @@ export class InstagramService {
     } finally { this.pending.delete(key); }
   }
 
-  private async collect(id: string, token: string, days: number, until: number, authMethod?: MetaAuthMethod | null): Promise<InstagramDashboardData> {
-    const since = until - days * DAY;
-    const previousSince = since - days * DAY;
+  private async collect(
+    id: string,
+    token: string,
+    resolved: { since: number; until: number; comparePrevious: boolean },
+    authMethod?: MetaAuthMethod | null,
+  ): Promise<InstagramDashboardData> {
+    const { since, until, comparePrevious } = resolved;
+    const previousSince = since - (until - since);
     const profile = await this.getProfile(id, token, authMethod);
     const [overview, previousOverview, media, daily] = await Promise.all([
       this.getAccountInsights(id, token, since, until, authMethod),
-      this.getAccountInsights(id, token, previousSince, since, authMethod),
+      comparePrevious ? this.getAccountInsights(id, token, previousSince, since, authMethod) : Promise.resolve(emptyOverview()),
       this.media(id, token, since, until, authMethod),
       this.graph(`${id}/insights`, token, { metric: 'reach', period: 'day', metric_type: 'time_series', since: String(since), until: String(until) }, authMethod),
     ]);
     const warnings: string[] = [];
+    if (!comparePrevious) warnings.push('Esta visão não possui um período anterior equivalente para comparação.');
     if (Object.values(overview).some(value => value === null)) warnings.push('Algumas métricas do período não foram disponibilizadas pela Meta. Elas aparecem como “—”, e não como zero.');
-    if (Object.values(previousOverview).some(value => value === null)) warnings.push('A comparação está disponível apenas nas métricas retornadas para os dois períodos.');
+    if (comparePrevious && Object.values(previousOverview).some(value => value === null)) warnings.push('A comparação está disponível apenas nas métricas retornadas para os dois períodos.');
     if (!media.coverage.available) warnings.push('A consulta de publicações falhou. O ranking pode estar incompleto.');
     else if (!media.coverage.complete) warnings.push('Foram consultadas até 300 publicações. O ranking representa apenas a amostra recuperada.');
     if (media.recentMedia.length > 30) warnings.push('Alcance, salvamentos e compartilhamentos consultados nas 30 publicações mais recentes do período.');
@@ -148,7 +186,7 @@ export class InstagramService {
     const history = daily?.data?.find((item: any) => item.name === 'reach')?.values || [];
     return {
       account: profile,
-      period: { days, since: new Date(since * 1000).toISOString(), until: new Date(until * 1000).toISOString(), timezone: 'UTC' },
+      period: { days: Math.round((until - since) / DAY), since: new Date(since * 1000).toISOString(), until: new Date(until * 1000).toISOString(), timezone: 'UTC' },
       previousPeriod: { since: new Date(previousSince * 1000).toISOString(), until: new Date(since * 1000).toISOString() },
       overview: { ...overview, totalFollowers: numeric(profile.followers_count) }, previousOverview,
       syncedAt: new Date().toISOString(), warnings, mediaCoverage: media.coverage,
