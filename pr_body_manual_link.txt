@@ -1,7 +1,0 @@
-Substitui a abordagem automática da PR #16 por um vínculo manual e explícito entre cards e PRs.
-
-**O que mudou:**
-- **Coluna 'Pull Requests':** Nova coluna dedicada no board exibe os PRs sincronizados do GitHub que ainda não estão vinculados a nenhum card.
-- **Vínculo Manual:** Botões nas interfaces (no PR listado e na tela de detalhes do card) permitem que o usuário escolha explicitamente qual PR vincular a qual card. O vínculo é salvo no novo campo `githubPrNumber` do `DevBoardCard`.
-- **Movimentação Manual:** As colunas do Kanban (Backlog, Em progresso, etc.) voltam a depender exclusivamente de movimentação manual.
-- **Limpeza de Fakes:** Removida a geração automática de cards de demonstração (SEED_CARDS).
