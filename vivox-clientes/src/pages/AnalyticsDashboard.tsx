@@ -67,13 +67,13 @@ export function AnalyticsDashboard() {
   return (
     <div className="w-full space-y-6 pb-12">
       {/* CABEÇALHO AMPLO E ELEGANTE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#FFFDF8] p-6 rounded-[11px] border border-[#D8CBB8] shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[11px] border border-[#E8E7E4] shadow-xs">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/analytics')}
-            className="px-2.5 h-10 border border-[#D8CBB8] hover:bg-[#EEE7DC] rounded-lg shrink-0"
+            className="px-2.5 h-10 border border-[#E8E7E4] hover:bg-[#EEE7DC] rounded-lg shrink-0"
           >
             <ArrowLeft className="w-5 h-5 text-[#1E1A16]" />
           </Button>
@@ -86,7 +86,7 @@ export function AnalyticsDashboard() {
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-[#1E1A16] tracking-tight">{cliente.nomeFantasia}</h1>
               <Badge variant="success" className="text-xs px-2.5 py-0.5">
-                Dashboard de Métricas Ativo
+                Métricas
               </Badge>
             </div>
             <p className="text-xs text-[#625746] flex items-center gap-2 mt-1">
@@ -110,7 +110,7 @@ export function AnalyticsDashboard() {
           </button>
           <button
             onClick={() => navigate(`/cliente/${cliente.id}`)}
-            className="px-3.5 py-2 rounded-lg border border-[#D8CBB8] bg-[#FFFDF8] hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            className="px-3.5 py-2 rounded-lg border border-[#E8E7E4] bg-white hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             Ver Cadastro do Cliente
             <ExternalLink className="w-3.5 h-3.5 text-[#8A6828]" />
@@ -119,10 +119,10 @@ export function AnalyticsDashboard() {
       </div>
 
       {/* NAVEGAÇÃO DE ABAS ABERTA E ESPECIALIZADA */}
-      <div className="flex border-b border-[#D8CBB8] gap-1 overflow-x-auto">
+      <div className="flex border-b border-[#E8E7E4] gap-1 overflow-x-auto">
         <button
           onClick={() => handleTabChange('site_analytics')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
             activeTab === 'site_analytics'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -134,7 +134,7 @@ export function AnalyticsDashboard() {
 
         <button
           onClick={() => handleTabChange('instagram')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
             activeTab === 'instagram'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -146,19 +146,19 @@ export function AnalyticsDashboard() {
 
         <button
           onClick={() => handleTabChange('executive_report')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
             activeTab === 'executive_report'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
-          ✨ Relatório Executivo (IA)
+          Relatório Executivo (IA)
         </button>
 
         <button
           onClick={() => handleTabChange('planning')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap cursor-pointer ${
+          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap cursor-pointer ${
             activeTab === 'planning'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
@@ -169,7 +169,7 @@ export function AnalyticsDashboard() {
 
         <button
           onClick={() => handleTabChange('services')}
-          className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all relative whitespace-nowrap cursor-pointer ${
+          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap cursor-pointer ${
             activeTab === 'services'
               ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
               : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
