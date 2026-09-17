@@ -221,6 +221,7 @@ model Cliente {
 
   // Relações Analytics
   analyticsSnapshots   AnalyticsSnapshot[]
+  instagramFollowerSnapshots InstagramFollowerSnapshot[]
   publicacoes          Publicacao[]
   avaliacoesGmb        AvaliacaoGmb[]
   oportunidades        Oportunidade[]
@@ -345,6 +346,18 @@ model AnalyticsSnapshot {
   avaliacoesGmbPeriodo Int?
 
   createdAt DateTime @default(now())
+}
+
+model InstagramFollowerSnapshot {
+  id                 String   @id @default(uuid())
+  clienteId          String
+  cliente            Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  instagramAccountId String
+  followersCount     Int
+  capturedAt         DateTime
+
+  @@unique([clienteId, instagramAccountId, capturedAt])
+  @@index([clienteId, instagramAccountId, capturedAt])
 }
 
 model Publicacao {

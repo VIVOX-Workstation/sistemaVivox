@@ -1,0 +1,5 @@
+-- RenameIndex
+ALTER INDEX "InstagramFollowerSnapshot_clienteId_instagramAccountId_captur_i" RENAME TO "InstagramFollowerSnapshot_clienteId_instagramAccountId_capt_idx";
+
+-- RenameIndex
+ALTER INDEX "InstagramFollowerSnapshot_clienteId_instagramAccountId_captur_k" RENAME TO "InstagramFollowerSnapshot_clienteId_instagramAccountId_capt_key";

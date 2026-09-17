@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { comparison, managementInsights, rankedMedia } from '../src/components/ClientTabs/instagramInsights.ts';
+import { comparison, metricDelta, managementInsights, rankedMedia } from '../src/components/ClientTabs/instagramInsights.ts';
 import type { ManagementData } from '../src/components/ClientTabs/instagramInsights.ts';
 
 const data = (): ManagementData => ({
@@ -17,6 +17,15 @@ test('comparison distinguishes zero, unavailable, growth and decline', () => {
   assert.equal(comparison(null, 10).label, 'Sem comparação');
   assert.equal(comparison(0, 10).percent, -100);
   assert.equal(comparison(15, 10).percent, 50);
+});
+test('summary shows absolute deltas, percentage points and zero-base changes honestly', () => {
+  assert.equal(metricDelta(120, 100)?.label, '+20%');
+  assert.equal(metricDelta(120, 100)?.absolute, '+20');
+  assert.equal(metricDelta(5, 0)?.label, '+5');
+  assert.equal(metricDelta(0, 5)?.label, '−100%');
+  assert.equal(metricDelta(6, 4, 'points')?.label, '+2 p.p.');
+  assert.equal(metricDelta(-3, -10, 'absolute')?.label, '+7');
+  assert.equal(metricDelta(null, 0), null);
 });
 test('ranking excludes missing values and out-of-period posts, but includes real zero', () => {
   const input = data();
