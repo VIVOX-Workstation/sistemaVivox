@@ -105,7 +105,6 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
     try {
       const params =
         periodo === 'custom' ? `since=${customFrom}&until=${customTo}` :
-        periodo === 'all' ? 'days=all' :
         `days=${periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30}`;
       const res = await api.get(`/analytics/instagram/${cliente.id}?${params}&refresh=${refresh}`);
       if (requestId.current === currentRequest) setRealData(res.data);
@@ -719,7 +718,6 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             <option value="7d">Últimos 7 dias</option>
             <option value="90d">Últimos 90 dias</option>
             <option value="custom">Personalizado</option>
-            <option value="all">Visão geral (todos)</option>
           </select>
           {periodo === 'custom' && (
             <div className="flex items-center gap-1.5">
@@ -760,7 +758,6 @@ export function InstagramPerformanceDashboard({ cliente }: Props) {
             <Calendar className="w-3.5 h-3.5 text-[#A28B64]" />
             {realData?.period?.since ? periodLabel(realData.period) + ' · UTC' :
               periodo === 'custom' ? 'Período personalizado' :
-              periodo === 'all' ? 'Visão geral (todos os dados)' :
               `Últimos ${periodo === '7d' ? 7 : periodo === '90d' ? 90 : 30} dias completos`}
           </span>
         </div>

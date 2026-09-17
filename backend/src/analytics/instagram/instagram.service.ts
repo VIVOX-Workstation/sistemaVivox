@@ -7,12 +7,11 @@ const DAY = 86400;
 const emptyOverview = (): InstagramOverview => ({ reach: null, views: null, accountsEngaged: null, profileViews: null });
 const numeric = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 
-// days = preset (7/30/90); since/until = intervalo customizado (timestamps em segundos, until exclusivo); all = visão geral (todos os dados)
+// days = preset (7/30/90); since/until = intervalo customizado (timestamps em segundos, until exclusivo)
 export interface InstagramPeriodInput {
   days?: number;
   since?: number;
   until?: number;
-  all?: boolean;
 }
 
 @Injectable()
@@ -112,29 +111,21 @@ export class InstagramService {
     return { recentMedia, coverage: { complete, available, fetched, enriched: sample.length, limit: 30 } };
   }
 
-  // "all" cobre a janela máxima de retenção de insights de conta da Meta (~2 anos).
-  private readonly ALL_TIME_DAYS = 730;
-
-  private resolvePeriod(period: InstagramPeriodInput): { since: number; until: number; comparePrevious: boolean; cacheKey: string } {
+  private resolvePeriod(period: InstagramPeriodInput): { since: number; until: number; cacheKey: string } {
     const todayUntil = Math.floor(Date.now() / (DAY * 1000)) * DAY;
-    if (period.all) {
-      const until = todayUntil;
-      const since = until - this.ALL_TIME_DAYS * DAY;
-      return { since, until, comparePrevious: false, cacheKey: `all:${until}` };
-    }
     if (period.since != null && period.until != null) {
       if (!Number.isFinite(period.since) || !Number.isFinite(period.until) || period.until <= period.since) {
         throw new BadRequestException('Intervalo de datas inválido. A data final deve ser depois da data inicial.');
       }
       const until = Math.min(period.until, todayUntil + DAY);
       const since = period.since;
-      return { since, until, comparePrevious: true, cacheKey: `custom:${since}:${until}` };
+      return { since, until, cacheKey: `custom:${since}:${until}` };
     }
     const days = period.days ?? 30;
     if (![7, 30, 90].includes(days)) throw new BadRequestException('Escolha um período de 7, 30 ou 90 dias.');
     const until = todayUntil;
     const since = until - days * DAY;
-    return { since, until, comparePrevious: true, cacheKey: `preset:${days}:${until}` };
+    return { since, until, cacheKey: `preset:${days}:${until}` };
   }
 
   async getDashboard(
@@ -163,22 +154,21 @@ export class InstagramService {
   private async collect(
     id: string,
     token: string,
-    resolved: { since: number; until: number; comparePrevious: boolean },
+    resolved: { since: number; until: number },
     authMethod?: MetaAuthMethod | null,
   ): Promise<InstagramDashboardData> {
-    const { since, until, comparePrevious } = resolved;
+    const { since, until } = resolved;
     const previousSince = since - (until - since);
     const profile = await this.getProfile(id, token, authMethod);
     const [overview, previousOverview, media, daily] = await Promise.all([
       this.getAccountInsights(id, token, since, until, authMethod),
-      comparePrevious ? this.getAccountInsights(id, token, previousSince, since, authMethod) : Promise.resolve(emptyOverview()),
+      this.getAccountInsights(id, token, previousSince, since, authMethod),
       this.media(id, token, since, until, authMethod),
       this.graph(`${id}/insights`, token, { metric: 'reach', period: 'day', metric_type: 'time_series', since: String(since), until: String(until) }, authMethod),
     ]);
     const warnings: string[] = [];
-    if (!comparePrevious) warnings.push('Esta visão não possui um período anterior equivalente para comparação.');
     if (Object.values(overview).some(value => value === null)) warnings.push('Algumas métricas do período não foram disponibilizadas pela Meta. Elas aparecem como “—”, e não como zero.');
-    if (comparePrevious && Object.values(previousOverview).some(value => value === null)) warnings.push('A comparação está disponível apenas nas métricas retornadas para os dois períodos.');
+    if (Object.values(previousOverview).some(value => value === null)) warnings.push('A comparação está disponível apenas nas métricas retornadas para os dois períodos.');
     if (!media.coverage.available) warnings.push('A consulta de publicações falhou. O ranking pode estar incompleto.');
     else if (!media.coverage.complete) warnings.push('Foram consultadas até 300 publicações. O ranking representa apenas a amostra recuperada.');
     if (media.recentMedia.length > 30) warnings.push('Alcance, salvamentos e compartilhamentos consultados nas 30 publicações mais recentes do período.');

@@ -637,8 +637,8 @@ export class AnalyticsService {
 
   /**
    * Retorna o dashboard consolidado de métricas do Instagram para o cliente.
-   * `period.days` aceita um preset (7/30/90) ou "all" (visão geral); `since`/`until`
-   * (AAAA-MM-DD) definem um intervalo personalizado e têm prioridade sobre `days`.
+   * `period.days` aceita um preset (7/30/90); `since`/`until` (AAAA-MM-DD)
+   * definem um intervalo personalizado e têm prioridade sobre `days`.
    */
   async getInstagramDashboard(
     clienteId: string,
@@ -677,7 +677,6 @@ export class AnalyticsService {
   }
 
   private parseInstagramPeriod(period: { days?: string; since?: string; until?: string }): InstagramPeriodInput {
-    if (period.days === 'all') return { all: true };
     if (period.since && period.until) {
       const sinceTs = Math.floor(Date.parse(`${period.since}T00:00:00Z`) / 1000);
       const untilTs = Math.floor(Date.parse(`${period.until}T00:00:00Z`) / 1000) + 86400; // até o fim do dia final (exclusivo)

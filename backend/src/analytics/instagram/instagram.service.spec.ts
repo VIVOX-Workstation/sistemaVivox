@@ -65,13 +65,6 @@ describe('Instagram management data', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('skips the previous-period comparison for the "all" overview', async () => {
-    fetchMock.mockImplementation((input: URL) => input.pathname.endsWith('/account') ? reply({ id: 'account' }) : reply({}, false));
-    const data = await service.getDashboard('account', 'test-token', { all: true });
-    expect(data.previousOverview).toEqual({ reach: null, views: null, accountsEngaged: null, profileViews: null });
-    expect(data.warnings).toContain('Esta visão não possui um período anterior equivalente para comparação.');
-  });
-
   it('accepts a custom since/until range', async () => {
     fetchMock.mockImplementation((input: URL) => input.pathname.endsWith('/account') ? reply({ id: 'account' }) : reply({}, false));
     const since = Math.floor(Date.parse('2026-08-01T00:00:00Z') / 1000);
