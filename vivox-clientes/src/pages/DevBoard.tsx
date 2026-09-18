@@ -25,7 +25,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
-import { githubApi, type GithubPR, type GithubIssue } from '../api/github';
+import { githubApi, type GithubPR, type GithubIssue, type GithubInstallationRepo } from '../api/github';
 
 function GithubIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -100,6 +100,9 @@ export function DevBoard() {
   const [githubIssues, setGithubIssues] = useState<GithubIssue[]>([]);
   const [linkPrModalForCard, setLinkPrModalForCard] = useState<string | null>(null);
   const [linkCardModalForPr, setLinkCardModalForPr] = useState<number | null>(null);
+  const [selectRepoInstallationId, setSelectRepoInstallationId] = useState<string | null>(null);
+  const [githubStatusError, setGithubStatusError] = useState(false);
+  const [connectingGithub, setConnectingGithub] = useState(false);
 
   const loadCards = useCallback(async () => {
     if (!servicoId) return;
@@ -134,9 +137,16 @@ export function DevBoard() {
       try {
         if (servicoId) {
           const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('github') === 'connected') {
+          const githubStatus = urlParams.get('github');
+          if (githubStatus) {
             window.history.replaceState({}, document.title, window.location.pathname);
-            await syncGithub();
+            if (githubStatus === 'connected') {
+              await syncGithub();
+            } else if (githubStatus === 'selectRepo') {
+              setSelectRepoInstallationId(urlParams.get('installationId'));
+            } else if (githubStatus === 'error') {
+              setGithubStatusError(true);
+            }
           }
 
           const [res] = await Promise.all([
@@ -160,13 +170,38 @@ export function DevBoard() {
 
   const handleConnectGithub = async () => {
     if (!servicoId) return;
+    setConnectingGithub(true);
     try {
+      // Se o GitHub App já está instalado (em qualquer serviço), reaproveita a instalação
+      // e deixa escolher o repo direto na nossa UI -- não faz sentido mandar pro GitHub de novo.
+      const existing = await githubApi.listInstallationRepos(servicoId);
+      if (existing.installationId && existing.repositories.length > 0) {
+        setSelectRepoInstallationId(existing.installationId);
+        return;
+      }
+
       const { url } = await githubApi.getInstallUrl(servicoId);
       window.location.href = url;
     } catch (err) {
-      console.error('Failed to get install url', err);
+      console.error('Failed to connect github', err);
       alert('Erro ao conectar com GitHub.');
+    } finally {
+      setConnectingGithub(false);
     }
+  };
+
+  const handleSelectRepo = async (repoOwner: string, repoName: string) => {
+    if (!servicoId || !selectRepoInstallationId) return;
+    await githubApi.selectRepo(servicoId, selectRepoInstallationId, repoOwner, repoName);
+    setSelectRepoInstallationId(null);
+    await syncGithub();
+  };
+
+  const handleDisconnectGithub = async () => {
+    if (!servicoId) return;
+    if (!confirm('Desconectar este serviço do repositório do GitHub?')) return;
+    await githubApi.disconnect(servicoId);
+    await syncGithub();
   };
 
   const allBoardItems = useMemo(() => {
@@ -261,6 +296,14 @@ export function DevBoard() {
 
   return (
     <div className="w-full space-y-6 px-4 sm:px-6 lg:px-8 pt-6 pb-20 bg-[#FAF7F2]">
+      {githubStatusError && (
+        <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-xs font-semibold">
+          <span>Não foi possível conectar com o GitHub. Tente novamente ou verifique a instalação do App.</span>
+          <button onClick={() => setGithubStatusError(false)} className="text-red-500 hover:text-red-700 cursor-pointer font-bold">
+            Fechar
+          </button>
+        </div>
+      )}
       {selectedCard ? (
         <DevBoardDetail
           card={selectedCard}
@@ -288,8 +331,10 @@ export function DevBoard() {
           githubConnected={githubConnected}
           githubRepo={githubRepo}
           githubSyncing={githubSyncing}
+          connectingGithub={connectingGithub}
           onConnectGithub={handleConnectGithub}
           onSyncGithub={syncGithub}
+          onDisconnectGithub={handleDisconnectGithub}
           onOpenCard={(id) => setSelectedCardId(id)}
           onMoveCard={moveCardLocal}
           onAssumirCard={assumirCard}
@@ -312,6 +357,14 @@ export function DevBoard() {
         onClose={() => setLinkCardModalForPr(null)}
         cards={cards.filter((c) => c.githubPrNumber == null)}
         onSelect={(cardId) => linkCardModalForPr != null && linkCardToPr(cardId, linkCardModalForPr)}
+      />
+      <SelectGithubRepoModal
+        isOpen={!!selectRepoInstallationId}
+        onClose={() => setSelectRepoInstallationId(null)}
+        installationId={selectRepoInstallationId}
+        servicoId={servicoId}
+        currentRepo={githubRepo}
+        onSelect={handleSelectRepo}
       />
     </div>
   );
@@ -418,19 +471,109 @@ function LinkCardModal({ isOpen, onClose, cards, onSelect }: { isOpen: boolean; 
   );
 }
 
+function SelectGithubRepoModal({
+  isOpen, onClose, installationId, servicoId, currentRepo, onSelect,
+}: {
+  isOpen: boolean; onClose: () => void; installationId: string | null; servicoId: string | undefined;
+  currentRepo: string | null; onSelect: (owner: string, name: string) => Promise<void>;
+}) {
+  const [repos, setRepos] = useState<GithubInstallationRepo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selecting, setSelecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !servicoId) return;
+    let active = true;
+    setLoading(true);
+    githubApi.listInstallationRepos(servicoId, installationId || undefined)
+      .then((res) => { if (active) setRepos(res.repositories); })
+      .catch(() => { if (active) setRepos([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [isOpen, servicoId, installationId]);
+
+  const filteredRepos = repos.filter((r) => r.fullName.toLowerCase().includes(search.toLowerCase()));
+
+  const handleSelect = async (repo: GithubInstallationRepo) => {
+    setSelecting(repo.fullName);
+    try {
+      await onSelect(repo.owner, repo.name);
+    } finally {
+      setSelecting(null);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Selecionar repositório do GitHub">
+      <div className="space-y-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar repositório..."
+          className="w-full text-sm bg-[#FAFAF9] border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-[#C7A15F]"
+        />
+        <div className="space-y-2 max-h-[380px] overflow-y-auto">
+          {loading && (
+            <p className="text-xs text-stone-400 text-center py-8 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando repositórios…
+            </p>
+          )}
+          {!loading && filteredRepos.length === 0 && (
+            <p className="text-xs text-stone-400 text-center py-8">Nenhum repositório encontrado nessa instalação do GitHub App.</p>
+          )}
+          {!loading && filteredRepos.map((repo) => {
+            const isCurrent = currentRepo === repo.fullName;
+            return (
+              <button
+                key={repo.fullName}
+                onClick={() => handleSelect(repo)}
+                disabled={selecting === repo.fullName}
+                className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer disabled:opacity-50 ${
+                  isCurrent ? 'border-[#C7A15F] bg-[#FAF2E4]/50' : 'border-stone-200 hover:border-[#C7A15F] hover:bg-[#FAF2E4]/40'
+                }`}
+              >
+                <GithubIcon className="w-4 h-4 text-stone-500 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-stone-800 truncate">{repo.fullName}</p>
+                </div>
+                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${repo.private ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                  {repo.private ? 'privado' : 'público'}
+                </span>
+                {isCurrent && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-[#C7A15F] text-[#1D160B] shrink-0">atual</span>}
+                {selecting === repo.fullName && <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-400 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+        {installationId && (
+          <a
+            href={`https://github.com/settings/installations/${installationId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-center text-[11px] text-stone-400 hover:text-stone-600 transition-colors pt-1"
+          >
+            Gerenciar permissões no GitHub
+          </a>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 // ============================================================================
 // Tela 1 — Board Kanban principal
 // ============================================================================
 
 function DevBoardKanban({
   items, unlinkedPRs, repoSlug, nomeCliente, currentUserName, openPrsCount, activeBranches, contributors,
-  githubConnected, githubRepo, githubSyncing, onConnectGithub, onSyncGithub,
+  githubConnected, githubRepo, githubSyncing, connectingGithub, onConnectGithub, onSyncGithub, onDisconnectGithub,
   onOpenCard, onMoveCard, onAssumirCard, onNovaIssue, onBack, onRequestLinkCard,
 }: {
   items: BoardItem[]; unlinkedPRs: GithubPR[]; repoSlug: string; nomeCliente: string; currentUserName: string | null;
   openPrsCount: number; activeBranches: number; contributors: number;
-  githubConnected: boolean; githubRepo: string | null; githubSyncing: boolean;
-  onConnectGithub: () => void; onSyncGithub: () => void;
+  githubConnected: boolean; githubRepo: string | null; githubSyncing: boolean; connectingGithub: boolean;
+  onConnectGithub: () => void; onSyncGithub: () => void; onDisconnectGithub: () => void;
   onOpenCard: (id: string) => void; onMoveCard: (id: string, coluna: DevCardColuna) => void; onAssumirCard: (id: string) => void;
   onNovaIssue: () => void; onBack: () => void; onRequestLinkCard: (prNumber: number) => void;
 }) {
@@ -471,10 +614,16 @@ function DevBoardKanban({
                 <RefreshCw className={`w-3.5 h-3.5 ${githubSyncing ? 'animate-spin' : ''}`} />
                 Sincronizar
               </button>
+              <button onClick={onConnectGithub} disabled={connectingGithub} className="text-[11px] font-bold text-stone-400 hover:text-stone-600 transition-colors cursor-pointer disabled:opacity-50">
+                Trocar
+              </button>
+              <button onClick={onDisconnectGithub} className="text-[11px] font-bold text-red-400 hover:text-red-600 transition-colors cursor-pointer">
+                Desconectar
+              </button>
             </>
           ) : (
-            <button onClick={onConnectGithub} className="flex items-center gap-1.5 rounded-full bg-[#14120E] text-white hover:bg-[#2B261F] transition-colors px-3 py-1.5 text-xs font-bold cursor-pointer">
-              <GithubIcon className="w-3.5 h-3.5" />
+            <button onClick={onConnectGithub} disabled={connectingGithub} className="flex items-center gap-1.5 rounded-full bg-[#14120E] text-white hover:bg-[#2B261F] transition-colors px-3 py-1.5 text-xs font-bold cursor-pointer disabled:opacity-50">
+              {connectingGithub ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GithubIcon className="w-3.5 h-3.5" />}
               Conectar repositório GitHub
             </button>
           )}

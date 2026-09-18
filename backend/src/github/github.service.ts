@@ -30,8 +30,23 @@ export class GithubService {
   }
 
   async getInstallationRepositories(installationId: string) {
-    const data = await this.fetchGithubApi('/installation/repositories', installationId);
-    return data.repositories || [];
+    const perPage = 100;
+    let page = 1;
+    let repos: any[] = [];
+
+    while (page <= 20) {
+      const data = await this.fetchGithubApi(`/installation/repositories?per_page=${perPage}&page=${page}`, installationId);
+      const batch = data.repositories || [];
+      repos = repos.concat(batch);
+      if (batch.length < perPage || repos.length >= (data.total_count || 0)) break;
+      page++;
+    }
+
+    return repos.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async listAppInstallations() {
+    return this.githubAppService.listAppInstallations();
   }
 
   async listPullRequests(owner: string, repo: string, installationId: string) {

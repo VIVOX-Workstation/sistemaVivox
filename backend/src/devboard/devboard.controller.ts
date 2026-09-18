@@ -40,7 +40,13 @@ export class DevboardController {
         return res.redirect(`${devboardUrl}?github=error`);
       }
 
-      // Pega o primeiro repositório configurado para a instalação (geralmente selecionam 1)
+      // Uma instalação pode dar acesso a vários repositórios (ex: "All repositories",
+      // ou "Only select repositories" com mais de um marcado). Só auto-seleciona quando
+      // não há ambiguidade; caso contrário o usuário escolhe na própria tela do DevBoard.
+      if (repos.length > 1) {
+        return res.redirect(`${devboardUrl}?github=selectRepo&installationId=${installationId}`);
+      }
+
       const repo = repos[0];
       const repoOwner = repo.owner.login;
       const repoName = repo.name;
@@ -69,6 +75,60 @@ export class DevboardController {
     return {
       url: `https://github.com/apps/${appSlug}/installations/new?state=${state}`
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('servico/:servicoId/github/installation-repos')
+  async listInstallationRepos(
+    @Param('servicoId') servicoId: string,
+    @Query('installationId') installationId?: string,
+  ) {
+    let targetInstId = installationId;
+    if (!targetInstId) {
+      const servico = await this.devboardService.getServico(servicoId);
+      targetInstId = servico.githubInstallationId || undefined;
+    }
+    if (!targetInstId) {
+      targetInstId = (await this.devboardService.getAnyActiveInstallationId()) || undefined;
+    }
+    if (!targetInstId) {
+      const appInstallations = await this.githubService.listAppInstallations();
+      if (appInstallations && appInstallations.length > 0) {
+        targetInstId = String(appInstallations[0].id);
+      }
+    }
+
+    if (!targetInstId) {
+      return { installationId: null, repositories: [] };
+    }
+
+    const repos = await this.githubService.getInstallationRepositories(targetInstId);
+    return {
+      installationId: targetInstId,
+      repositories: (repos || []).map((r: any) => ({
+        owner: r.owner.login,
+        name: r.name,
+        fullName: r.full_name,
+        private: r.private,
+      })),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('servico/:servicoId/github/select-repo')
+  async selectGithubRepo(
+    @Param('servicoId') servicoId: string,
+    @Body() dto: { installationId: string; repoOwner: string; repoName: string },
+  ) {
+    await this.devboardService.saveGithubConfig(servicoId, dto.installationId, dto.repoOwner, dto.repoName);
+    return { success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('servico/:servicoId/github/disconnect')
+  async disconnectGithub(@Param('servicoId') servicoId: string) {
+    await this.devboardService.disconnectGithub(servicoId);
+    return { success: true };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -134,6 +194,7 @@ export class DevboardController {
 
     return {
       connected: true,
+      installationId: githubInstallationId,
       repoOwner: githubRepoOwner,
       repoName: githubRepoName,
       pullRequests: prsWithDetails,

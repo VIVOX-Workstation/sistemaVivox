@@ -45,6 +45,29 @@ export class GithubAppService {
     return sanitized;
   }
 
+  async listAppInstallations(): Promise<{ id: number; account: { login: string } }[]> {
+    try {
+      const appJwt = this.generateAppJwt();
+      const response = await fetch('https://api.github.com/app/installations', {
+        headers: {
+          Authorization: `Bearer ${appJwt}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (!response.ok) {
+        this.logger.error(`Failed to list app installations: ${await response.text()}`);
+        return [];
+      }
+
+      return response.json();
+    } catch (err) {
+      this.logger.error('Erro ao listar instalações do GitHub App:', err);
+      return [];
+    }
+  }
+
   async getInstallationAccessToken(installationId: string): Promise<string> {
     const cached = this.installationTokenCache.get(installationId);
     // Checa se ainda tem pelo menos 1 minuto de validade

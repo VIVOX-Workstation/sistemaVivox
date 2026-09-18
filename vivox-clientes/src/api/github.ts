@@ -46,10 +46,18 @@ export interface GithubIssue {
 
 export interface GithubSyncResult {
   connected: boolean;
+  installationId?: string;
   repoOwner?: string;
   repoName?: string;
   pullRequests: GithubPR[];
   issues: GithubIssue[];
+}
+
+export interface GithubInstallationRepo {
+  owner: string;
+  name: string;
+  fullName: string;
+  private: boolean;
 }
 
 export const githubApi = {
@@ -60,5 +68,20 @@ export const githubApi = {
   syncGithub: async (servicoId: string): Promise<GithubSyncResult> => {
     const res = await api.get(`/devboard/servico/${servicoId}/github/sync`);
     return res.data;
+  },
+  listInstallationRepos: async (
+    servicoId: string,
+    installationId?: string,
+  ): Promise<{ installationId: string | null; repositories: GithubInstallationRepo[] }> => {
+    const res = await api.get(`/devboard/servico/${servicoId}/github/installation-repos`, {
+      params: installationId ? { installationId } : {},
+    });
+    return res.data;
+  },
+  selectRepo: async (servicoId: string, installationId: string, repoOwner: string, repoName: string): Promise<void> => {
+    await api.post(`/devboard/servico/${servicoId}/github/select-repo`, { installationId, repoOwner, repoName });
+  },
+  disconnect: async (servicoId: string): Promise<void> => {
+    await api.post(`/devboard/servico/${servicoId}/github/disconnect`);
   },
 };
