@@ -81,4 +81,25 @@ export class DevboardService {
     if (!servico) throw new NotFoundException('Serviço não encontrado');
     return servico;
   }
+
+  async getAnyActiveInstallationId(): Promise<string | null> {
+    const servico = await this.prisma.servicoContratado.findFirst({
+      where: { githubInstallationId: { not: null } },
+      orderBy: { githubConnectedAt: 'desc' },
+      select: { githubInstallationId: true },
+    });
+    return servico?.githubInstallationId || null;
+  }
+
+  async disconnectGithub(servicoId: string) {
+    return this.prisma.servicoContratado.update({
+      where: { id: servicoId },
+      data: {
+        githubInstallationId: null,
+        githubRepoOwner: null,
+        githubRepoName: null,
+        githubConnectedAt: null,
+      },
+    });
+  }
 }
