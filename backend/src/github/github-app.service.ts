@@ -29,9 +29,20 @@ export class GithubAppService {
       iss: appId,
     };
 
-    const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+    const formattedPrivateKey = this.sanitizePrivateKey(privateKey);
+
 
     return jwt.sign(payload, formattedPrivateKey, { algorithm: 'RS256' });
+  }
+
+  private sanitizePrivateKey(key: string): string {
+    if (!key) return '';
+    let sanitized = key.trim();
+    if (sanitized.startsWith('"') && sanitized.endsWith('"')) {
+      sanitized = sanitized.substring(1, sanitized.length - 1);
+    }
+    sanitized = sanitized.replace(/\\n/g, '\n');
+    return sanitized;
   }
 
   async getInstallationAccessToken(installationId: string): Promise<string> {
