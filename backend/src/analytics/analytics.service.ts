@@ -500,6 +500,7 @@ export class AnalyticsService {
           facebookPageId: null,
           instagramAccountId: null,
           instagramUsername: null,
+          metaAuthMethod: null,
         },
       });
 
@@ -524,6 +525,9 @@ export class AnalyticsService {
         facebookPageId: pageWithIg.id,
         instagramAccountId: igAccount.id,
         instagramUsername: igAccount.username || null,
+        // Sem isto, um cliente que já conectou pelo Login Direto continuaria
+        // marcado como INSTAGRAM e o token do Facebook iria para graph.instagram.com.
+        metaAuthMethod: 'FACEBOOK',
       },
     });
 
@@ -632,6 +636,7 @@ export class AnalyticsService {
         facebookPageId: dto.pageId,
         instagramAccountId: dto.instagramAccountId,
         instagramUsername: dto.instagramUsername || null,
+        metaAuthMethod: 'FACEBOOK',
       },
     });
   }
@@ -726,6 +731,7 @@ export class AnalyticsService {
         instagramAccountId: null,
         instagramUsername: null,
         facebookPageId: null,
+        metaAuthMethod: null,
       },
     });
   }
