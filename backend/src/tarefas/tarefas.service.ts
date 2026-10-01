@@ -967,6 +967,12 @@ Gere o checklist em formato JSON:
 
   async removeProjeto(id: string) {
     await this.findProjetoById(id);
-    return this.prisma.projeto.delete({ where: { id } });
+    // As tarefas do workspace são excluídas junto (checklist e comentários caem em cascata);
+    // sem isso, projetoId virava null e elas continuavam contando no total do GP.
+    const [tarefasExcluidas, projeto] = await this.prisma.$transaction([
+      this.prisma.tarefa.deleteMany({ where: { projetoId: id } }),
+      this.prisma.projeto.delete({ where: { id } }),
+    ]);
+    return { ...projeto, tarefasExcluidas: tarefasExcluidas.count };
   }
 }
