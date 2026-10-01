@@ -6,21 +6,15 @@ import {
   Building2,
   ExternalLink,
   Globe,
-  Sparkles,
   AlertTriangle,
   RefreshCw,
-  Map as MapIcon,
-  Target,
 } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente } from '../types';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 
-import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { AnalyticsTab } from '../components/ClientTabs/AnalyticsTab';
 import { InstagramPerformanceDashboard } from '../components/ClientTabs/InstagramPerformanceDashboard';
-import { PlanningTab } from '../components/ClientTabs/PlanningTab';
-import { ExecutiveReportTab } from '../components/ClientTabs/ExecutiveReportTab';
 import './planning-workspace.css';
 
 function InstagramIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -33,14 +27,11 @@ function InstagramIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-type Tab = 'site_analytics' | 'instagram' | 'executive_report' | 'planning' | 'services';
+type Tab = 'site_analytics' | 'instagram';
 
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'site_analytics', label: 'Site & Landing Pages', icon: <Globe className="w-3.5 h-3.5" /> },
   { id: 'instagram', label: 'Instagram & Redes', icon: <InstagramIcon className="w-3.5 h-3.5" /> },
-  { id: 'executive_report', label: 'Relatório Executivo (IA)', icon: <Sparkles className="w-3.5 h-3.5" /> },
-  { id: 'planning', label: 'Planejamento', icon: <Target className="w-3.5 h-3.5" /> },
-  { id: 'services', label: 'Mapa de Serviços', icon: <MapIcon className="w-3.5 h-3.5" /> },
 ];
 
 const isTab = (v: string | null): v is Tab => TABS.some((t) => t.id === v);
@@ -207,7 +198,7 @@ export function AnalyticsDashboard() {
       </div>
 
       {/* ABAS */}
-      <div className="pw-glass-panel p-2 flex items-center gap-2 overflow-x-auto" role="tablist">
+      <div className="pw-glass-panel rounded-2xl p-2 flex items-center gap-2 overflow-x-auto" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -215,7 +206,7 @@ export function AnalyticsDashboard() {
             role="tab"
             aria-selected={activeTab === t.id}
             onClick={() => handleTabChange(t.id)}
-            className={`pw-glass-pill px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+            className={`pw-glass-pill rounded-xl px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               activeTab === t.id ? 'pw-glass-primary' : 'text-[#1E1A16]'
             }`}
           >
@@ -229,9 +220,6 @@ export function AnalyticsDashboard() {
       <div className="w-full min-w-0">
         {activeTab === 'site_analytics' && <AnalyticsTab cliente={cliente} />}
         {activeTab === 'instagram' && <InstagramPerformanceDashboard cliente={cliente} />}
-        {activeTab === 'executive_report' && <ExecutiveReportTab cliente={cliente} />}
-        {activeTab === 'services' && <ServicesTab cliente={cliente} />}
-        {activeTab === 'planning' && <PlanningTab cliente={cliente} />}
       </div>
     </div>
   );
