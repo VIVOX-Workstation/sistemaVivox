@@ -18,6 +18,11 @@ export class AnalyticsController {
     return this.analyticsService.getDashboardExecutivo();
   }
 
+  @Get('sparklines')
+  getSparklines() {
+    return this.analyticsService.getSparklines();
+  }
+
   @Get('resultados/:clienteId')
   getResultados(@Param('clienteId') clienteId: string) {
     return this.analyticsService.getResultados(clienteId);

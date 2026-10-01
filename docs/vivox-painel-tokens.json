@@ -1,0 +1,58 @@
+{
+  "source": "https://painel.vivoxmarketing.com.br/",
+  "liquidGlassSource": "Painel VIVOX Liquid Glass.html",
+  "inspectedAt": "2026-10-01",
+  "description": "Tokens observados no CSS público do painel; não são uma biblioteca oficial de componentes.",
+  "colors": {
+    "background": "#f8f6f6",
+    "backgroundSecondary": "#efeae2",
+    "surface": "#ffffff",
+    "rowHover": "#faf7f2",
+    "pill": "#ede7dd",
+    "text": "#1e1b17",
+    "textMuted": "#5e574c",
+    "gold": "#ccb691",
+    "goldInk": "#7a6440",
+    "brown": "#524b40",
+    "onGold": "#191612",
+    "border": "#524b4029",
+    "borderSoft": "#524b4017",
+    "borderStrong": "#524b4057",
+    "danger": "#b42318",
+    "dangerBackground": "#fbece9",
+    "warning": "#b54708",
+    "warningBackground": "#fcefe2",
+    "success": "#3d6b35",
+    "successBackground": "#eaf2e7"
+  },
+  "typography": {
+    "body": "Manrope",
+    "display": "Archivo",
+    "sectionLabelLetterSpacing": "0.16em",
+    "sectionLabelWeight": 600,
+    "titleWeight": 700
+  },
+  "radii": { "small": "8px", "medium": "12px", "large": "18px", "pill": "999px" },
+  "motion": { "easing": "cubic-bezier(.22, 1, .36, 1)" },
+  "depth": {
+    "glassTint": "#ffffff42",
+    "glassPanelTint": "#fffdf99e",
+    "shadow": "0 10px 26px -12px #4a3a204d, 0 2px 6px -2px #4a3a2024"
+  },
+  "liquidGlass": {
+    "tint": "rgba(255, 255, 255, 0.26)",
+    "tintHover": "rgba(255, 255, 255, 0.4)",
+    "panelTint": "rgba(255, 253, 249, 0.62)",
+    "sheen": "linear-gradient(180deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.06) 48%, rgba(255,255,255,.14) 100%)",
+    "innerShadow": "inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.35), inset 0 -12px 20px -14px rgba(255,255,255,.55), inset 0 10px 18px -16px rgba(74,58,32,.2)",
+    "shadowHover": "0 16px 34px -14px rgba(74,58,32,.38), 0 3px 8px -3px rgba(74,58,32,.18)",
+    "controlBackdrop": "blur(3px) saturate(170%) brightness(1.04)",
+    "panelBackdrop": "blur(26px) saturate(160%)",
+    "modalBackdrop": "blur(30px) saturate(180%)",
+    "panelRadius": "26px",
+    "modalRadius": "28px",
+    "pointerReflection": "radial-gradient(120% 90% at var(--mx) var(--my), rgba(255,255,255,.5), rgba(255,255,255,0) 55%)",
+    "reflectionFade": "0.45s ease",
+    "refraction": { "mapMaxDimension": 420, "edgeDepthMin": 8, "edgeDepthMax": 22, "scaleFactor": 2.3, "channelScaleFactors": [1, 0.93, 0.86] }
+  }
+}

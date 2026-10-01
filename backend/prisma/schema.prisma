@@ -296,6 +296,7 @@ model ServicoContratado {
   historico       ServicoHistorico[]
   producoes       Producao[]
   planejamento    PlanejamentoServico?
+  ativosHospedagem AtivoHospedagem[]
   tarefas         Tarefa[]
   chamados        Chamado[]
   devBoardCards   DevBoardCard[]
@@ -552,6 +553,12 @@ model AtivoHospedagem {
   titulo String // ex: "LP Implante Capilar", "Site Institucional"
   url    String // ex: "https://drcliente.com.br/capilar"
 
+  servicoContratadoId String?
+  servicoContratado ServicoContratado? @relation(fields: [servicoContratadoId], references: [id], onDelete: SetNull)
+  itemPlanejadoId String?
+  dataInicioHospedagem DateTime? @db.Date
+  prazoHospedagemMeses Int?
+
   // Dados de Servidor / VPS
   provedorVps      String? // ex: "VPS Vivox Hetzner #1", "Hostinger", "Coolify"
   ipServidor       String? // ex: "179.198.120.113"
@@ -575,6 +582,7 @@ model AtivoHospedagem {
   updatedAt DateTime @updatedAt
 
   @@index([clienteId])
+  @@unique([servicoContratadoId, itemPlanejadoId])
 }
 
 // ============================================

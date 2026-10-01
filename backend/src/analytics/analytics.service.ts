@@ -30,6 +30,78 @@ export class AnalyticsService {
     private instagramService: InstagramService,
   ) {}
 
+  /**
+   * Séries curtas para sparklines nos cards de clientes. Somente Prisma, sem N+1.
+   */
+  async getSparklines() {
+    const DAY = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const [followers, snaps] = await Promise.all([
+      this.prisma.instagramFollowerSnapshot.findMany({
+        where: { capturedAt: { gte: new Date(now - 60 * DAY) } },
+        select: { clienteId: true, instagramAccountId: true, followersCount: true, capturedAt: true },
+        orderBy: { capturedAt: 'asc' },
+      }),
+      this.prisma.analyticsSnapshot.findMany({
+        where: { periodoFim: { gte: new Date(now - 90 * DAY) }, alcanceTotal: { not: null } },
+        select: { clienteId: true, periodoFim: true, alcanceTotal: true },
+        orderBy: { periodoFim: 'asc' },
+      }),
+    ]);
+
+    type Ponto = { data: string; valor: number };
+    const build = (metrica: 'seguidores' | 'alcance', rotulo: string, mapa: Map<string, number>) => {
+      const serie: Ponto[] = [...mapa.entries()]
+        .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+        .map(([data, valor]) => ({ data, valor }))
+        .slice(-30);
+      const ultimo = serie.length ? serie[serie.length - 1].valor : null;
+      const primeiro = serie.length ? serie[0].valor : null;
+      const variacaoPct =
+        serie.length >= 2 && primeiro !== 0 && primeiro !== null && ultimo !== null
+          ? Math.round(((ultimo - primeiro) / primeiro) * 1000) / 10
+          : null;
+      return { metrica, rotulo, serie, ultimo, variacaoPct };
+    };
+
+    const result: Record<string, ReturnType<typeof build>> = {};
+
+    // Seguidores: agrupa por cliente e conta; usa a conta com mais registros
+    const porCliente = new Map<string, Map<string, typeof followers>>();
+    for (const f of followers) {
+      let contas = porCliente.get(f.clienteId);
+      if (!contas) porCliente.set(f.clienteId, (contas = new Map()));
+      const lista = contas.get(f.instagramAccountId);
+      if (lista) lista.push(f);
+      else contas.set(f.instagramAccountId, [f]);
+    }
+    for (const [clienteId, contas] of porCliente) {
+      let melhor: typeof followers = [];
+      for (const lista of contas.values()) if (lista.length > melhor.length) melhor = lista;
+      const dias = new Map<string, number>();
+      // já ordenado por capturedAt asc: o último do dia sobrescreve
+      for (const f of melhor) dias.set(iso(f.capturedAt), f.followersCount);
+      result[clienteId] = build('seguidores', 'Seguidores', dias);
+    }
+
+    // Alcance: apenas para clientes sem seguidores
+    const alcance = new Map<string, Map<string, number>>();
+    for (const s of snaps) {
+      if (result[s.clienteId]) continue;
+      let dias = alcance.get(s.clienteId);
+      if (!dias) alcance.set(s.clienteId, (dias = new Map()));
+      const d = iso(s.periodoFim);
+      dias.set(d, (dias.get(d) ?? 0) + (s.alcanceTotal ?? 0));
+    }
+    for (const [clienteId, dias] of alcance) {
+      result[clienteId] = build('alcance', 'Alcance', dias);
+    }
+
+    return result;
+  }
+
   async saveSnapshot(dto: CreateMetricaDto) {
     const existing = await this.prisma.analyticsSnapshot.findFirst({
       where: { 
@@ -329,6 +401,7 @@ export class AnalyticsService {
       radarHospedagens,
       ultimosClientes,
       totalOportunidades,
+      extras,
     ] = await Promise.all([
       this.prisma.cliente.count(),
       this.prisma.cliente.count({ where: { status: 'ATIVO' } }),
@@ -362,6 +435,7 @@ export class AnalyticsService {
         },
       }),
       this.prisma.oportunidade.count({ where: { status: 'ABERTA' } }),
+      this.getDashboardExtras(),
     ]);
 
     return {
@@ -370,19 +444,285 @@ export class AnalyticsService {
         ativos: clientesAtivos,
         prospects: clientesProspects,
         pausados: clientesPausados,
+        novosPorMes: extras.novosPorMes,
       },
       servicos: {
         ativos: totalServicosAtivos,
         producoesEmAndamento: totalProducoesEmAndamento,
         oportunidadesAbertas: totalOportunidades,
+        porTipo: extras.servicosPorTipo,
       },
       landingPages: radarHospedagens,
       ultimosClientes,
+      tarefas: extras.tarefas,
+      chamados: extras.chamados,
+      producoes: extras.producoes,
+      analytics: extras.analytics,
+    };
+  }
+
+  /** Data "local" (America/Cuiaba, UTC-4 fixo, sem DST) com campos UTC representando o relógio local. */
+  private static readonly OFFSET_LOCAL_MS = -4 * 60 * 60 * 1000;
+
+  private async getDashboardExtras() {
+    const DIA = 24 * 60 * 60 * 1000;
+    const agora = new Date();
+    const local = new Date(agora.getTime() + AnalyticsService.OFFSET_LOCAL_MS);
+    const fmtDia = (d: Date) => d.toISOString().slice(0, 10);
+
+    // Últimos 6 meses (mês corrente incluso)
+    const mesesChaves: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - i, 1));
+      mesesChaves.push(d.toISOString().slice(0, 7));
+    }
+    const inicioMeses = new Date(
+      Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - 5, 1) - AnalyticsService.OFFSET_LOCAL_MS,
+    );
+    const inicioMesAtual = new Date(
+      Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) - AnalyticsService.OFFSET_LOCAL_MS,
+    );
+
+    // Semana (domingo 00:00) igual a TarefasService.getMetricas
+    const inicioSemana = new Date(agora);
+    inicioSemana.setDate(agora.getDate() - agora.getDay());
+    inicioSemana.setHours(0, 0, 0, 0);
+
+    // Últimas 8 semanas (segunda-feira como chave)
+    const diaSemanaLocal = (local.getUTCDay() + 6) % 7; // 0 = segunda
+    const segundaAtualLocal = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - diaSemanaLocal * DIA;
+    const semanasChaves: string[] = [];
+    for (let i = 7; i >= 0; i--) semanasChaves.push(fmtDia(new Date(segundaAtualLocal - i * 7 * DIA)));
+    const inicioSemanas = new Date(segundaAtualLocal - 7 * 7 * DIA - AnalyticsService.OFFSET_LOCAL_MS);
+
+    const em7Dias = new Date(agora.getTime() + 7 * DIA);
+    const ha30Dias = new Date(agora.getTime() - 30 * DIA);
+
+    const statusTarefa = ['BACKLOG', 'A_FAZER', 'EM_ANDAMENTO', 'EM_REVISAO', 'CONCLUIDA', 'CANCELADA'];
+    const prioridades = ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'] as const;
+    const urgencias = ['BAIXA', 'MEDIA', 'ALTA'] as const;
+    const statusProducao = ['EM_PRODUCAO', 'EM_REVISAO', 'APROVADO', 'PUBLICADO'];
+    const abertaWhere = { status: { notIn: ['CONCLUIDA', 'CANCELADA'] } };
+    const naoResolvido = { status: { not: 'RESOLVIDO' as const } };
+
+    const [
+      clientesRecentes,
+      servicosTipoRaw,
+      tarefasTotal,
+      tarefasStatusRaw,
+      tarefasPrioridadeRaw,
+      tarefasAtrasadas,
+      tarefasVencendo,
+      tarefasConcluidasSemana,
+      tarefasHoras,
+      tarefasConcluidasRecentes,
+      tarefasAtrasadasLista,
+      chamadosStatusRaw,
+      chamadosResolvidosMes,
+      chamadosSlaVencidos,
+      chamadosUrgenciaRaw,
+      chamadosRecentesRaw,
+      producoesStatusRaw,
+      clientesGa4,
+      clientesInstagram,
+      clientesOpenpanel,
+      snapshots,
+    ] = await Promise.all([
+      this.prisma.cliente.findMany({ where: { createdAt: { gte: inicioMeses } }, select: { createdAt: true } }),
+      this.prisma.servicoContratado.groupBy({ by: ['tipoServico'], where: { status: 'ATIVO' }, _count: { _all: true } }),
+      this.prisma.tarefa.count(),
+      this.prisma.tarefa.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.tarefa.groupBy({ by: ['prioridade'], where: abertaWhere, _count: { _all: true } }),
+      this.prisma.tarefa.count({ where: { ...abertaWhere, prazo: { lt: agora } } }),
+      this.prisma.tarefa.count({ where: { ...abertaWhere, prazo: { gte: agora, lte: em7Dias } } }),
+      this.prisma.tarefa.count({ where: { status: 'CONCLUIDA', dataConclusao: { gte: inicioSemana } } }),
+      this.prisma.tarefa.aggregate({ _sum: { horasGastas: true } }),
+      this.prisma.tarefa.findMany({
+        where: { status: 'CONCLUIDA', dataConclusao: { gte: inicioSemanas } },
+        select: { dataConclusao: true },
+      }),
+      this.prisma.tarefa.findMany({
+        where: { ...abertaWhere, prazo: { lt: agora } },
+        orderBy: { prazo: 'asc' },
+        take: 6,
+        select: {
+          id: true,
+          titulo: true,
+          prazo: true,
+          prioridade: true,
+          cliente: { select: { id: true, nomeFantasia: true } },
+          responsavel: { select: { nome: true } },
+        },
+      }),
+      this.prisma.chamado.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.chamado.count({ where: { resolvidoEm: { gte: inicioMesAtual } } }),
+      this.prisma.chamado.count({ where: { ...naoResolvido, slaVencimento: { lt: agora } } }),
+      this.prisma.chamado.groupBy({ by: ['urgencia'], where: naoResolvido, _count: { _all: true } }),
+      this.prisma.chamado.findMany({
+        where: naoResolvido,
+        orderBy: { slaVencimento: { sort: 'asc', nulls: 'last' } },
+        take: 6,
+        select: {
+          id: true,
+          titulo: true,
+          urgencia: true,
+          status: true,
+          slaVencimento: true,
+          createdAt: true,
+          cliente: { select: { id: true, nomeFantasia: true } },
+        },
+      }),
+      this.prisma.producao.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.cliente.count({ where: { status: 'ATIVO', ga4PropertyId: { not: null } } }),
+      this.prisma.cliente.count({ where: { status: 'ATIVO', instagramAccountId: { not: null } } }),
+      this.prisma.cliente.count({ where: { status: 'ATIVO', openpanelProjectId: { not: null } } }),
+      this.prisma.analyticsSnapshot.findMany({
+        where: { periodoFim: { gte: ha30Dias } },
+        select: {
+          clienteId: true,
+          periodoFim: true,
+          alcanceTotal: true,
+          engajamentoTotal: true,
+          cliente: { select: { nomeFantasia: true } },
+        },
+      }),
+    ]);
+
+    const mapa = (rows: any[], campo: string) => {
+      const m = new Map<string, number>();
+      for (const r of rows || []) m.set(String(r[campo]), r._count?._all ?? 0);
+      return m;
+    };
+
+    // novosPorMes
+    const mesesMap = new Map<string, number>(mesesChaves.map(k => [k, 0]));
+    for (const c of clientesRecentes || []) {
+      const k = new Date(c.createdAt.getTime() + AnalyticsService.OFFSET_LOCAL_MS).toISOString().slice(0, 7);
+      if (mesesMap.has(k)) mesesMap.set(k, (mesesMap.get(k) || 0) + 1);
+    }
+    const novosPorMes = mesesChaves.map(mes => ({ mes, total: mesesMap.get(mes) || 0 }));
+
+    // serviços por tipo
+    const servicosPorTipo = (servicosTipoRaw || [])
+      .map((r: any) => ({ tipo: String(r.tipoServico), total: r._count?._all ?? 0 }))
+      .sort((a, b) => b.total - a.total);
+
+    // tarefas
+    const stMap = mapa(tarefasStatusRaw, 'status');
+    const prMap = mapa(tarefasPrioridadeRaw, 'prioridade');
+    const abertas = statusTarefa
+      .filter(s => s !== 'CONCLUIDA' && s !== 'CANCELADA')
+      .reduce((acc, s) => acc + (stMap.get(s) || 0), 0);
+
+    const semanasMap = new Map<string, number>(semanasChaves.map(k => [k, 0]));
+    for (const t of tarefasConcluidasRecentes || []) {
+      if (!t.dataConclusao) continue;
+      const l = new Date(t.dataConclusao.getTime() + AnalyticsService.OFFSET_LOCAL_MS);
+      const seg = Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate()) - ((l.getUTCDay() + 6) % 7) * DIA;
+      const k = fmtDia(new Date(seg));
+      if (semanasMap.has(k)) semanasMap.set(k, (semanasMap.get(k) || 0) + 1);
+    }
+
+    const tarefas = {
+      total: tarefasTotal ?? 0,
+      abertas,
+      emAndamento: stMap.get('EM_ANDAMENTO') || 0,
+      atrasadas: tarefasAtrasadas ?? 0,
+      vencendoSemana: tarefasVencendo ?? 0,
+      concluidasSemana: tarefasConcluidasSemana ?? 0,
+      horasGastas: tarefasHoras?._sum?.horasGastas ?? 0,
+      porStatus: statusTarefa.map(status => ({ status, total: stMap.get(status) || 0 })),
+      porPrioridade: prioridades.map(prioridade => ({ prioridade, total: prMap.get(prioridade) || 0 })),
+      concluidasPorSemana: semanasChaves.map(semana => ({ semana, total: semanasMap.get(semana) || 0 })),
+      atrasadasLista: (tarefasAtrasadasLista || []).map((t: any) => ({
+        id: t.id,
+        titulo: t.titulo,
+        prazo: t.prazo.toISOString(),
+        diasAtraso: Math.max(0, Math.floor((agora.getTime() - t.prazo.getTime()) / DIA)),
+        prioridade: t.prioridade,
+        cliente: t.cliente ? { id: t.cliente.id, nomeFantasia: t.cliente.nomeFantasia } : null,
+        responsavel: t.responsavel ? { nome: t.responsavel.nome } : null,
+      })),
+    };
+
+    // chamados
+    const chStatus = mapa(chamadosStatusRaw, 'status');
+    const chUrg = mapa(chamadosUrgenciaRaw, 'urgencia');
+    const chamados = {
+      abertos: chStatus.get('ABERTO') || 0,
+      emAndamento: chStatus.get('EM_ANDAMENTO') || 0,
+      resolvidosMes: chamadosResolvidosMes ?? 0,
+      slaVencidos: chamadosSlaVencidos ?? 0,
+      porUrgencia: urgencias.map(urgencia => ({ urgencia, total: chUrg.get(urgencia) || 0 })),
+      recentes: (chamadosRecentesRaw || []).map((c: any) => ({
+        id: c.id,
+        titulo: c.titulo,
+        urgencia: c.urgencia,
+        status: c.status,
+        slaVencimento: c.slaVencimento ? c.slaVencimento.toISOString() : null,
+        slaVencido: !!c.slaVencimento && c.slaVencimento.getTime() < agora.getTime(),
+        createdAt: c.createdAt.toISOString(),
+        cliente: c.cliente,
+      })),
+    };
+
+    // produções
+    const prodMap = mapa(producoesStatusRaw, 'status');
+    const producoes = {
+      porStatus: statusProducao.map(status => ({ status, total: prodMap.get(status) || 0 })),
+    };
+
+    // analytics
+    let alcance30d = 0;
+    let engajamento30d = 0;
+    const serie = new Map<string, { alcance: number; engajamento: number }>();
+    const porCliente = new Map<string, { id: string; nomeFantasia: string; alcance: number; engajamento: number }>();
+    for (const s of snapshots || []) {
+      const alc = s.alcanceTotal ?? 0;
+      const eng = s.engajamentoTotal ?? 0;
+      alcance30d += alc;
+      engajamento30d += eng;
+      const dia = fmtDia(s.periodoFim);
+      const p = serie.get(dia) || { alcance: 0, engajamento: 0 };
+      p.alcance += alc;
+      p.engajamento += eng;
+      serie.set(dia, p);
+      const c = porCliente.get(s.clienteId) || {
+        id: s.clienteId,
+        nomeFantasia: s.cliente?.nomeFantasia ?? '',
+        alcance: 0,
+        engajamento: 0,
+      };
+      c.alcance += alc;
+      c.engajamento += eng;
+      porCliente.set(s.clienteId, c);
+    }
+
+    return {
+      novosPorMes,
+      servicosPorTipo,
+      tarefas,
+      chamados,
+      producoes,
+      analytics: {
+        clientesComGa4: clientesGa4 ?? 0,
+        clientesComInstagram: clientesInstagram ?? 0,
+        clientesComOpenpanel: clientesOpenpanel ?? 0,
+        alcance30d,
+        engajamento30d,
+        serieAlcance: [...serie.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([data, v]) => ({ data, ...v })),
+        topClientesAlcance: [...porCliente.values()].sort((a, b) => b.alcance - a.alcance).slice(0, 5),
+      },
     };
   }
 
   private async getRadarHospedagensResumo() {
-    const agora = new Date();
+    const hoje = new Intl.DateTimeFormat('en-CA', {
+      timeZone: process.env.TZ || 'America/Cuiaba', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const agora = new Date(`${hoje}T00:00:00.000Z`);
     const todos = await this.prisma.ativoHospedagem.findMany({
       where: {
         status: { in: ['ATIVO', 'PENDENTE_RENOVACAO'] },
@@ -403,9 +743,11 @@ export class AnalyticsService {
 
     const enriquecidos = todos.map(item => {
       let diasRestantes: number | null = null;
-      if (item.dataExpiracaoDominio) {
+      const vencimentos = [item.dataRenovacaoVps, item.dataExpiracaoDominio]
+        .filter((data): data is Date => data !== null);
+      if (vencimentos.length) {
         diasRestantes = Math.ceil(
-          (new Date(item.dataExpiracaoDominio).getTime() - agora.getTime()) / (1000 * 60 * 60 * 24),
+          (Math.min(...vencimentos.map(data => data.getTime())) - agora.getTime()) / (1000 * 60 * 60 * 24),
         );
       }
 

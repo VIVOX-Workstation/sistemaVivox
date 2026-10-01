@@ -9,6 +9,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - /app/dist
     env_file:
       - .env
     environment:
@@ -17,7 +18,7 @@ services:
       - postgres
       - redis
       - minio
-    command: sh -c "npx prisma generate && npm run start:dev"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run start:dev -- --config nest-cli.docker.json --path tsconfig.docker.json"
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -42,7 +43,7 @@ services:
       - redis_data:/data
 
   minio:
-    image: minio/minio:latest
+    image: ghcr.io/coollabsio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: vivox-minio
     restart: unless-stopped
     ports:
@@ -56,7 +57,7 @@ services:
       - minio_data:/data
 
   minio-init:
-    image: minio/mc:latest
+    image: ghcr.io/coollabsio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: vivox-minio-init
     depends_on:
       - minio

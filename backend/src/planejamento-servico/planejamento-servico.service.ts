@@ -74,6 +74,7 @@ export class PlanejamentoServicoService {
       data: {
         servicoContratadoId: dto.servicoContratadoId,
         ideiaBriefing: dto.ideiaBriefing,
+        flowNodes: dto.flowNodes,
         statusGeral: dto.statusGeral || StatusPlanejamento.BRIEFING,
         prazoEntrega: dto.prazoEntrega ? new Date(dto.prazoEntrega) : null,
         responsaveis: {

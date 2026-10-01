@@ -32,16 +32,22 @@ export class GithubAppService {
     const formattedPrivateKey = this.sanitizePrivateKey(privateKey);
 
 
-    return jwt.sign(payload, formattedPrivateKey, { algorithm: 'RS256' });
+    try {
+      return jwt.sign(payload, formattedPrivateKey, { algorithm: 'RS256' });
+    } catch {
+      throw new InternalServerErrorException('A chave privada do GitHub App está inválida no servidor. Verifique GITHUB_APP_PRIVATE_KEY.');
+    }
   }
 
   private sanitizePrivateKey(key: string): string {
     if (!key) return '';
     let sanitized = key.trim();
-    if (sanitized.startsWith('"') && sanitized.endsWith('"')) {
+    if ((sanitized.startsWith('"') && sanitized.endsWith('"')) ||
+        (sanitized.startsWith("'") && sanitized.endsWith("'"))) {
       sanitized = sanitized.substring(1, sanitized.length - 1);
     }
-    sanitized = sanitized.replace(/\\n/g, '\n');
+    // Deployment platforms may escape the backslashes again when rendering env files.
+    sanitized = sanitized.replace(/\\+r\\+n/g, '\n').replace(/\\+n/g, '\n').trim();
     return sanitized;
   }
 
@@ -57,14 +63,15 @@ export class GithubAppService {
       });
 
       if (!response.ok) {
-        this.logger.error(`Failed to list app installations: ${await response.text()}`);
-        return [];
+        this.logger.error(`Failed to list app installations: HTTP ${response.status}`);
+        throw new InternalServerErrorException(`Não foi possível consultar as instalações do GitHub App (HTTP ${response.status}). Verifique as credenciais do app no servidor.`);
       }
 
       return response.json();
     } catch (err) {
-      this.logger.error('Erro ao listar instalações do GitHub App:', err);
-      return [];
+      if (err instanceof InternalServerErrorException) throw err;
+      this.logger.error('Falha de comunicação ao listar instalações do GitHub App.');
+      throw new InternalServerErrorException('Não foi possível acessar o GitHub. Tente novamente em instantes.');
     }
   }
 

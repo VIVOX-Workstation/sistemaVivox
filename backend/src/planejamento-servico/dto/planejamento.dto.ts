@@ -19,6 +19,10 @@ export class EscopoItemDto {
 }
 
 export class CreatePlanejamentoDto {
+  @IsOptional()
+  @IsArray()
+  flowNodes?: any;
+
   @IsString()
   servicoContratadoId: string;
 
