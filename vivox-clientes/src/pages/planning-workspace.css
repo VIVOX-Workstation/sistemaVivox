@@ -64,6 +64,7 @@
   color: var(--pw-text);
   background-color: var(--pw-bg);
   min-height: 100%;
+  flex-shrink: 0; /* dentro do Layout (flex-col) não encolhe e perde o respiro inferior */
   position: relative;
   isolation: isolate;
   box-sizing: border-box;
@@ -444,5 +445,18 @@
   .planning-workspace .pw-glass-modal::after,
   .pw-glass-modal::after {
     display: none !important;
+  }
+}
+
+/* Raio padrão para controles de vidro sem classe rounded-* (em layer: utilitários Tailwind prevalecem) */
+@layer components {
+  .planning-workspace .pw-glass-pill,
+  .planning-workspace .pw-glass-control,
+  .planning-workspace .pw-glass-tab {
+    border-radius: 12px;
+  }
+
+  .planning-workspace .pw-glass-card {
+    border-radius: 20px;
   }
 }

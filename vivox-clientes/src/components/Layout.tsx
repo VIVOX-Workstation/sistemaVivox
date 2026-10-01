@@ -159,7 +159,7 @@ export function Layout() {
             
             <NavLink
               to="/hospedagens"
-              title={isSidebarCollapsed ? 'Radar de Renovações' : undefined}
+              title={isSidebarCollapsed ? 'Hospedagens' : undefined}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   isSidebarCollapsed ? 'justify-center' : ''
@@ -171,7 +171,7 @@ export function Layout() {
               }
             >
               <Globe className="w-4 h-4 text-[#C7A15F] shrink-0" />
-              {!isSidebarCollapsed && <span className="truncate">Radar de Renovações</span>}
+              {!isSidebarCollapsed && <span className="truncate">Hospedagens</span>}
             </NavLink>
 
             <NavLink
