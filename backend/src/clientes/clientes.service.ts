@@ -17,6 +17,10 @@ export class ClientesService {
   findAll() {
     return this.prisma.cliente.findMany({
       omit: { openpanelClientSecret: true },
+      include: {
+        responsavel: { select: { nome: true } },
+        _count: { select: { servicosContratados: true, ativosHospedagem: true } },
+      },
     });
   }
 
