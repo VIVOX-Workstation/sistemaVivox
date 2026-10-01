@@ -137,6 +137,41 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setColunas(getStoredColunas(workspaceId));
   }, [storageKey, workspaceId]);
 
+  // Tarefas importadas (ex.: Bitrix) ou criadas em outro navegador podem ter
+  // etapas que não existem na lista de colunas deste dispositivo (que fica no
+  // localStorage). Sem coluna, essas tarefas não apareciam no Kanban. Aqui
+  // detectamos as etapas com tarefas e criamos as colunas que faltam.
+  useEffect(() => {
+    let ativo = true;
+    tarefasApi
+      .getResumoEtapas({ projetoId: workspaceId })
+      .then((res) => {
+        if (!ativo) return;
+        const existentes = new Set(getStoredColunas(workspaceId).map((c) => c.id));
+        const faltantes = Object.entries(res.contadoresPorEtapa || {})
+          .filter(([status, qtd]) => qtd > 0 && !existentes.has(status))
+          .map(([status]) => ({
+            id: status,
+            titulo: status.replace(/^col_\d+_/i, '').replace(/_/g, ' ').toUpperCase(),
+            subtitulo: 'Etapa encontrada nas tarefas',
+            headerBg: '#8F8271',
+            cardBg: '#FFFFFF',
+            headerTextColor: '#FFFFFF',
+            isDefault: false,
+          }));
+        if (faltantes.length === 0) return;
+        setColunas((prev) => {
+          const ids = new Set(prev.map((c) => c.id));
+          const novas = faltantes.filter((c) => !ids.has(c.id));
+          return novas.length ? [...prev, ...novas] : prev;
+        });
+      })
+      .catch((e) => console.error('Erro ao detectar etapas do workspace:', e));
+    return () => {
+      ativo = false;
+    };
+  }, [workspaceId, refreshSignal]);
+
   // Dados de cada coluna são carregados sob demanda (paginados), não vêm
   // mais prontos do componente pai — cada etapa só busca o que precisa
   // mostrar, e busca mais conforme o usuário rola até o fim da lista.
