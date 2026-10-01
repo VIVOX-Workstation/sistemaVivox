@@ -19,17 +19,21 @@ import {
   ChevronRight,
   ChevronDown,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Globe
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export function Layout() {
   const { signOut } = useAuth();
   const location = useLocation();
-  const isFullBleed = 
-    location.pathname.startsWith('/gp') || 
+  const isFullBleed =
+    location.pathname === '/' ||
+    location.pathname.startsWith('/gp') ||
     location.pathname.startsWith('/cliente') || 
-    location.pathname === '/analytics';
+    location.pathname.startsWith('/analytics') ||
+    location.pathname === '/hospedagens' ||
+    location.pathname === '/renovacoes';
 
   const isMarcaVisible =
     location.pathname === '/' ||
@@ -153,6 +157,23 @@ export function Layout() {
               {!isSidebarCollapsed && <span className="truncate">Vivox Clientes</span>}
             </NavLink>
             
+            <NavLink
+              to="/hospedagens"
+              title={isSidebarCollapsed ? 'Radar de Renovações' : undefined}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                  isSidebarCollapsed ? 'justify-center' : ''
+                } ${
+                  isActive
+                    ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
+                    : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
+                }`
+              }
+            >
+              <Globe className="w-4 h-4 text-[#C7A15F] shrink-0" />
+              {!isSidebarCollapsed && <span className="truncate">Radar de Renovações</span>}
+            </NavLink>
+
             <NavLink
               to="/analytics"
               title={isSidebarCollapsed ? 'Vivox Analytics' : undefined}

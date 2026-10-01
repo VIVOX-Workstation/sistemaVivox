@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { 
@@ -10,26 +10,21 @@ import {
   MessageCircle, 
   Share2, 
   Edit2, 
-  Plus, 
-  Trash2, 
   Globe, 
   CheckCircle2, 
-  Clock, 
-  FileText, 
-  Sparkles, 
-  ShieldCheck,
   UserCheck,
-  MoreVertical,
   Calendar as CalendarIcon,
-  Video,
-  Info,
-  User,
   Camera,
   Image as ImageIcon,
   UploadCloud,
-  Link2,
-  Check,
-  Ticket
+  Ticket,
+  ChevronRight,
+  ChevronDown,
+  LayoutDashboard,
+  FolderKanban,
+  StickyNote,
+  ExternalLink,
+  Plus
 } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente, Contato, StatusCliente } from '../types';
@@ -39,26 +34,59 @@ import { Select } from '../components/Select';
 import { Modal } from '../components/Modal';
 
 import { OverviewTab } from '../components/ClientTabs/OverviewTab';
-import { HostingTab } from '../components/ClientTabs/HostingTab';
 import { NotesTab } from '../components/ClientTabs/NotesTab';
-import { MarketTab } from '../components/ClientTabs/MarketTab';
 import { ServicesTab } from '../components/ClientTabs/ServicesTab';
-import { AiContentStudioTab } from '../components/ClientTabs/AiContentStudioTab';
 import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
 import { chamadosApi } from '../api/chamados';
+import { formatarDataBR } from '../utils/hospedagemCalculo';
+import { useLiquidGlass } from '../hooks/useLiquidGlass';
+import './planning-workspace.css';
 
-type Tab = 'overview' | 'services' | 'ai-studio' | 'hosting' | 'market' | 'notes';
+type Tab = 'overview' | 'services' | 'notes';
+const VALID_TABS: Tab[] = ['overview', 'services', 'notes'];
+
+function ClientProfileSkeleton() {
+  return (
+    <div className="planning-workspace w-full space-y-6 animate-pulse" aria-busy="true" aria-label="Carregando perfil do cliente">
+      <div className="pw-lg-scene" aria-hidden="true" />
+      <div className="w-full space-y-6">
+        {/* Breadcrumb skeleton */}
+        <div className="h-6 w-48 rounded-lg bg-white/40" />
+
+        {/* Header Hero skeleton */}
+        <div className="pw-glass-panel p-6 h-56 rounded-3xl" />
+
+        {/* Tabs skeleton */}
+        <div className="flex gap-2">
+          <div className="h-10 w-32 rounded-xl bg-white/40" />
+          <div className="h-10 w-36 rounded-xl bg-white/40" />
+          <div className="h-10 w-28 rounded-xl bg-white/40" />
+        </div>
+
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="pw-glass-card h-28 rounded-2xl" />
+          ))}
+        </div>
+        <div className="pw-glass-panel h-64 rounded-3xl" />
+      </div>
+    </div>
+  );
+}
 
 export function ClientProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get('tab') as Tab;
   const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl || 'overview');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const raw = searchParams.get('tab') as Tab;
+    return raw && VALID_TABS.includes(raw) ? raw : 'overview';
+  });
   const [copiado, setCopiado] = useState(false);
 
-  // Chamados em aberto deste cliente (contador real da pílula "Demandas")
+  // Chamados em aberto deste cliente
   const [chamadosAbertos, setChamadosAbertos] = useState(0);
   const [isNovoChamadoModalOpen, setNovoChamadoModalOpen] = useState(false);
 
@@ -73,7 +101,7 @@ export function ClientProfile() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
 
-  // Modal de Edição dos Dados Cadastrais (Nome Fantasia, Razão Social, CNPJ, Status, etc.)
+  // Modal de Edição dos Dados Cadastrais
   const [isEditClientModalOpen, setEditClientModalOpen] = useState(false);
   const [editClientForm, setEditClientForm] = useState({
     nomeFantasia: '',
@@ -93,16 +121,30 @@ export function ClientProfile() {
 
   const fileInputLogoRef = useRef<HTMLInputElement>(null);
   const fileInputBannerRef = useRef<HTMLInputElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+
+  // Ativar efeitos Liquid Glass nos nós de vidro do container
+  useLiquidGlass(workspaceRef, !!cliente);
 
   useEffect(() => {
-    if (tabFromUrl && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      if (VALID_TABS.includes(tabParam as Tab)) {
+        if (tabParam !== activeTab) {
+          setActiveTab(tabParam as Tab);
+        }
+      } else {
+        // Query antiga (?tab=ai-studio|hosting|market) cai para overview
+        setActiveTab('overview');
+        setSearchParams({ tab: 'overview' });
+      }
     }
-  }, [tabFromUrl]);
+  }, [searchParams]);
 
   const handleTabSelect = (tab: Tab) => {
-    setActiveTab(tab);
-    setSearchParams({ tab });
+    const target = VALID_TABS.includes(tab) ? tab : 'overview';
+    setActiveTab(target);
+    setSearchParams({ tab: target });
   };
 
   useEffect(() => {
@@ -139,6 +181,18 @@ export function ClientProfile() {
     navigator.clipboard.writeText(window.location.href);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
+  };
+
+  // Alteração rápida de status do cliente direto no cabeçalho
+  const handleQuickStatusChange = async (novoStatus: StatusCliente) => {
+    if (!cliente || cliente.status === novoStatus) return;
+    try {
+      const res = await api.patch(`/clientes/${cliente.id}`, { status: novoStatus });
+      setCliente(res.data);
+    } catch (err) {
+      console.error('Erro ao atualizar status:', err);
+      alert('Erro ao atualizar status do cliente.');
+    }
   };
 
   const openEditClientModal = () => {
@@ -237,7 +291,7 @@ export function ClientProfile() {
     }
   };
 
-  // Salvar URLs digitadas no Modal
+  // Salvar URLs digitadas no Modal Visual
   const handleSaveVisualUrls = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cliente) return;
@@ -295,30 +349,25 @@ export function ClientProfile() {
   };
 
   if (!cliente) {
-    return (
-      <div className="flex-1 w-full h-full flex items-center justify-center py-32 text-[#8F8271]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#C7A15F] border-t-transparent animate-spin" />
-          <p className="text-xs font-bold uppercase tracking-wider text-[#1E1A16]">Carregando perfil do cliente...</p>
-        </div>
-      </div>
-    );
+    return <ClientProfileSkeleton />;
   }
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'overview', label: 'Visão Geral' },
-    { id: 'services', label: 'Mapa de Serviços' },
-    { id: 'ai-studio', label: '✨ Estúdio IA' },
-    { id: 'hosting', label: 'Landing Pages' },
-    { id: 'market', label: 'Mercado (IA)' },
-    { id: 'notes', label: 'Anotações' },
+  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview', label: 'Visão Geral', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'services', label: 'Mapa de Serviços', icon: <FolderKanban className="w-4 h-4" /> },
+    { id: 'notes', label: 'Anotações', icon: <StickyNote className="w-4 h-4" /> },
   ];
 
   const primeiroContato = cliente.contatos?.[0];
+  const telefoneContato = cliente.telefone || primeiroContato?.telefone;
+  const emailContato = cliente.email || primeiroContato?.email;
+  const siteUrl = cliente.gscSiteUrl;
 
   return (
-    <div className="flex-1 w-full h-full overflow-y-auto bg-transparent p-6 md:p-10 flex flex-col select-none">
-      {/* Hidden File Inputs para Upload Instantâneo */}
+    <div ref={workspaceRef} className="planning-workspace w-full space-y-6 select-none">
+      <div className="pw-lg-scene" aria-hidden="true" />
+
+      {/* Hidden File Inputs para Upload Direto */}
       <input
         type="file"
         ref={fileInputLogoRef}
@@ -334,459 +383,297 @@ export function ClientProfile() {
         className="hidden"
       />
 
-      <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
+      <div className="w-full space-y-6">
         {/* ========================================================================= */}
-        {/* TOP ROW: ← CLIENTE + STATUS PILL & AÇÕES RÁPIDAS (PALETA VIVOX GP)        */}
+        {/* 1. BREADCRUMB & VOLTAR                                                    */}
         {/* ========================================================================= */}
-        <div className="flex items-center justify-between gap-4 flex-wrap pb-1">
-          {/* Lado Esquerdo: ← Nome do Cliente / My Profile */}
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <nav aria-label="Navegação estrutural" className="flex items-center gap-2 text-xs">
             <button
               onClick={() => navigate('/clientes')}
-              title="Voltar para clientes"
-              className="w-10 h-10 rounded-full bg-[#FFFDF8] hover:bg-[#FAF2E4] flex items-center justify-center text-[#1E1A16] transition-all cursor-pointer shadow-2xs hover:scale-105"
+              title="Voltar para a lista de clientes"
+              className="pw-glass-control px-3 py-1.5 rounded-full font-bold text-[#625746] hover:text-[#1E1A16] flex items-center gap-1.5 cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4 text-[#1E1A16]" />
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Clientes</span>
             </button>
+            <ChevronRight className="w-3.5 h-3.5 text-[#C7A15F]" />
+            <span className="font-bold text-[#1E1A16] truncate max-w-[240px] sm:max-w-md">
+              {cliente.nomeFantasia}
+            </span>
+          </nav>
 
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl md:text-3xl font-black text-[#1E1A16] tracking-tight">
-                {cliente.nomeFantasia}
-              </h1>
+          {copiado && (
+            <div className="px-3 py-1 rounded-full bg-[#E6F4EA] border border-[#CEEAD6] text-[#247A4A] text-xs font-bold flex items-center gap-1.5 shadow-sm animate-fade-in">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Link do perfil copiado!</span>
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Lado Direito: Pílulas de Status, Editar Cadastro, Banner/Logo & Data */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {copiado && (
-              <span className="text-[12.5px] font-bold text-[#247A4A] flex items-center gap-1 animate-fade-in">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Link Copiado!
-              </span>
-            )}
+        {/* ========================================================================= */}
+        {/* 2. CABEÇALHO DO CLIENTE COMPACTO (HERO CARD COM LIQUID GLASS)             */}
+        {/* ========================================================================= */}
+        <div className="pw-glass-panel p-5 md:p-6 rounded-[28px] overflow-hidden relative space-y-5">
+          {/* Se houver banner, exibir faixa sutil de topo integrada */}
+          {cliente.bannerUrl && (
+            <div className="w-full h-24 sm:h-28 rounded-2xl overflow-hidden relative group -mt-1 -mx-1 mb-2">
+              <img
+                src={resolveMediaUrl(cliente.bannerUrl)}
+                alt={`Banner de ${cliente.nomeFantasia}`}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#14120E]/70 via-black/20 to-transparent" />
+              <button
+                type="button"
+                onClick={() => fileInputBannerRef.current?.click()}
+                title="Trocar capa superior"
+                className="absolute top-2.5 right-2.5 px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-[#FFFDF8] text-[11.5px] font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-sm"
+              >
+                <Camera className="w-3 h-3 text-[#C7A15F]" />
+                <span>{uploadingBanner ? 'Enviando...' : 'Trocar Capa'}</span>
+              </button>
+            </div>
+          )}
 
-            {/* Botão para Criar Chamado */}
-            <button
-              onClick={() => setNovoChamadoModalOpen(true)}
-              className="px-4 py-2 rounded-full bg-gradient-to-r from-[#181512] to-[#2A241E] text-white text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer hover:scale-105 border border-[#C7A15F]/40"
-            >
-              <Ticket className="w-3.5 h-3.5 text-[#C7A15F]" />
-              <span>Criar Chamado</span>
-            </button>
+          {/* Linha Principal de Identidade + Ações Rápidas */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            {/* Lado Esquerdo: Avatar + Dados de Identificação */}
+            <div className="flex items-center gap-4 min-w-0">
+              {/* Avatar do Cliente com Hover para Troca */}
+              <div
+                onClick={() => fileInputLogoRef.current?.click()}
+                title="Clique para alterar a logo da marca"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#FAF2E4] border-2 border-white/90 shadow-md flex items-center justify-center overflow-hidden shrink-0 relative group cursor-pointer transition-transform hover:scale-105"
+              >
+                {cliente.logoUrl ? (
+                  <img
+                    src={resolveMediaUrl(cliente.logoUrl)}
+                    alt={cliente.nomeFantasia}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl sm:text-3xl font-black text-[#8A6828]">
+                    {cliente.nomeFantasia.charAt(0).toUpperCase()}
+                  </span>
+                )}
 
-            {/* Botão para Editar Dados Cadastrais */}
-            <button
-              onClick={openEditClientModal}
-              className="px-4 py-2 rounded-full bg-[#181512] hover:bg-[#2A241E] text-[#C7A15F] text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer hover:scale-105 border border-[#C7A15F]/20"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>Editar Cadastro</span>
-            </button>
+                {/* Hover overlay de câmera */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10.5px] font-bold gap-0.5">
+                  <Camera className="w-4 h-4 text-[#C7A15F]" />
+                  <span>{uploadingLogo ? '...' : 'Trocar'}</span>
+                </div>
+              </div>
 
-            {/* Botão para Alterar Capa / Imagem da Marca */}
-            <button
-              onClick={() => setVisualModalOpen(true)}
-              className="px-4 py-2 rounded-full bg-[#FFFDF8] hover:bg-[#FAF2E4] text-[#1E1A16] text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer hover:scale-105"
-            >
-              <Camera className="w-3.5 h-3.5 text-[#C7A15F]" />
-              <span>Imagens / Banner</span>
-            </button>
+              {/* Textos de Identificação */}
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-black text-[#1E1A16] tracking-tight truncate">
+                    {cliente.nomeFantasia}
+                  </h1>
 
-            <button
-              onClick={handleCopyLink}
-              title="Copiar Link do Perfil"
-              className="w-9 h-9 rounded-full bg-[#FFFDF8] hover:bg-[#FAF2E4] text-[#1E1A16] flex items-center justify-center shadow-2xs transition-all cursor-pointer hover:scale-105"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
+                  {/* Seletor / Dropdown Rápido de Status */}
+                  <div className="relative inline-block">
+                    <select
+                      value={cliente.status}
+                      onChange={(e) => handleQuickStatusChange(e.target.value as StatusCliente)}
+                      aria-label="Alterar status do cliente"
+                      title="Clique para alterar o status da conta"
+                      className={`text-[11.5px] font-black tracking-wider uppercase px-3 py-1 rounded-full cursor-pointer outline-none border transition-all appearance-none pr-6 shadow-2xs ${
+                        cliente.status === 'ATIVO'
+                          ? 'text-[#247A4A] bg-[#247A4A]/10 border-[#247A4A]/30 hover:bg-[#247A4A]/20'
+                          : cliente.status === 'PROSPECT'
+                          ? 'text-[#B45309] bg-[#FFA800]/15 border-[#FFA800]/40 hover:bg-[#FFA800]/25'
+                          : cliente.status === 'PAUSADO'
+                          ? 'text-[#625746] bg-[#8F8271]/15 border-[#8F8271]/30 hover:bg-[#8F8271]/25'
+                          : 'text-[#B83B32] bg-[#B83B32]/10 border-[#B83B32]/30 hover:bg-[#B83B32]/20'
+                      }`}
+                    >
+                      <option value="ATIVO">🟢 ATIVO</option>
+                      <option value="PROSPECT">⚡ PROSPECT</option>
+                      <option value="PAUSADO">⏸️ PAUSADO</option>
+                      <option value="ENCERRADO">🔴 ENCERRADO</option>
+                    </select>
+                    <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                  </div>
+                </div>
 
-            {/* Pílula de Status (Ativo / Prospect) */}
-            <span className={`px-4 py-2 rounded-full text-xs font-black tracking-wider uppercase shadow-2xs flex items-center gap-1.5 ${
-              cliente.status === 'ATIVO'
-                ? 'bg-[#247A4A]/10 text-[#247A4A] border border-[#247A4A]/30'
-                : cliente.status === 'PROSPECT'
-                ? 'bg-[#FFA800]/15 text-[#B45309] border border-[#FFA800]/40'
-                : cliente.status === 'PAUSADO'
-                ? 'bg-[#8F8271]/15 text-[#625746] border border-[#8F8271]/30'
-                : 'bg-[#B83B32]/10 text-[#B83B32] border border-[#B83B32]/30'
-            }`}>
-              <span className="w-2 h-2 rounded-full bg-current" />
-              <span>{cliente.status}</span>
-            </span>
+                {cliente.razaoSocial && cliente.razaoSocial !== cliente.nomeFantasia && (
+                  <p className="text-xs text-[#8F8271] truncate font-medium">
+                    {cliente.razaoSocial}
+                  </p>
+                )}
 
-            {/* Pílula de Data */}
-            <span className="px-4 py-2 rounded-full bg-[#FFFDF8] text-xs font-bold text-[#625746] shadow-2xs flex items-center gap-2">
-              <span>{new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
-              <CalendarIcon className="w-3.5 h-3.5 text-[#C7A15F]" />
-            </span>
+                {/* Badges de Meta-informação */}
+                <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#625746] bg-white/70 px-2.5 py-0.5 rounded-full border border-[#E8D4B4]/50">
+                    <Building2 className="w-3 h-3 text-[#C7A15F]" />
+                    <span>{cliente.segmento || 'Segmento não informado'}</span>
+                  </span>
+
+                  {cliente.responsavel?.nome && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#625746] bg-white/70 px-2.5 py-0.5 rounded-full border border-[#E8D4B4]/50">
+                      <UserCheck className="w-3 h-3 text-[#C7A15F]" />
+                      <span>Resp: {cliente.responsavel.nome}</span>
+                    </span>
+                  )}
+
+                  {cliente.dataInicioContrato && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#625746] bg-white/70 px-2.5 py-0.5 rounded-full border border-[#E8D4B4]/50">
+                      <CalendarIcon className="w-3 h-3 text-[#C7A15F]" />
+                      <span>Desde {formatarDataBR(cliente.dataInicioContrato)}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Lado Direito: Ações Principais Agrupadas & Links Úteis */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              {/* Links de Contato Rápido (Ícones em Vidro) */}
+              <div className="flex items-center gap-1.5">
+                {siteUrl && (
+                  <a
+                    href={siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Abrir site (${siteUrl})`}
+                    className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#1E1A16] hover:bg-white transition-all shadow-2xs"
+                  >
+                    <Globe className="w-4 h-4 text-[#7A6440]" />
+                  </a>
+                )}
+
+                {telefoneContato && (
+                  <a
+                    href={`https://wa.me/55${telefoneContato.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Conversar no WhatsApp (${telefoneContato})`}
+                    className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#247A4A] bg-[#247A4A]/10 border-[#247A4A]/30 hover:bg-[#247A4A]/20 transition-all shadow-2xs"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </a>
+                )}
+
+                {emailContato && (
+                  <a
+                    href={`mailto:${emailContato}`}
+                    title={`Enviar e-mail (${emailContato})`}
+                    className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#1E1A16] hover:bg-white transition-all shadow-2xs"
+                  >
+                    <Mail className="w-4 h-4 text-[#7A6440]" />
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => navigate(`/analytics/${cliente.id}`)}
+                  title="Acessar painel de Analytics da conta"
+                  className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#1E1A16] hover:bg-white transition-all cursor-pointer shadow-2xs"
+                >
+                  <BarChart2 className="w-4 h-4 text-[#7A6440]" />
+                </button>
+              </div>
+
+              {/* Botões de Ação Agrupados */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Criar Chamado */}
+                <button
+                  type="button"
+                  onClick={() => setNovoChamadoModalOpen(true)}
+                  className="pw-glass-control pw-glass-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs hover:scale-[1.02]"
+                >
+                  <Ticket className="w-4 h-4 text-[#C7A15F]" />
+                  <span>Criar Chamado</span>
+                </button>
+
+                {/* Editar Cadastro */}
+                <button
+                  type="button"
+                  onClick={openEditClientModal}
+                  className="pw-glass-control px-3.5 py-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-[#8A6828]" />
+                  <span>Editar Cadastro</span>
+                </button>
+
+                {/* Personalizar Logo & Capa */}
+                <button
+                  type="button"
+                  onClick={() => setVisualModalOpen(true)}
+                  title="Alterar Logo e Capa do cliente"
+                  className="pw-glass-control px-3 py-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#8A6828]" />
+                  <span className="hidden sm:inline">Capa / Logo</span>
+                </button>
+
+                {/* Copiar Link */}
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  title="Copiar link do cliente"
+                  className="pw-glass-control p-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center justify-center cursor-pointer shadow-2xs"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* LAYOUT PRINCIPAL DE 2 COLUNAS CLEAN (CORES VIVOX GP)                      */}
+        {/* 3. NAVEGAÇÃO DE ABAS EM PILLS GLASS                                       */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* ======================================================================= */}
-          {/* COLUNA ESQUERDA: PROFILE CARD COM BANNER & LOGO + DETALHES (COLS 1-4)   */}
-          {/* ======================================================================= */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Card 1: Perfil do Cliente com BANNER DE CAPA & LOGO EDITÁVEL */}
-            <div className="bg-[#FFFDF8] rounded-[28px] shadow-xs overflow-hidden flex flex-col">
-              {/* BANNER DE CAPA DO CLIENTE */}
-              <div className="w-full h-32 md:h-36 relative overflow-hidden group">
-                {cliente.bannerUrl ? (
-                  <img
-                    src={resolveMediaUrl(cliente.bannerUrl)}
-                    alt={`Banner de ${cliente.nomeFantasia}`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-r from-[#181512] via-[#2B2319] to-[#1E1A16] flex items-center justify-end pr-5 relative">
-                    <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#C7A15F_1px,transparent_1px)] [background-size:16px_16px]" />
-                    <span className="text-[12px] font-black uppercase tracking-widest text-[#C7A15F]/40 select-none">
-                      VIVOX BRAND COVER
-                    </span>
-                  </div>
-                )}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabSelect(tab.id)}
+                className={`pw-glass-tab px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+                  isActive ? 'is-active text-[#7A6440]' : 'text-[#625746]'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-                {/* Botão de Troca Rápida de Banner sobre a Capa */}
-                <button
-                  onClick={() => fileInputBannerRef.current?.click()}
-                  title="Alterar imagem de capa / banner"
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-[#FFFDF8] text-[12px] font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-sm hover:scale-105"
-                >
-                  <Camera className="w-3.5 h-3.5 text-[#C7A15F]" />
-                  <span>{uploadingBanner ? 'Enviando...' : 'Capa'}</span>
-                </button>
-              </div>
+        {/* ========================================================================= */}
+        {/* 4. CONTEÚDO DA ABA ATIVA (LARGURA TOTAL SEM ESTOURO DE FUNDO)             */}
+        {/* ========================================================================= */}
+        <div className="w-full min-w-0">
+          {activeTab === 'overview' && (
+            <OverviewTab
+              cliente={cliente}
+              onChange={loadCliente}
+              onNavigateTab={(t) => handleTabSelect(t as Tab)}
+              onEditClient={openEditClientModal}
+              onOpenChamado={() => setNovoChamadoModalOpen(true)}
+              onManageContatos={() => {
+                setCurrentContato({});
+                setContatoModalOpen(true);
+              }}
+            />
+          )}
 
-              {/* CONTEÚDO DO PERFIL (AVATAR SOBREPOSTO + NOMES + AÇÕES) */}
-              <div className="relative z-10 p-6 pt-0 space-y-5">
-                {/* Linha do Avatar e Botão Editar */}
-                <div className="flex items-end justify-between gap-3 -mt-10 mb-2">
-                  {/* Avatar Circular com Fundo Dourado Vivox e Botão de Foto */}
-                  <div 
-                    onClick={() => fileInputLogoRef.current?.click()}
-                    title="Clique para alterar a foto/logo do cliente"
-                    className="w-20 h-20 rounded-3xl bg-[#FAF2E4] border-4 border-[#FFFDF8] shadow-md flex items-center justify-center overflow-hidden relative z-20 group cursor-pointer transition-transform hover:scale-105 shrink-0"
-                  >
-                    {cliente.logoUrl ? (
-                      <img
-                        src={resolveMediaUrl(cliente.logoUrl)}
-                        alt={cliente.nomeFantasia}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-3xl font-black text-[#8A6828]">
-                        {cliente.nomeFantasia.charAt(0).toUpperCase()}
-                      </span>
-                    )}
+          {activeTab === 'services' && <ServicesTab cliente={cliente} />}
 
-                    {/* Hover Overlay com Ícone de Câmera */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-bold gap-0.5">
-                      <Camera className="w-4 h-4 text-[#C7A15F]" />
-                      <span>{uploadingLogo ? '...' : 'Trocar'}</span>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={openEditClientModal}
-                    title="Editar Dados Cadastrais"
-                    className="w-8 h-8 rounded-full bg-[#FAF7F2] hover:bg-[#FAF2E4] flex items-center justify-center text-[#8F8271] hover:text-[#1E1A16] transition-colors cursor-pointer mb-1 shadow-2xs"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Nome e Segmento */}
-                <div>
-                  <h2 className="text-xl font-black text-[#1E1A16] leading-tight">
-                    {cliente.nomeFantasia}
-                  </h2>
-                  <p className="text-xs font-semibold text-[#8F8271] mt-0.5 flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    {cliente.segmento || 'Segmento da Marca'}
-                  </p>
-                </div>
-
-                {/* Barra de Ações Redondas: [ ✉ ] [ 📞 ] [ 💬 ] [ 📊 ] */}
-                <div className="flex items-center gap-2.5 pt-1">
-                  {(cliente.email || primeiroContato?.email) ? (
-                    <a
-                      href={`mailto:${cliente.email || primeiroContato?.email}`}
-                      title={cliente.email || primeiroContato?.email}
-                      className="w-10 h-10 rounded-2xl bg-[#181512] text-[#C7A15F] flex items-center justify-center shadow-2xs hover:scale-105 transition-all border border-[#C7A15F]/20"
-                    >
-                      <Mail className="w-4 h-4" />
-                    </a>
-                  ) : (
-                    <button className="w-10 h-10 rounded-2xl bg-[#FAF7F2] text-[#8F8271] opacity-60 flex items-center justify-center cursor-not-allowed">
-                      <Mail className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {(cliente.telefone || primeiroContato?.telefone) ? (
-                    <a
-                      href={`tel:${(cliente.telefone || primeiroContato?.telefone || '').replace(/\D/g, '')}`}
-                      title={cliente.telefone || primeiroContato?.telefone}
-                      className="w-10 h-10 rounded-2xl bg-[#FAF7F2] hover:bg-[#181512] hover:text-[#C7A15F] text-[#1E1A16] flex items-center justify-center transition-all hover:scale-105 shadow-2xs"
-                    >
-                      <Phone className="w-4 h-4" />
-                    </a>
-                  ) : (
-                    <button className="w-10 h-10 rounded-2xl bg-[#FAF7F2] text-[#8F8271] opacity-60 flex items-center justify-center cursor-not-allowed">
-                      <Phone className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {(cliente.telefone || primeiroContato?.telefone) ? (
-                    <a
-                      href={`https://wa.me/55${(cliente.telefone || primeiroContato?.telefone || '').replace(/\D/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Conversar no WhatsApp"
-                      className="w-10 h-10 rounded-2xl bg-[#247A4A]/10 hover:bg-[#247A4A] hover:text-white text-[#247A4A] flex items-center justify-center transition-all hover:scale-105 shadow-2xs border border-[#247A4A]/20"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </a>
-                  ) : (
-                    <button className="w-10 h-10 rounded-2xl bg-[#FAF7F2] text-[#8F8271] opacity-60 flex items-center justify-center cursor-not-allowed">
-                      <MessageCircle className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => navigate(`/analytics/${cliente.id}`)}
-                    title="Métricas do Cliente"
-                    className="w-10 h-10 rounded-2xl bg-[#FAF7F2] hover:bg-[#181512] hover:text-[#C7A15F] text-[#1E1A16] flex items-center justify-center transition-all hover:scale-105 cursor-pointer shadow-2xs"
-                  >
-                    <BarChart2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Contrato & Chamados em Aberto (Cores Vivox GP) */}
-                <div className="pt-2">
-                  <span className="text-[12.5px] font-bold text-[#8F8271] block mb-2">
-                    Contrato & Demandas
-                  </span>
-                  <div className="flex items-center justify-between gap-2">
-                    {/* Pílula de Data */}
-                    <div className="px-4 py-2 rounded-2xl bg-[#FAF7F2] flex items-center gap-2 text-xs font-bold text-[#1E1A16]">
-                      <span>
-                        {cliente.dataInicioContrato
-                          ? new Date(cliente.dataInicioContrato).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-                          : 'Contrato Ativo'}
-                      </span>
-                      <CalendarIcon className="w-3.5 h-3.5 text-[#C7A15F]" />
-                    </div>
-
-                    {/* Pílula de Chamados em Aberto */}
-                    <div
-                      onClick={() => navigate('/gp')}
-                      title="Chamados em aberto ou em andamento"
-                      className="px-4 py-2 rounded-2xl bg-[#FAF2E4] hover:bg-[#E8D4B4] transition-colors flex items-center gap-1.5 text-xs font-bold text-[#8A6828] cursor-pointer shadow-2xs"
-                    >
-                      <span>Chamados</span>
-                      <span className="w-5 h-5 rounded-full bg-[#181512] text-[#C7A15F] text-[12px] flex items-center justify-center font-bold">
-                        {chamadosAbertos}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Detailed Information (Cores Vivox GP) */}
-            <div className="bg-[#FFFDF8] rounded-[28px] p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-1">
-                <h3 className="text-sm font-black text-[#1E1A16] tracking-tight">
-                  Informações Detalhadas
-                </h3>
-                <button
-                  onClick={openEditClientModal}
-                  className="text-xs font-bold text-[#8A6828] hover:text-[#1E1A16] flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>Editar</span>
-                </button>
-              </div>
-
-              {/* Lista de Linhas com Bolinha Preta e Ícone à Direita */}
-              <div className="space-y-2.5">
-                {/* Linha 1: Full Name / Razão Social */}
-                <div 
-                  onClick={openEditClientModal}
-                  className="p-3.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#FAF2E4] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Razão Social</span>
-                    </div>
-                    <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {cliente.razaoSocial || cliente.nomeFantasia}
-                    </p>
-                  </div>
-                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-[#247A4A]/15 text-[#247A4A] shrink-0">
-                    {cliente.status}
-                  </span>
-                </div>
-
-                {/* Linha 2: CNPJ / CPF */}
-                <div 
-                  onClick={openEditClientModal}
-                  className="p-3.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#FAF2E4] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">CNPJ / CPF</span>
-                    </div>
-                    <p className="font-mono text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {cliente.cnpjCpf || 'Não informado'}
-                    </p>
-                  </div>
-                  <Info className="w-4 h-4 text-[#8F8271] shrink-0 group-hover:text-[#1E1A16]" />
-                </div>
-
-                {/* Linha 3: Email Principal */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Email Address</span>
-                    </div>
-                    <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {cliente.email || primeiroContato?.email || 'Nenhum e-mail'}
-                    </p>
-                  </div>
-                  <Mail className="w-4 h-4 text-[#C7A15F] shrink-0" />
-                </div>
-
-                {/* Linha 4: Contact Number */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Telefone de Contato</span>
-                    </div>
-                    <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {cliente.telefone || primeiroContato?.telefone || 'Não cadastrado'}
-                    </p>
-                  </div>
-                  <Phone className="w-4 h-4 text-[#C7A15F] shrink-0" />
-                </div>
-
-                {/* Localização */}
-                <div 
-                  onClick={openEditClientModal}
-                  className="p-3.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#FAF2E4] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Localização</span>
-                    </div>
-                    <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {cliente.localizacao || 'Não cadastrada'}
-                    </p>
-                  </div>
-                  <Globe className="w-4 h-4 text-[#8A6828] shrink-0 group-hover:text-[#1E1A16]" />
-                </div>
-
-                {/* Linha 5: Designation / Responsável */}
-                <div 
-                  onClick={openEditClientModal}
-                  className="p-3.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#FAF2E4] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#1E1A16]" />
-                      <span className="text-[12px] font-bold text-[#8F8271] uppercase">Segmento</span>
-                    </div>
-                    <p className="text-xs font-bold text-[#1E1A16] mt-0.5 truncate pl-3.5">
-                      {cliente.segmento || 'Não informado'}
-                    </p>
-                  </div>
-                  <UserCheck className="w-4 h-4 text-[#8A6828] shrink-0" />
-                </div>
-              </div>
-
-              {/* Botão de Adicionar / Gerenciar Contatos */}
-              <div className="pt-2">
-                <button
-                  onClick={() => {
-                    setCurrentContato({});
-                    setContatoModalOpen(true);
-                  }}
-                  className="w-full py-2.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#181512] hover:text-[#C7A15F] text-xs font-bold text-[#1E1A16] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                >
-                  <Plus className="w-3.5 h-3.5 text-[#C7A15F]" />
-                  <span>Gerenciar Contatos ({cliente.contatos?.length || 0})</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Acessos e Credenciais (Visível apenas se preenchido) */}
-            {cliente.loginsSenhas && (
-              <div className="bg-[#FFFDF8] rounded-[28px] p-6 shadow-xs space-y-3 mt-6">
-                <div className="flex items-center gap-2 pb-1">
-                  <ShieldCheck className="w-4 h-4 text-[#8A6828]" />
-                  <h3 className="text-sm font-black text-[#1E1A16] tracking-tight">
-                    Acessos & Credenciais
-                  </h3>
-                </div>
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8D4B4]">
-                  <p className="text-xs text-[#1E1A16] whitespace-pre-wrap leading-relaxed">
-                    {cliente.loginsSenhas}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ======================================================================= */}
-          {/* COLUNA DIREITA: ABAS & HUB DE OPERAÇÕES (COLS 5-12)                     */}
-          {/* ======================================================================= */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Barra de Abas Estilo Pílula Limpa com Cores Vivox GP */}
-            <div className="bg-[#FFFDF8] rounded-full p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabSelect(tab.id)}
-                  className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'bg-[#181512] text-[#C7A15F] shadow-xs border border-[#C7A15F]/20'
-                      : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#FAF7F2]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Renderização da Aba Ativa */}
-            <div className="w-full">
-              {activeTab === 'overview' && (
-                <OverviewTab 
-                  cliente={cliente} 
-                  onChange={loadCliente} 
-                  onNavigateTab={(tab) => handleTabSelect(tab as Tab)}
-                />
-              )}
-              {activeTab === 'services' && <ServicesTab cliente={cliente} />}
-              {activeTab === 'ai-studio' && <AiContentStudioTab cliente={cliente} />}
-              {activeTab === 'hosting' && <HostingTab cliente={cliente} />}
-              {activeTab === 'market' && <MarketTab clienteId={cliente.id} />}
-              {activeTab === 'notes' && <NotesTab cliente={cliente} onChange={loadCliente} />}
-            </div>
-          </div>
+          {activeTab === 'notes' && <NotesTab cliente={cliente} onChange={loadCliente} />}
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL: EDITAR DADOS CADASTRAIS DO CLIENTE (NOME, RAZÃO, CNPJ, STATUS, ETC) */}
+      {/* MODAIS PRESERVADOS COM TODA A LÓGICA DE DADOS                             */}
       {/* ========================================================================= */}
+
+      {/* Modal: Editar Dados Cadastrais */}
       <Modal
         isOpen={isEditClientModalOpen}
         onClose={() => setEditClientModalOpen(false)}
@@ -899,7 +786,7 @@ export function ClientProfile() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Logins e Senhas</label>
+              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Logins e Senhas / Vault</label>
               <Input
                 value={editClientForm.loginsSenhas}
                 onChange={(e) => setEditClientForm({ ...editClientForm, loginsSenhas: e.target.value })}
@@ -939,16 +826,14 @@ export function ClientProfile() {
         </form>
       </Modal>
 
-      {/* ========================================================================= */}
-      {/* MODAL: PERSONALIZAR IMAGEM (LOGO) E BANNER DE CAPA DO CLIENTE             */}
-      {/* ========================================================================= */}
+      {/* Modal: Identidade Visual (Logo & Capa) */}
       <Modal
         isOpen={isVisualModalOpen}
         onClose={() => setVisualModalOpen(false)}
         title="Identidade Visual do Cliente (Logo & Capa)"
       >
         <form onSubmit={handleSaveVisualUrls} className="space-y-5">
-          {/* Seção 1: Logo / Foto de Perfil */}
+          {/* Seção Logo */}
           <div className="p-4 rounded-2xl bg-[#FAF7F2] space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-[#1E1A16] flex items-center gap-1.5">
@@ -958,7 +843,7 @@ export function ClientProfile() {
               <button
                 type="button"
                 onClick={() => fileInputLogoRef.current?.click()}
-                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12.5px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
+                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
               >
                 <UploadCloud className="w-3.5 h-3.5" />
                 <span>{uploadingLogo ? 'Enviando...' : 'Fazer Upload'}</span>
@@ -968,7 +853,7 @@ export function ClientProfile() {
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-2xl bg-[#FAF2E4] border border-[#E8D4B4] flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                 {logoUrlInput ? (
-                  <img src={resolveMediaUrl(logoUrlInput)} alt="Preview" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(logoUrlInput)} alt="Preview Logo" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-xl font-bold text-[#8A6828]">
                     {cliente.nomeFantasia.charAt(0)}
@@ -976,7 +861,7 @@ export function ClientProfile() {
                 )}
               </div>
               <div className="flex-1">
-                <label className="block text-[12.5px] font-bold text-[#8F8271] mb-1">
+                <label className="block text-[12px] font-bold text-[#8F8271] mb-1">
                   Ou cole a URL direta da imagem:
                 </label>
                 <Input
@@ -988,7 +873,7 @@ export function ClientProfile() {
             </div>
           </div>
 
-          {/* Seção 2: Banner / Capa de Fundo */}
+          {/* Seção Banner */}
           <div className="p-4 rounded-2xl bg-[#FAF7F2] space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-[#1E1A16] flex items-center gap-1.5">
@@ -998,7 +883,7 @@ export function ClientProfile() {
               <button
                 type="button"
                 onClick={() => fileInputBannerRef.current?.click()}
-                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12.5px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
+                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
               >
                 <UploadCloud className="w-3.5 h-3.5" />
                 <span>{uploadingBanner ? 'Enviando...' : 'Fazer Upload'}</span>
@@ -1016,7 +901,7 @@ export function ClientProfile() {
                 )}
               </div>
               <div>
-                <label className="block text-[12.5px] font-bold text-[#8F8271] mb-1">
+                <label className="block text-[12px] font-bold text-[#8F8271] mb-1">
                   Ou cole a URL direta do banner:
                 </label>
                 <Input
@@ -1039,9 +924,7 @@ export function ClientProfile() {
         </form>
       </Modal>
 
-      {/* ========================================================================= */}
-      {/* MODAL: ADICIONAR / EDITAR CONTATO                                         */}
-      {/* ========================================================================= */}
+      {/* Modal: Adicionar / Editar Contato */}
       <Modal
         isOpen={isContatoModalOpen}
         onClose={() => setContatoModalOpen(false)}
@@ -1095,9 +978,7 @@ export function ClientProfile() {
         </form>
       </Modal>
 
-      {/* ========================================================================= */}
-      {/* MODAL: NOVO CHAMADO (CENTRAL DE CHAMADOS)                                 */}
-      {/* ========================================================================= */}
+      {/* Modal: Novo Chamado */}
       {isNovoChamadoModalOpen && (
         <NovoChamadoModal
           initialClienteId={cliente.id}

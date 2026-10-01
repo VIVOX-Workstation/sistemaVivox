@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BarChart } from '@mui/x-charts/BarChart';
+import { PieChart } from '@mui/x-charts/PieChart';
 import type { RadarHospedagemResult, AtivoHospedagem } from '../types';
 import { api } from '../api/client';
 import {
@@ -7,284 +9,530 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
+  CalendarOff,
   Search,
   ExternalLink,
   Building2,
   RefreshCw,
-  Layout,
+  Server,
+  ArrowRight,
+  Layers,
 } from 'lucide-react';
-import { Input } from '../components/Input';
-import { Select } from '../components/Select';
+import { formatarDataBR, calcularDiasRestantes } from '../utils/hospedagemCalculo';
+import { Panel, EmptyChart, CHART_COLORS, CHART_HEIGHT, nf } from '../components/dashboard/DashboardShared';
+import './planning-workspace.css';
+
+type Urgencia = 'CRITICO' | 'ATENCAO' | 'EM_DIA' | 'SEM_DATA';
+type Filtro = 'TODOS' | Urgencia;
+
+const URGENCIA_META: Record<Urgencia, { label: string; color: string; badge: string }> = {
+  CRITICO: { label: 'Críticos', color: CHART_COLORS.danger, badge: 'text-[#B83B32] bg-[#FDF2F2] border-[#FCDAD7]' },
+  ATENCAO: { label: 'Atenção', color: CHART_COLORS.gold, badge: 'text-[#8A6828] bg-[#FAF2E4] border-[#E8D4B4]' },
+  EM_DIA: { label: 'Em dia', color: CHART_COLORS.success, badge: 'text-[#247A4A] bg-[#E6F4EA] border-[#CEEAD6]' },
+  SEM_DATA: { label: 'Sem data', color: CHART_COLORS.taupe, badge: 'text-[#5E574C] bg-[#EEE7DC] border-[#D8CBB8]' },
+};
+
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+interface Linha {
+  ativo: AtivoHospedagem;
+  nivel: Urgencia;
+  menor: number | null;
+  tipo: 'VPS' | 'DOMINIO' | null;
+  dataProxima: string | null;
+  diasVps: number | null;
+  diasDom: number | null;
+}
+
+function montarLinha(ativo: AtivoHospedagem): Linha {
+  const diasVps =
+    typeof ativo.diasParaVps === 'number' ? ativo.diasParaVps : calcularDiasRestantes(ativo.dataRenovacaoVps);
+  const diasDom =
+    typeof ativo.diasParaDominio === 'number'
+      ? ativo.diasParaDominio
+      : calcularDiasRestantes(ativo.dataExpiracaoDominio);
+
+  let tipo: Linha['tipo'] = null;
+  let menor: number | null = null;
+  if (diasVps !== null && (diasDom === null || diasVps <= diasDom)) {
+    tipo = 'VPS';
+    menor = diasVps;
+  } else if (diasDom !== null) {
+    tipo = 'DOMINIO';
+    menor = diasDom;
+  }
+  if (typeof ativo.menorDias === 'number') menor = ativo.menorDias;
+
+  const nivel: Urgencia =
+    ativo.nivelUrgencia ??
+    (menor === null ? 'SEM_DATA' : menor <= 7 ? 'CRITICO' : menor <= 30 ? 'ATENCAO' : 'EM_DIA');
+
+  return {
+    ativo,
+    nivel,
+    menor,
+    tipo,
+    dataProxima: tipo === 'VPS' ? ativo.dataRenovacaoVps ?? null : tipo === 'DOMINIO' ? ativo.dataExpiracaoDominio ?? null : null,
+    diasVps,
+    diasDom,
+  };
+}
+
+function textoDias(dias: number | null): string {
+  if (dias === null) return 'Sem data definida';
+  if (dias === 0) return 'Vence hoje';
+  if (dias < 0) return `Venceu há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'dia' : 'dias'}`;
+  return `em ${dias} ${dias === 1 ? 'dia' : 'dias'}`;
+}
+
+function UrgenciaBadge({ nivel, menor }: { nivel: Urgencia; menor: number | null }) {
+  const meta = URGENCIA_META[nivel];
+  const Icon = nivel === 'CRITICO' ? AlertTriangle : nivel === 'ATENCAO' ? Clock : nivel === 'EM_DIA' ? CheckCircle2 : CalendarOff;
+  const texto =
+    nivel === 'CRITICO' ? (menor !== null && menor < 0 ? 'Vencido' : 'Crítico') : nivel === 'ATENCAO' ? 'Atenção' : nivel === 'EM_DIA' ? 'Em dia' : 'Sem data';
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11.5px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${meta.badge}`}>
+      <Icon className="w-3 h-3 shrink-0" /> {texto}
+    </span>
+  );
+}
+
+function TipoTag({ tipo }: { tipo: Linha['tipo'] }) {
+  if (!tipo) return <span className="text-[#8F8271]">-</span>;
+  const Icon = tipo === 'VPS' ? Server : Globe;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#1E1A16] whitespace-nowrap">
+      <Icon className="w-3.5 h-3.5 text-[#7A6440]" /> {tipo === 'VPS' ? 'Hospedagem (VPS)' : 'Domínio'}
+    </span>
+  );
+}
+
+function RadarSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Carregando radar">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="pw-glass-card h-24" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="pw-glass-panel h-72 lg:col-span-2" />
+        <div className="pw-glass-panel h-72" />
+      </div>
+      <div className="pw-glass-panel h-80" />
+    </div>
+  );
+}
+
+interface KpiProps {
+  label: string;
+  value: number;
+  hint: string;
+  icon: React.ReactNode;
+  color?: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+function Kpi({ label, value, hint, icon, color, active, onClick }: KpiProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`pw-glass-card p-4 text-left flex flex-col gap-1.5 cursor-pointer min-w-0 ${
+        active ? 'ring-2 ring-[#C7A15F]' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2 text-xs font-semibold">
+        <span className="truncate text-[#5E574C]">{label}</span>
+        <span style={{ color: color ?? '#7A6440' }}>{icon}</span>
+      </div>
+      <span className="text-2xl font-bold" style={{ color: color ?? '#1E1A16' }}>
+        {nf.format(value)}
+      </span>
+      <span className="text-[11.5px] text-[#5E574C] truncate">{hint}</span>
+    </button>
+  );
+}
 
 export function HostingRadar() {
   const [radar, setRadar] = useState<RadarHospedagemResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
-  const [filterUrgencia, setFilterUrgencia] = useState<string>('TODOS');
+  const [filterUrgencia, setFilterUrgencia] = useState<Filtro>('TODOS');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadRadar();
-  }, []);
-
-  const loadRadar = async () => {
+  const loadRadar = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const res = await api.get('/hospedagens/radar');
       setRadar(res.data);
     } catch (err) {
       console.error('Erro ao carregar radar de renovações:', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filteredItems = useMemo(() => {
-    if (!radar?.proximasRenovacoes) return [];
-    return radar.proximasRenovacoes.filter((item) => {
+  useEffect(() => {
+    loadRadar();
+  }, [loadRadar]);
+
+  // Todas as linhas, ordenadas por urgência (menor prazo primeiro; sem data por último)
+  const linhas = useMemo(() => {
+    const base = (radar?.proximasRenovacoes ?? []).map(montarLinha);
+    return base.sort((a, b) => {
+      if (a.menor === null && b.menor === null) return 0;
+      if (a.menor === null) return 1;
+      if (b.menor === null) return -1;
+      return a.menor - b.menor;
+    });
+  }, [radar?.proximasRenovacoes]);
+
+  const contagem = useMemo(() => {
+    const c: Record<Urgencia, number> = { CRITICO: 0, ATENCAO: 0, EM_DIA: 0, SEM_DATA: 0 };
+    linhas.forEach((l) => {
+      c[l.nivel]++;
+    });
+    return c;
+  }, [linhas]);
+
+  const filtradas = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return linhas.filter(({ ativo, nivel }) => {
       const matchSearch =
-        item.titulo.toLowerCase().includes(search.toLowerCase()) ||
-        item.url.toLowerCase().includes(search.toLowerCase()) ||
-        (item.dominio && item.dominio.toLowerCase().includes(search.toLowerCase())) ||
-        (item.cliente?.nomeFantasia && item.cliente.nomeFantasia.toLowerCase().includes(search.toLowerCase()));
-
-      const matchUrgencia =
-        filterUrgencia === 'TODOS' ? true : item.nivelUrgencia === filterUrgencia;
-
+        !q ||
+        ativo.titulo.toLowerCase().includes(q) ||
+        ativo.url.toLowerCase().includes(q) ||
+        (ativo.dominio && ativo.dominio.toLowerCase().includes(q)) ||
+        (ativo.cliente?.nomeFantasia && ativo.cliente.nomeFantasia.toLowerCase().includes(q));
+      const matchUrgencia = filterUrgencia === 'TODOS' ? true : nivel === filterUrgencia;
       return matchSearch && matchUrgencia;
     });
-  }, [radar?.proximasRenovacoes, search, filterUrgencia]);
+  }, [linhas, search, filterUrgencia]);
 
-  const formatarDataBR = (dataStr?: string) => {
-    if (!dataStr) return '-';
-    const d = new Date(dataStr);
-    return d.toLocaleDateString('pt-BR');
-  };
+  // Vencimentos (hospedagem e domínio) por mês nos próximos 6 meses
+  const porMes = useMemo(() => {
+    const hoje = new Date();
+    const meses = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+      return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: `${MESES[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`, vps: 0, dominio: 0 };
+    });
+    const idx = new Map(meses.map((m, i) => [m.key, i]));
+    linhas.forEach(({ ativo, diasVps, diasDom }) => {
+      if (diasVps !== null && diasVps >= 0 && ativo.dataRenovacaoVps) {
+        const i = idx.get(ativo.dataRenovacaoVps.slice(0, 7));
+        if (i !== undefined) meses[i].vps++;
+      }
+      if (diasDom !== null && diasDom >= 0 && ativo.dataExpiracaoDominio) {
+        const i = idx.get(ativo.dataExpiracaoDominio.slice(0, 7));
+        if (i !== undefined) meses[i].dominio++;
+      }
+    });
+    return meses;
+  }, [linhas]);
+  const temVencimentos = porMes.some((m) => m.vps + m.dominio > 0);
 
-  const renderBadgeUrgencia = (ativo: AtivoHospedagem) => {
-    const menorDias = ativo.menorDias;
-    const nivelUrgencia = ativo.nivelUrgencia;
+  const donutData = (['CRITICO', 'ATENCAO', 'EM_DIA', 'SEM_DATA'] as Urgencia[])
+    .filter((k) => contagem[k] > 0)
+    .map((k) => ({ id: k, value: contagem[k], label: URGENCIA_META[k].label, color: URGENCIA_META[k].color }));
 
-    if (nivelUrgencia === 'CRITICO' && typeof menorDias === 'number') {
-      return (
-        <span className="text-[12px] text-[#B83B32] bg-[#FDF2F2] border border-[#FCDAD7] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" />
-          {menorDias < 0 ? `Vencido há ${Math.abs(menorDias)}d` : `Vence em ${menorDias}d`}
-        </span>
-      );
-    }
+  const pills: { id: Filtro; label: string; count: number }[] = [
+    { id: 'TODOS', label: 'Todos', count: linhas.length },
+    { id: 'CRITICO', label: 'Críticos', count: contagem.CRITICO },
+    { id: 'ATENCAO', label: 'Atenção', count: contagem.ATENCAO },
+    { id: 'EM_DIA', label: 'Em dia', count: contagem.EM_DIA },
+    { id: 'SEM_DATA', label: 'Sem data', count: contagem.SEM_DATA },
+  ];
 
-    if (nivelUrgencia === 'ATENCAO' && typeof menorDias === 'number') {
-      return (
-        <span className="text-[12px] text-[#8A6828] bg-[#FAF2E4] border border-[#E8D4B4] px-2.5 py-0.5 rounded font-bold flex items-center gap-1">
-          <Clock className="w-3 h-3" /> Vence em {menorDias}d
-        </span>
-      );
-    }
-
-    if (nivelUrgencia === 'EM_DIA' && typeof menorDias === 'number') {
-      return (
-        <span className="text-[12px] text-[#247A4A] bg-[#E6F4EA] border border-[#CEEAD6] px-2.5 py-0.5 rounded font-semibold flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3" /> Em dia ({menorDias}d)
-        </span>
-      );
-    }
-
-    return <span className="text-[12px] text-[#847663] bg-[#EEE7DC] px-2 py-0.5 rounded font-medium">Sem data</span>;
-  };
+  const abrirCliente = (clienteId: string) => navigate(`/cliente/${clienteId}?tab=services`);
+  const toggle = (f: Filtro) => setFilterUrgencia((cur) => (cur === f ? 'TODOS' : f));
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="planning-workspace w-full space-y-6">
+      <div className="pw-lg-scene" aria-hidden="true" />
+
       {/* CABEÇALHO */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1E1A16] tracking-tight flex items-center gap-2.5">
-            <Globe className="w-6 h-6 text-[#B89455]" />
-            Radar de Landing Pages & Renovações
-          </h1>
-          <p className="text-xs text-[#625746] mt-0.5">
-            Acompanhe as datas de expiração e renovação dos domínios das Landing Pages dos clientes.
+      <div className="pw-glass-panel p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1 min-w-0">
+          <span className="pw-section-label">Radar de renovações</span>
+          <h1 className="text-2xl font-bold text-[#1E1A16] tracking-tight">Hospedagens e domínios</h1>
+          <p className="text-xs text-[#5E574C]">
+            Acompanhe os vencimentos de hospedagem e domínio das landing pages dos clientes, do mais urgente ao mais tranquilo.
           </p>
         </div>
-
         <button
+          type="button"
           onClick={loadRadar}
-          className="h-8 px-3 rounded-lg border border-[#D8CBB8] bg-[#FFFDF8] hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          disabled={loading}
+          className="pw-glass-control px-3 py-2 text-xs font-semibold text-[#1E1A16] flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-[#B89455] ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
+          <RefreshCw className={`w-3.5 h-3.5 text-[#7A6440] ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
       </div>
 
-      {/* CARDS DE KPIS CONSOLIDADOS */}
-      {radar && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-[#FFFDF8] p-4 rounded-[11px] border border-[#D8CBB8] shadow-2xs">
-            <span className="text-[12.5px] font-semibold text-[#847663]">Total de Landing Pages</span>
-            <h3 className="text-2xl font-bold text-[#1E1A16] mt-1">{radar.totalAtivos}</h3>
-          </div>
-
-          <div
-            onClick={() => setFilterUrgencia('CRITICO')}
-            className={`p-4 rounded-[11px] border shadow-2xs cursor-pointer transition-all ${
-              filterUrgencia === 'CRITICO'
-                ? 'bg-[#FDF2F2] border-[#B83B32] ring-1 ring-[#B83B32]'
-                : 'bg-[#FFFDF8] border-[#D8CBB8] hover:border-[#B83B32]'
-            }`}
+      {loading && !radar ? (
+        <RadarSkeleton />
+      ) : error && !radar ? (
+        <div className="pw-glass-panel p-8 flex flex-col items-center gap-3 text-center">
+          <AlertTriangle className="w-6 h-6 text-[#B83B32]" />
+          <p className="text-sm font-semibold text-[#1E1A16]">Não foi possível carregar o radar de renovações.</p>
+          <button
+            type="button"
+            onClick={loadRadar}
+            className="pw-glass-control pw-glass-primary px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
           >
-            <div className="flex items-center justify-between text-[#B83B32]">
-              <span className="text-[12.5px] font-semibold">Críticos (&le; 7 dias)</span>
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <h3 className="text-2xl font-bold text-[#B83B32] mt-1">{radar.criticos7Dias}</h3>
-          </div>
-
-          <div
-            onClick={() => setFilterUrgencia('ATENCAO')}
-            className={`p-4 rounded-[11px] border shadow-2xs cursor-pointer transition-all ${
-              filterUrgencia === 'ATENCAO'
-                ? 'bg-[#FAF2E4] border-[#8A6828] ring-1 ring-[#8A6828]'
-                : 'bg-[#FFFDF8] border-[#D8CBB8] hover:border-[#8A6828]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-[#8A6828]">
-              <span className="text-[12.5px] font-semibold">Atenção (&le; 30 dias)</span>
-              <Clock className="w-4 h-4" />
-            </div>
-            <h3 className="text-2xl font-bold text-[#8A6828] mt-1">{radar.atencao30Dias}</h3>
-          </div>
-
-          <div
-            onClick={() => setFilterUrgencia('EM_DIA')}
-            className={`p-4 rounded-[11px] border shadow-2xs cursor-pointer transition-all ${
-              filterUrgencia === 'EM_DIA'
-                ? 'bg-[#E6F4EA] border-[#247A4A] ring-1 ring-[#247A4A]'
-                : 'bg-[#FFFDF8] border-[#D8CBB8] hover:border-[#247A4A]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-[#247A4A]">
-              <span className="text-[12.5px] font-semibold">Em Dia (&gt; 30 dias)</span>
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-            <h3 className="text-2xl font-bold text-[#247A4A] mt-1">{radar.emDia}</h3>
-          </div>
+            <RefreshCw className="w-3.5 h-3.5" /> Tentar de novo
+          </button>
         </div>
-      )}
+      ) : radar ? (
+        <>
+          {error && <p className="text-xs text-[#B83B32] px-1">Falha ao atualizar; exibindo os últimos dados carregados.</p>}
 
-      {/* FILTROS E BUSCA */}
-      <div className="bg-[#FFFDF8] p-4 rounded-[11px] border border-[#D8CBB8] shadow-xs flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-[#847663]" />
-          <Input
-            placeholder="Buscar por cliente, título da LP, URL ou domínio..."
-            className="pl-9 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+          {/* KPIs clicáveis */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Kpi
+              label="Total de ativos"
+              value={radar.totalAtivos}
+              hint="Mostrar todos"
+              icon={<Layers className="w-4 h-4" />}
+              active={filterUrgencia === 'TODOS'}
+              onClick={() => setFilterUrgencia('TODOS')}
+            />
+            <Kpi
+              label="Críticos (≤ 7 dias)"
+              value={radar.criticos7Dias}
+              hint="Inclui vencidos"
+              icon={<AlertTriangle className="w-4 h-4" />}
+              color={radar.criticos7Dias > 0 ? CHART_COLORS.danger : undefined}
+              active={filterUrgencia === 'CRITICO'}
+              onClick={() => toggle('CRITICO')}
+            />
+            <Kpi
+              label="Atenção (≤ 30 dias)"
+              value={radar.atencao30Dias}
+              hint="Planeje a renovação"
+              icon={<Clock className="w-4 h-4" />}
+              color={CHART_COLORS.goldDark}
+              active={filterUrgencia === 'ATENCAO'}
+              onClick={() => toggle('ATENCAO')}
+            />
+            <Kpi
+              label="Em dia (> 30 dias)"
+              value={radar.emDia}
+              hint="Sem pendência próxima"
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              color={CHART_COLORS.success}
+              active={filterUrgencia === 'EM_DIA'}
+              onClick={() => toggle('EM_DIA')}
+            />
+            <Kpi
+              label="Sem data"
+              value={contagem.SEM_DATA}
+              hint="Cadastre os vencimentos"
+              icon={<CalendarOff className="w-4 h-4" />}
+              active={filterUrgencia === 'SEM_DATA'}
+              onClick={() => toggle('SEM_DATA')}
+            />
+          </div>
 
-        <div className="w-full sm:w-56">
-          <Select
-            value={filterUrgencia}
-            onChange={(e) => setFilterUrgencia(e.target.value)}
-          >
-            <option value="TODOS">Todos os Vencimentos</option>
-            <option value="CRITICO">🔴 Críticos (&le; 7 dias)</option>
-            <option value="ATENCAO">🟡 Atenção (&le; 30 dias)</option>
-            <option value="EM_DIA">🟢 Em Dia (&gt; 30 dias)</option>
-          </Select>
-        </div>
-      </div>
-
-      {/* TABELA CONSOLIDADA DE LANDING PAGES */}
-      <div className="bg-[#FFFDF8] rounded-[11px] border border-[#D8CBB8] shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-[#FAF7F2] text-[#625746] border-b border-[#D8CBB8]">
-              <tr>
-                <th className="py-3 px-4 font-bold">Cliente</th>
-                <th className="py-3 px-3 font-bold">Landing Page</th>
-                <th className="py-3 px-3 font-bold">URL Direta</th>
-                <th className="py-3 px-3 font-bold">Domínio Principal</th>
-                <th className="py-3 px-3 font-bold">Data de Renovação</th>
-                <th className="py-3 px-3 font-bold">Previsão / Urgência</th>
-                <th className="py-3 px-4 text-right font-bold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#EEE7DC]">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#625746]">
-                    Carregando radar de renovações...
-                  </td>
-                </tr>
-              ) : filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#847663] italic">
-                    Nenhuma Landing Page encontrada para os filtros selecionados.
-                  </td>
-                </tr>
+          {/* Gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Panel title="Vencimentos nos próximos 6 meses" className="lg:col-span-2">
+              {temVencimentos ? (
+                <BarChart
+                  height={CHART_HEIGHT}
+                  xAxis={[{ scaleType: 'band', data: porMes.map((m) => m.label) }]}
+                  series={[
+                    { data: porMes.map((m) => m.vps), label: 'Hospedagem', color: CHART_COLORS.gold, stack: 'v' },
+                    { data: porMes.map((m) => m.dominio), label: 'Domínio', color: CHART_COLORS.brown, stack: 'v' },
+                  ]}
+                  margin={{ left: 8, right: 8, top: 12, bottom: 8 }}
+                />
               ) : (
-                filteredItems.map((ativo) => (
-                  <tr key={ativo.id} className="hover:bg-[#FAF7F2] transition-colors">
-                    {/* Cliente */}
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => navigate(`/cliente/${ativo.clienteId}`)}
-                        className="font-bold text-[#1E1A16] hover:text-[#8A6828] flex items-center gap-1.5 transition-colors text-left"
-                      >
-                        <Building2 className="w-3.5 h-3.5 text-[#8A6828]" />
-                        {ativo.cliente?.nomeFantasia || 'Cliente'}
-                      </button>
-                    </td>
+                <EmptyChart message="Nenhum vencimento de hospedagem ou domínio previsto para os próximos 6 meses." />
+              )}
+            </Panel>
 
-                    {/* Título da LP */}
-                    <td className="py-3 px-3 font-semibold text-[#1E1A16]">
-                      {ativo.titulo}
-                    </td>
+            <Panel title="Distribuição por urgência">
+              {donutData.length > 0 ? (
+                <PieChart
+                  height={CHART_HEIGHT}
+                  series={[{ innerRadius: 50, paddingAngle: 2, cornerRadius: 4, data: donutData }]}
+                  margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
+                />
+              ) : (
+                <EmptyChart message="Nenhum ativo de hospedagem cadastrado." />
+              )}
+            </Panel>
+          </div>
 
-                    {/* URL */}
-                    <td className="py-3 px-3">
+          {/* Filtros e busca */}
+          <div className="pw-glass-panel p-4 flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="flex-1 relative min-w-0">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8F8271]" />
+              <input
+                type="search"
+                placeholder="Buscar por cliente, título, URL ou domínio..."
+                aria-label="Buscar renovações"
+                className="pw-glass-control w-full h-9 pl-9 pr-3 text-xs text-[#1E1A16] outline-none"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pills.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setFilterUrgencia(p.id)}
+                  aria-pressed={filterUrgencia === p.id}
+                  className={`pw-glass-pill px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+                    filterUrgencia === p.id ? 'pw-glass-primary' : 'text-[#1E1A16]'
+                  }`}
+                >
+                  {p.label} ({p.count})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lista priorizada */}
+          <div className="pw-glass-panel p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b border-[#D8CBB8]/60 text-xs font-semibold text-[#5E574C]">
+              {filtradas.length} {filtradas.length === 1 ? 'resultado' : 'resultados'}
+              {filtradas.length !== linhas.length && ` de ${linhas.length}`}
+            </div>
+
+            {filtradas.length === 0 ? (
+              <div className="py-14 px-4 text-center text-xs text-[#8F8271]">
+                {linhas.length === 0
+                  ? 'Nenhuma hospedagem ativa cadastrada ainda.'
+                  : 'Nenhuma hospedagem encontrada para os filtros selecionados.'}
+              </div>
+            ) : (
+              <>
+                {/* Tabela (desktop) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="text-[#5E574C] border-b border-[#D8CBB8]/60">
+                      <tr>
+                        <th className="py-3 px-5 font-bold">Cliente</th>
+                        <th className="py-3 px-3 font-bold">Domínio / URL</th>
+                        <th className="py-3 px-3 font-bold">Vence primeiro</th>
+                        <th className="py-3 px-3 font-bold">Data</th>
+                        <th className="py-3 px-3 font-bold">Prazo</th>
+                        <th className="py-3 px-3 font-bold">Urgência</th>
+                        <th className="py-3 px-5 text-right font-bold">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#D8CBB8]/40">
+                      {filtradas.map((l) => (
+                        <tr key={l.ativo.id} className="hover:bg-white/50 transition-colors">
+                          <td className="py-3 px-5">
+                            <button
+                              type="button"
+                              onClick={() => abrirCliente(l.ativo.clienteId)}
+                              className="font-bold text-[#1E1A16] hover:text-[#8A6828] flex items-center gap-1.5 text-left cursor-pointer"
+                            >
+                              <Building2 className="w-3.5 h-3.5 text-[#7A6440] shrink-0" />
+                              {l.ativo.cliente?.nomeFantasia || 'Cliente'}
+                            </button>
+                            <div className="text-[11.5px] text-[#5E574C] mt-0.5 truncate max-w-[220px]" title={l.ativo.titulo}>
+                              {l.ativo.titulo}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            {l.ativo.dominio && (
+                              <div className="font-mono text-[11.5px] text-[#1E1A16] truncate max-w-[200px]" title={l.ativo.dominio}>
+                                {l.ativo.dominio}
+                              </div>
+                            )}
+                            <a
+                              href={l.ativo.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[#8A6828] hover:underline font-mono text-[11.5px] flex items-center gap-1 truncate max-w-[200px]"
+                              title={l.ativo.url}
+                            >
+                              {l.ativo.url.replace(/^https?:\/\//, '')}
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                            </a>
+                          </td>
+                          <td className="py-3 px-3">
+                            <TipoTag tipo={l.tipo} />
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-[#1E1A16] whitespace-nowrap">
+                            {l.dataProxima ? formatarDataBR(l.dataProxima) : '-'}
+                          </td>
+                          <td className="py-3 px-3 text-[#1E1A16] whitespace-nowrap">{textoDias(l.menor)}</td>
+                          <td className="py-3 px-3">
+                            <UrgenciaBadge nivel={l.nivel} menor={l.menor} />
+                          </td>
+                          <td className="py-3 px-5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => abrirCliente(l.ativo.clienteId)}
+                              className="pw-glass-pill px-2.5 py-1 text-[11.5px] font-semibold text-[#1E1A16] inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                            >
+                              Abrir cliente <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Cards (mobile) */}
+                <ul className="md:hidden divide-y divide-[#D8CBB8]/40">
+                  {filtradas.map((l) => (
+                    <li key={l.ativo.id} className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm text-[#1E1A16] truncate">{l.ativo.cliente?.nomeFantasia || 'Cliente'}</p>
+                          <p className="text-[11.5px] text-[#5E574C] truncate">{l.ativo.titulo}</p>
+                        </div>
+                        <UrgenciaBadge nivel={l.nivel} menor={l.menor} />
+                      </div>
                       <a
-                        href={ativo.url}
+                        href={l.ativo.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#8A6828] hover:underline font-mono text-[12.5px] flex items-center gap-1 truncate max-w-[200px]"
-                        title={ativo.url}
+                        className="text-[#8A6828] font-mono text-[11.5px] flex items-center gap-1 truncate"
                       >
-                        {ativo.url.replace(/^https?:\/\//, '')}
+                        {l.ativo.dominio || l.ativo.url.replace(/^https?:\/\//, '')}
                         <ExternalLink className="w-3 h-3 shrink-0" />
                       </a>
-                    </td>
-
-                    {/* Domínio */}
-                    <td className="py-3 px-3 font-bold text-[#1E1A16]">
-                      {ativo.dominio || '-'}
-                    </td>
-
-                    {/* Data de Renovação */}
-                    <td className="py-3 px-3 font-medium text-[#1E1A16]">
-                      {formatarDataBR(ativo.dataExpiracaoDominio)}
-                    </td>
-
-                    {/* Previsão Urgência */}
-                    <td className="py-3 px-3">
-                      {renderBadgeUrgencia(ativo)}
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3 px-4 text-right">
-                      <span className="px-2 py-0.5 rounded text-[12px] font-bold bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]">
-                        {ativo.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <div className="space-y-0.5">
+                          <TipoTag tipo={l.tipo} />
+                          <p className="text-[#1E1A16]">
+                            {l.dataProxima ? `${formatarDataBR(l.dataProxima)}, ` : ''}
+                            {textoDias(l.menor)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => abrirCliente(l.ativo.clienteId)}
+                          className="pw-glass-pill px-2.5 py-1.5 text-[11.5px] font-semibold text-[#1E1A16] inline-flex items-center gap-1 cursor-pointer shrink-0"
+                        >
+                          Abrir cliente <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

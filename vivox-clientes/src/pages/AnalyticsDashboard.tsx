@@ -1,19 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Building2, ExternalLink, Globe } from 'lucide-react';
+import {
+  ArrowLeft,
+  Building2,
+  ExternalLink,
+  Globe,
+  Sparkles,
+  AlertTriangle,
+  RefreshCw,
+  Map as MapIcon,
+  Target,
+} from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente } from '../types';
-import { Button } from '../components/Button';
-import { Badge } from '../components/Badge';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { AnalyticsTab } from '../components/ClientTabs/AnalyticsTab';
 import { InstagramPerformanceDashboard } from '../components/ClientTabs/InstagramPerformanceDashboard';
 import { PlanningTab } from '../components/ClientTabs/PlanningTab';
 import { ExecutiveReportTab } from '../components/ClientTabs/ExecutiveReportTab';
-import { Sparkles } from 'lucide-react';
+import './planning-workspace.css';
 
-function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
+function InstagramIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
@@ -25,74 +35,138 @@ function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
 
 type Tab = 'site_analytics' | 'instagram' | 'executive_report' | 'planning' | 'services';
 
+const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
+  { id: 'site_analytics', label: 'Site & Landing Pages', icon: <Globe className="w-3.5 h-3.5" /> },
+  { id: 'instagram', label: 'Instagram & Redes', icon: <InstagramIcon className="w-3.5 h-3.5" /> },
+  { id: 'executive_report', label: 'Relatório Executivo (IA)', icon: <Sparkles className="w-3.5 h-3.5" /> },
+  { id: 'planning', label: 'Planejamento', icon: <Target className="w-3.5 h-3.5" /> },
+  { id: 'services', label: 'Mapa de Serviços', icon: <MapIcon className="w-3.5 h-3.5" /> },
+];
+
+const isTab = (v: string | null): v is Tab => TABS.some((t) => t.id === v);
+
+function normalizeUrl(u: string) {
+  return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="planning-workspace w-full space-y-6 animate-pulse" aria-busy="true" aria-label="Carregando dashboard de métricas">
+      <div className="pw-lg-scene" aria-hidden="true" />
+      <div className="pw-glass-panel h-20" />
+      <div className="pw-glass-panel h-12" />
+      <div className="pw-glass-card h-72" />
+    </div>
+  );
+}
+
 export function AnalyticsDashboard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get('tab') as Tab;
+  const tabParam = searchParams.get('tab');
+  const activeTab: Tab = isTab(tabParam) ? tabParam : 'site_analytics';
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl || 'site_analytics');
-
-  useEffect(() => {
-    if (tabFromUrl && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [tabFromUrl]);
+  const [error, setError] = useState(false);
 
   const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
     setSearchParams({ tab });
   };
 
-  useEffect(() => {
-    loadCliente();
-  }, [id]);
-
-  const loadCliente = async () => {
+  const loadCliente = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
       const response = await api.get(`/clientes/${id}`);
       setCliente(response.data);
     } catch (e) {
       console.error(e);
-      navigate('/analytics');
+      setError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  if (loading) return <div className="py-20 text-center text-[#625746]">Carregando dashboard de métricas...</div>;
-  if (!cliente) return null;
+  useEffect(() => {
+    loadCliente();
+  }, [loadCliente]);
+
+  if (loading) return <DashboardSkeleton />;
+
+  if (error || !cliente) {
+    return (
+      <div className="planning-workspace w-full space-y-6">
+        <div className="pw-lg-scene" aria-hidden="true" />
+        <div className="pw-glass-panel p-8 flex flex-col items-center gap-3 text-center">
+          <AlertTriangle className="w-6 h-6 text-[#B83B32]" />
+          <p className="text-sm font-semibold text-[#1E1A16]">Não foi possível carregar este cliente.</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/analytics')}
+              className="pw-glass-control px-4 py-2 text-xs font-semibold text-[#1E1A16] flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+            </button>
+            <button
+              type="button"
+              onClick={loadCliente}
+              className="pw-glass-control pw-glass-primary px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Tentar de novo
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const ativo = String(cliente.status).toUpperCase() === 'ATIVO';
+  const siteUrl = cliente.gscSiteUrl && !cliente.gscSiteUrl.startsWith('sc-domain:') ? cliente.gscSiteUrl : null;
+  const igUser = cliente.instagramUsername?.replace(/^@/, '');
 
   return (
-    <div className="w-full space-y-6 pb-12">
-      {/* CABEÇALHO AMPLO E ELEGANTE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[11px] border border-[#E8E7E4] shadow-xs">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/analytics')}
-            className="px-2.5 h-10 border border-[#E8E7E4] hover:bg-[#EEE7DC] rounded-lg shrink-0"
-          >
-            <ArrowLeft className="w-5 h-5 text-[#1E1A16]" />
-          </Button>
+    <div className="planning-workspace w-full space-y-6 pb-12">
+      <div className="pw-lg-scene" aria-hidden="true" />
 
-          <div className="w-14 h-14 bg-[#FAF2E4] border border-[#E8D4B4] rounded-[11px] flex items-center justify-center text-[#8A6828] font-bold text-2xl shrink-0 shadow-2xs">
-            {cliente.nomeFantasia.charAt(0).toUpperCase()}
+      {/* CABEÇALHO COMPACTO */}
+      <div className="pw-glass-panel px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate('/analytics')}
+            aria-label="Voltar para Analytics"
+            className="pw-glass-control w-9 h-9 flex items-center justify-center shrink-0 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#1E1A16]" />
+          </button>
+
+          <div className="w-11 h-11 shrink-0 rounded-2xl bg-white/60 border border-[#E5D9C8] flex items-center justify-center overflow-hidden text-[#8A6828] font-bold text-lg">
+            {cliente.logoUrl ? (
+              <img src={resolveMediaUrl(cliente.logoUrl)} alt={cliente.nomeFantasia} className="w-full h-full object-cover" />
+            ) : (
+              cliente.nomeFantasia.charAt(0).toUpperCase()
+            )}
           </div>
 
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-[#1E1A16] tracking-tight">{cliente.nomeFantasia}</h1>
-              <Badge variant="success" className="text-xs px-2.5 py-0.5">
-                Métricas
-              </Badge>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-[#1E1A16] tracking-tight truncate">{cliente.nomeFantasia}</h1>
+              <span
+                className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                  ativo
+                    ? 'text-[#247A4A] bg-[#EEF8F2] border-[#C9E8D5]'
+                    : 'text-[#5E574C] bg-white/50 border-[#D8CBB8]'
+                }`}
+              >
+                {ativo ? 'Ativo' : 'Inativo'}
+              </span>
             </div>
-            <p className="text-xs text-[#625746] flex items-center gap-2 mt-1">
+            <p className="text-xs text-[#5E574C] flex items-center gap-2 mt-0.5 flex-wrap">
               <span className="flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5 text-[#847663]" />
-                {cliente.segmento}
+                <Building2 className="w-3 h-3 text-[#8F8271]" />
+                {cliente.segmento || 'Segmento não informado'}
               </span>
               <span>•</span>
               <span>Responsável: {cliente.responsavel?.nome || 'Equipe Vivox'}</span>
@@ -100,87 +174,59 @@ export function AnalyticsDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+          {siteUrl && (
+            <a
+              href={normalizeUrl(siteUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pw-glass-pill px-3 py-1.5 text-xs font-semibold text-[#1E1A16] inline-flex items-center gap-1.5"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#8A6828]" /> Site
+            </a>
+          )}
+          {igUser && (
+            <a
+              href={`https://instagram.com/${igUser}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pw-glass-pill px-3 py-1.5 text-xs font-semibold text-[#1E1A16] inline-flex items-center gap-1.5"
+            >
+              <InstagramIcon className="w-3.5 h-3.5 text-[#8A6828]" /> @{igUser}
+            </a>
+          )}
           <button
-            onClick={() => handleTabChange('executive_report')}
-            className="px-3.5 py-2 rounded-lg bg-[#24201A] hover:bg-[#2F2922] border border-[#4A4032] text-[#C7A15F] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            Relatório Executivo (IA)
-          </button>
-          <button
+            type="button"
             onClick={() => navigate(`/cliente/${cliente.id}`)}
-            className="px-3.5 py-2 rounded-lg border border-[#E8E7E4] bg-white hover:bg-[#EEE7DC] text-[#1E1A16] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            className="pw-glass-control px-3 py-2 text-xs font-bold text-[#1E1A16] flex items-center gap-1.5 cursor-pointer"
           >
-            Ver Cadastro do Cliente
+            Ver cadastro
             <ExternalLink className="w-3.5 h-3.5 text-[#8A6828]" />
           </button>
         </div>
       </div>
 
-      {/* NAVEGAÇÃO DE ABAS ABERTA E ESPECIALIZADA */}
-      <div className="flex border-b border-[#E8E7E4] gap-1 overflow-x-auto">
-        <button
-          onClick={() => handleTabChange('site_analytics')}
-          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-            activeTab === 'site_analytics'
-              ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
-              : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5" />
-          Acessos ao Site & Landing Pages
-        </button>
-
-        <button
-          onClick={() => handleTabChange('instagram')}
-          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-            activeTab === 'instagram'
-              ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
-              : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
-          }`}
-        >
-          <InstagramIcon className="w-3.5 h-3.5" />
-          Instagram & Redes Sociais
-        </button>
-
-        <button
-          onClick={() => handleTabChange('executive_report')}
-          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-            activeTab === 'executive_report'
-              ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
-              : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-[#C7A15F]" />
-          Relatório Executivo (IA)
-        </button>
-
-        <button
-          onClick={() => handleTabChange('planning')}
-          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap cursor-pointer ${
-            activeTab === 'planning'
-              ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
-              : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
-          }`}
-        >
-          Planejamento Estratégico
-        </button>
-
-        <button
-          onClick={() => handleTabChange('services')}
-          className={`px-5 py-3 text-sm font-medium transition-all relative whitespace-nowrap cursor-pointer ${
-            activeTab === 'services'
-              ? 'text-[#8A6828] border-b-2 border-[#B89455] bg-transparent'
-              : 'text-[#625746] hover:text-[#1E1A16] hover:bg-[#EEE7DC]/50 rounded-t-lg'
-          }`}
-        >
-          Mapa de Serviços
-        </button>
+      {/* ABAS */}
+      <div className="pw-glass-panel p-2 flex items-center gap-2 overflow-x-auto" role="tablist">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === t.id}
+            onClick={() => handleTabChange(t.id)}
+            className={`pw-glass-pill px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              activeTab === t.id ? 'pw-glass-primary' : 'text-[#1E1A16]'
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* CONTEÚDO EM LARGURA TOTAL COM SCROLL NATURAL */}
-      <div className="w-full pt-2">
+      {/* CONTEÚDO */}
+      <div className="w-full min-w-0">
         {activeTab === 'site_analytics' && <AnalyticsTab cliente={cliente} />}
         {activeTab === 'instagram' && <InstagramPerformanceDashboard cliente={cliente} />}
         {activeTab === 'executive_report' && <ExecutiveReportTab cliente={cliente} />}

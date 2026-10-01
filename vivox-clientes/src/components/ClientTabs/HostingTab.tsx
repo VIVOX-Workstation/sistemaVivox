@@ -12,11 +12,20 @@ import {
   CheckCircle2,
   Clock,
   Layout,
+  Server,
 } from 'lucide-react';
 import { Modal } from '../Modal';
 import { Input } from '../Input';
 import { Select } from '../Select';
 import { Textarea } from '../Textarea';
+import {
+  OPCOES_PRAZO_MESES,
+  calcularVencimentoHospedagem,
+  getSituacaoHospedagem,
+  formatarDataBR,
+  calcularDiasRestantes,
+  getHojeLocal,
+} from '../../utils/hospedagemCalculo';
 
 interface Props {
   cliente: Cliente;
@@ -29,12 +38,14 @@ export function HostingTab({ cliente }: Props) {
   const [editingAtivo, setEditingAtivo] = useState<AtivoHospedagem | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Form State Simplificado
+  // Form State
   const [formData, setFormData] = useState<{
     titulo: string;
     url: string;
     dominio: string;
     dataExpiracaoDominio: string;
+    dataInicioHospedagem: string;
+    prazoHospedagemMeses: number;
     status: StatusHospedagem;
     observacoes: string;
   }>({
@@ -42,6 +53,8 @@ export function HostingTab({ cliente }: Props) {
     url: '',
     dominio: '',
     dataExpiracaoDominio: '',
+    dataInicioHospedagem: getHojeLocal(),
+    prazoHospedagemMeses: 12,
     status: 'ATIVO',
     observacoes: '',
   });
@@ -69,6 +82,8 @@ export function HostingTab({ cliente }: Props) {
       url: '',
       dominio: '',
       dataExpiracaoDominio: '',
+      dataInicioHospedagem: getHojeLocal(),
+      prazoHospedagemMeses: 12,
       status: 'ATIVO',
       observacoes: '',
     });
@@ -82,6 +97,10 @@ export function HostingTab({ cliente }: Props) {
       url: ativo.url,
       dominio: ativo.dominio || '',
       dataExpiracaoDominio: ativo.dataExpiracaoDominio ? ativo.dataExpiracaoDominio.split('T')[0] : '',
+      dataInicioHospedagem: ativo.dataInicioHospedagem
+        ? ativo.dataInicioHospedagem.split('T')[0]
+        : '',
+      prazoHospedagemMeses: ativo.prazoHospedagemMeses || 12,
       status: ativo.status || 'ATIVO',
       observacoes: ativo.observacoes || '',
     });
@@ -92,6 +111,21 @@ export function HostingTab({ cliente }: Props) {
     e.preventDefault();
     setSaving(true);
     try {
+      const temInicio = !!formData.dataInicioHospedagem;
+      if (!editingAtivo && !temInicio) {
+        alert('Informe a data de início da hospedagem para cadastrar.');
+        setSaving(false);
+        return;
+      }
+
+      const ciclos: Record<number, 'MENSAL' | 'TRIMESTRAL' | 'SEMESTRAL' | 'ANUAL' | 'BIENAL'> = {
+        1: 'MENSAL',
+        3: 'TRIMESTRAL',
+        6: 'SEMESTRAL',
+        12: 'ANUAL',
+        24: 'BIENAL',
+      };
+
       const payload = {
         clienteId: cliente.id,
         titulo: formData.titulo,
@@ -100,6 +134,9 @@ export function HostingTab({ cliente }: Props) {
         dataExpiracaoDominio: formData.dataExpiracaoDominio
           ? new Date(formData.dataExpiracaoDominio).toISOString()
           : undefined,
+        dataInicioHospedagem: temInicio ? formData.dataInicioHospedagem : undefined,
+        prazoHospedagemMeses: temInicio && formData.prazoHospedagemMeses ? Number(formData.prazoHospedagemMeses) : undefined,
+        cicloVps: temInicio ? (ciclos[Number(formData.prazoHospedagemMeses)] || undefined) : undefined,
         status: formData.status,
         observacoes: formData.observacoes || undefined,
       };
@@ -131,18 +168,6 @@ export function HostingTab({ cliente }: Props) {
     }
   };
 
-  const calcularDiasRestantes = (dataStr?: string) => {
-    if (!dataStr) return null;
-    const dataAlvo = new Date(dataStr);
-    const hoje = new Date();
-    return Math.ceil((dataAlvo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  const formatarDataBR = (dataStr?: string) => {
-    if (!dataStr) return 'Não informada';
-    const d = new Date(dataStr);
-    return d.toLocaleDateString('pt-BR');
-  };
 
   const renderBadgeVencimento = (dias: number | null) => {
     if (dias === null) {
@@ -231,7 +256,12 @@ export function HostingTab({ cliente }: Props) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {ativos.map((ativo) => {
-            const diasDom = calcularDiasRestantes(ativo.dataExpiracaoDominio);
+            const diasDom = typeof ativo.diasParaDominio === 'number'
+              ? ativo.diasParaDominio
+              : calcularDiasRestantes(ativo.dataExpiracaoDominio);
+            const diasVps = typeof ativo.diasParaVps === 'number'
+              ? ativo.diasParaVps
+              : calcularDiasRestantes(ativo.dataRenovacaoVps);
 
             return (
               <div
@@ -276,13 +306,51 @@ export function HostingTab({ cliente }: Props) {
                     </div>
                   </div>
 
+                  {/* Informações de Hospedagem (VPS / Servidor) */}
+                  <div className="bg-[#FAF7F2] p-3 rounded-lg border border-[#E5D9C8] space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#1E1A16]">
+                      <span className="flex items-center gap-1 text-[#8A6828]">
+                        <Server className="w-3.5 h-3.5" /> Hospedagem
+                      </span>
+                      {ativo.prazoHospedagemMeses && (
+                        <span className="text-[11px] font-normal text-[#847663]">
+                          Prazo: {ativo.prazoHospedagemMeses}m
+                        </span>
+                      )}
+                    </div>
+
+                    {ativo.dataInicioHospedagem && (
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-[#EEE7DC]">
+                        <span className="text-[#847663]">Início:</span>
+                        <span className="text-[#1E1A16] font-medium">
+                          {formatarDataBR(ativo.dataInicioHospedagem)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-[#EEE7DC]">
+                      <span className="text-[#847663] flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-[#8A6828]" /> Vencimento:
+                      </span>
+                      <span className="font-semibold text-[#1E1A16]">
+                        {formatarDataBR(ativo.dataRenovacaoVps)}
+                      </span>
+                    </div>
+
+                    <div className="pt-1 flex justify-end">
+                      {renderBadgeVencimento(diasVps)}
+                    </div>
+                  </div>
+
                   {/* Informações de Domínio e Renovação */}
                   <div className="bg-[#FAF7F2] p-3 rounded-lg border border-[#E5D9C8] space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#847663] flex items-center gap-1">
-                        <Globe className="w-3.5 h-3.5 text-[#B89455]" /> Domínio:
+                    <div className="flex items-center justify-between text-xs font-bold text-[#1E1A16]">
+                      <span className="flex items-center gap-1 text-[#B89455]">
+                        <Globe className="w-3.5 h-3.5" /> Domínio
                       </span>
-                      <span className="font-bold text-[#1E1A16]">{ativo.dominio || '-'}</span>
+                      <span className="font-mono text-[11px] text-[#1E1A16] truncate max-w-[130px]">
+                        {ativo.dominio || '-'}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1.5 border-t border-[#EEE7DC]">
@@ -328,7 +396,7 @@ export function HostingTab({ cliente }: Props) {
         </div>
       )}
 
-      {/* MODAL SIMPLIFICADO */}
+      {/* MODAL DE CADASTRO / EDIÇÃO */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -350,6 +418,72 @@ export function HostingTab({ cliente }: Props) {
             onChange={(e) => setFormData({ ...formData, url: e.target.value })}
             required
           />
+
+          {/* Seção Hospedagem: Início, Prazo e Preview Calendário com Clamp */}
+          <div className="bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E5D9C8] space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#1E1A16]">
+              <Server className="w-4 h-4 text-[#8A6828]" />
+              <span>Hospedagem & Renovação</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label={`Início da Hospedagem ${editingAtivo ? '' : '*'}`}
+                type="date"
+                value={formData.dataInicioHospedagem}
+                onChange={(e) => setFormData({ ...formData, dataInicioHospedagem: e.target.value })}
+                required={!editingAtivo}
+              />
+
+              <Select
+                label="Prazo da Hospedagem"
+                value={formData.prazoHospedagemMeses}
+                onChange={(e) => setFormData({ ...formData, prazoHospedagemMeses: Number(e.target.value) })}
+              >
+                {OPCOES_PRAZO_MESES.map((op) => (
+                  <option key={op.meses} value={op.meses}>
+                    {op.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Preview do Vencimento com clamp fim de mês e situação */}
+            {formData.dataInicioHospedagem ? (
+              <div className="p-2.5 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-[#847663]">Previsão de Vencimento:</span>{' '}
+                  <strong className="text-[#1E1A16]">
+                    {formatarDataBR(calcularVencimentoHospedagem(formData.dataInicioHospedagem, Number(formData.prazoHospedagemMeses)))}
+                  </strong>
+                  <span className="text-[10.5px] text-[#847663] block">
+                    Ajustado automaticamente pelo prazo contratado
+                  </span>
+                </div>
+                {(() => {
+                  const venc = calcularVencimentoHospedagem(formData.dataInicioHospedagem, Number(formData.prazoHospedagemMeses));
+                  const sit = getSituacaoHospedagem(venc);
+                  return renderBadgeVencimento(sit.dias);
+                })()}
+              </div>
+            ) : editingAtivo?.dataRenovacaoVps ? (
+              <div className="p-2.5 rounded-lg bg-[#FFFDF8] border border-[#D8CBB8] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-[#847663]">Vencimento Atual Registrado:</span>{' '}
+                  <strong className="text-[#1E1A16]">
+                    {formatarDataBR(editingAtivo.dataRenovacaoVps.slice(0, 10))}
+                  </strong>
+                  <span className="text-[10.5px] text-[#847663] block">
+                    Vencimento atual da hospedagem (defina o início para recalcular)
+                  </span>
+                </div>
+                {(() => {
+                  const sit = getSituacaoHospedagem(editingAtivo.dataRenovacaoVps.slice(0, 10));
+                  return renderBadgeVencimento(sit.dias);
+                })()}
+              </div>
+            ) : null}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
