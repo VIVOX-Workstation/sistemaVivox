@@ -1,7 +1,28 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsNumber, IsInt, Min, Max, Matches, IsDateString } from 'class-validator';
 import { StatusHospedagem, CicloRenovacao } from '@prisma/client';
 
 export class CreateHospedagemDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  servicoContratadoId?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  itemPlanejadoId?: string;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  dataInicioHospedagem?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(120)
+  prazoHospedagemMeses?: number;
+
   @IsString()
   @IsNotEmpty()
   clienteId: string;

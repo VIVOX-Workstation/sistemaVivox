@@ -9,6 +9,7 @@ import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { PlanejamentoServico } from './pages/PlanejamentoServico';
 import { DevBoard } from './pages/DevBoard';
 import { Configuracoes } from './pages/Configuracoes';
+import { HostingRadar } from './pages/HostingRadar';
 import { VivoxGP } from './pages/VivoxGP';
 import { EducacionalHome } from './pages/EducacionalHome';
 import { EducacionalCurso } from './pages/EducacionalCurso';
@@ -45,6 +46,9 @@ function App() {
               <Route path="cliente/:id/servicos/:servicoId/planejamento/:itemId" element={<PlanejamentoServico />} />
               <Route path="cliente/:id/servicos/:servicoId/devboard" element={<DevBoard />} />
               
+              <Route path="hospedagens" element={<HostingRadar />} />
+              <Route path="renovacoes" element={<HostingRadar />} />
+
               <Route path="analytics" element={<AnalyticsIndex />} />
               <Route path="analytics/:id" element={<AnalyticsDashboard />} />
               <Route path="gp" element={<VivoxGP />} />

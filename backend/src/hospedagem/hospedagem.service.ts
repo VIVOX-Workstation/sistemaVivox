@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { AtivoHospedagem, CicloRenovacao, Prisma } from '@prisma/client';
+import { calcularVencimentoHospedagem } from './prazo-hospedagem';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHospedagemDto } from './dto/create-hospedagem.dto';
 import { UpdateHospedagemDto } from './dto/update-hospedagem.dto';
@@ -7,8 +9,52 @@ import { UpdateHospedagemDto } from './dto/update-hospedagem.dto';
 export class HospedagemService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async dadosPrazo(dto: CreateHospedagemDto | UpdateHospedagemDto, atual?: AtivoHospedagem) {
+    const inicio = dto.dataInicioHospedagem ?? atual?.dataInicioHospedagem?.toISOString().slice(0, 10);
+    const meses = dto.prazoHospedagemMeses ?? atual?.prazoHospedagemMeses;
+    const servicoId = dto.servicoContratadoId ?? atual?.servicoContratadoId;
+    const itemId = dto.itemPlanejadoId ?? atual?.itemPlanejadoId;
+    if (Boolean(servicoId) !== Boolean(itemId)) {
+      throw new BadRequestException('Informe o serviço e o item do planejamento juntos.');
+    }
+    if (servicoId) {
+      const servico = await this.prisma.servicoContratado.findUnique({
+        where: { id: servicoId }, include: { planejamento: { select: { flowNodes: true } } },
+      });
+      if (!servico || servico.clienteId !== (dto.clienteId ?? atual?.clienteId) || servico.tipoServico !== 'LANDING_PAGE') {
+        throw new BadRequestException('O serviço deve ser uma landing page deste cliente.');
+      }
+      const itens = servico.planejamento?.flowNodes;
+      if (!Array.isArray(itens) || !itens.some(item => item && typeof item === 'object' && !Array.isArray(item) && item.id === itemId)) {
+        throw new BadRequestException('Salve o item do planejamento antes de cadastrar a hospedagem.');
+      }
+    }
+    if (Boolean(inicio) !== Boolean(meses)) {
+      throw new BadRequestException('Informe a data de início e o prazo da hospedagem juntos.');
+    }
+    if (!inicio && !meses) return {};
+    if (!inicio || !meses) throw new BadRequestException('Data de início e prazo são obrigatórios.');
+    const ciclos: Record<number, CicloRenovacao> = { 1: 'MENSAL', 3: 'TRIMESTRAL', 6: 'SEMESTRAL', 12: 'ANUAL', 24: 'BIENAL' };
+    return {
+      dataInicioHospedagem: new Date(`${inicio}T00:00:00.000Z`),
+      prazoHospedagemMeses: meses,
+      dataRenovacaoVps: calcularVencimentoHospedagem(inicio, meses),
+      cicloVps: ciclos[meses] ?? dto.cicloVps ?? atual?.cicloVps ?? 'ANUAL',
+    };
+  }
+
+  private async persistir<T>(operacao: () => Promise<T>): Promise<T> {
+    try { return await operacao(); } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Este item já possui hospedagem cadastrada. Atualize o cadastro existente.');
+      }
+      throw error;
+    }
+  }
+
   async create(dto: CreateHospedagemDto) {
-    return this.prisma.ativoHospedagem.create({
+    const prazo = await this.dadosPrazo(dto);
+    return this.persistir(() => this.prisma.ativoHospedagem.create({
       data: {
         clienteId: dto.clienteId,
         titulo: dto.titulo,
@@ -26,6 +72,9 @@ export class HospedagemService {
         status: dto.status || 'ATIVO',
         sslAtivo: dto.sslAtivo !== undefined ? dto.sslAtivo : true,
         observacoes: dto.observacoes || null,
+        servicoContratadoId: dto.servicoContratadoId,
+        itemPlanejadoId: dto.itemPlanejadoId,
+        ...prazo,
       },
       include: {
         cliente: {
@@ -37,7 +86,7 @@ export class HospedagemService {
           },
         },
       },
-    });
+    }));
   }
 
   async findAll(params?: { search?: string; status?: string }) {
@@ -105,9 +154,10 @@ export class HospedagemService {
   }
 
   async update(id: string, dto: UpdateHospedagemDto) {
-    await this.findOne(id);
+    const atual = await this.findOne(id);
+    const prazo = await this.dadosPrazo(dto, atual);
 
-    return this.prisma.ativoHospedagem.update({
+    return this.persistir(() => this.prisma.ativoHospedagem.update({
       where: { id },
       data: {
         ...(dto.clienteId && { clienteId: dto.clienteId }),
@@ -132,6 +182,9 @@ export class HospedagemService {
         ...(dto.status && { status: dto.status }),
         ...(dto.sslAtivo !== undefined && { sslAtivo: dto.sslAtivo }),
         ...(dto.observacoes !== undefined && { observacoes: dto.observacoes || null }),
+        ...(dto.servicoContratadoId !== undefined && { servicoContratadoId: dto.servicoContratadoId }),
+        ...(dto.itemPlanejadoId !== undefined && { itemPlanejadoId: dto.itemPlanejadoId }),
+        ...prazo,
       },
       include: {
         cliente: {
@@ -143,7 +196,7 @@ export class HospedagemService {
           },
         },
       },
-    });
+    }));
   }
 
   async remove(id: string) {
@@ -152,12 +205,10 @@ export class HospedagemService {
   }
 
   async getRadarRenovacoes() {
-    const agora = new Date();
-    const em7Dias = new Date();
-    em7Dias.setDate(agora.getDate() + 7);
-
-    const em30Dias = new Date();
-    em30Dias.setDate(agora.getDate() + 30);
+    const hoje = new Intl.DateTimeFormat('en-CA', {
+      timeZone: process.env.TZ || 'America/Cuiaba', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const agora = new Date(`${hoje}T00:00:00.000Z`);
 
     const todos = await this.prisma.ativoHospedagem.findMany({
       where: {
@@ -223,6 +274,7 @@ export class HospedagemService {
       else if (item.cicloVps === 'SEMESTRAL') fatorMensal = 1 / 6;
       else if (item.cicloVps === 'TRIMESTRAL') fatorMensal = 1 / 3;
       else if (item.cicloVps === 'BIENAL') fatorMensal = 1 / 24;
+      if (item.prazoHospedagemMeses) fatorMensal = 1 / item.prazoHospedagemMeses;
 
       receitaMensalTotal += valor * fatorMensal;
       custoMensalTotal += custo * fatorMensal;

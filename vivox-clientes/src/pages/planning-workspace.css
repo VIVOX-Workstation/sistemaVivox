@@ -1,0 +1,448 @@
+/* Planning Workspace Scoped Styles (Painel Vivox Liquid Glass Design System) */
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/manrope.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo.woff2') format('woff2');
+  font-weight: 500 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Posição do reflexo animável: o brilho desliza em vez de pular */
+@property --mx {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 25%;
+}
+
+@property --my {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+
+.planning-workspace {
+  color-scheme: light;
+  --pw-bg: #f8f6f6;
+  --pw-bg-sec: #efeae2;
+  --pw-surface: #ffffff;
+  --pw-surface-hover: #faf7f2;
+  --pw-pill: #ede7dd;
+  --pw-text: #1e1b17;
+  --pw-text-muted: #5e574c;
+  --pw-gold: #ccb691;
+  --pw-gold-ink: #7a6440;
+  --pw-brown: #524b40;
+  --pw-border: rgba(82, 75, 64, 0.16);
+  --pw-border-subtle: rgba(82, 75, 64, 0.09);
+  --pw-border-strong: rgba(82, 75, 64, 0.34);
+  --pw-radius-card: 18px;
+  --pw-radius-field: 10px;
+
+  /* Liquid Glass tokens reais (referência Painel VIVOX Liquid Glass.html linhas 1720-1733) */
+  --lg-tint: rgba(255, 255, 255, 0.26);
+  --lg-tint-hover: rgba(255, 255, 255, 0.4);
+  --lg-panel-tint: rgba(255, 253, 249, 0.62);
+  --lg-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0.14) 100%);
+  --lg-shadow: 0 10px 26px -12px rgba(74, 58, 32, 0.3), 0 2px 6px -2px rgba(74, 58, 32, 0.14);
+  --lg-shadow-hover: 0 16px 34px -14px rgba(74, 58, 32, 0.38), 0 3px 8px -3px rgba(74, 58, 32, 0.18);
+  --lg-inner:
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -12px 20px -14px rgba(255, 255, 255, 0.55),
+    inset 0 10px 18px -16px rgba(74, 58, 32, 0.2);
+
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--pw-text);
+  background-color: var(--pw-bg);
+  min-height: 100%;
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  padding: 24px 24px 80px 24px;
+
+  /* Fundo 3 camadas de degradê idêntico ao .lg-scene (marfim + dois brilhos dourados) */
+  background-image:
+    radial-gradient(55% 60% at 0% 0%, rgba(204, 182, 145, 0.42) 0%, rgba(204, 182, 145, 0) 70%),
+    radial-gradient(50% 55% at 100% 100%, rgba(204, 182, 145, 0.3) 0%, rgba(204, 182, 145, 0) 70%),
+    linear-gradient(165deg, #FAF7F2 0%, #F3EDE4 60%, #EEE6DA 100%);
+  background-attachment: fixed;
+}
+
+@media (max-width: 640px) {
+  .planning-workspace {
+    padding: 16px 16px 80px 16px;
+  }
+}
+
+/* Camada visual auxiliar de cena líquida */
+.planning-workspace .pw-lg-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(55% 60% at 0% 0%, rgba(204, 182, 145, 0.42) 0%, rgba(204, 182, 145, 0) 70%),
+    radial-gradient(50% 55% at 100% 100%, rgba(204, 182, 145, 0.3) 0%, rgba(204, 182, 145, 0) 70%),
+    linear-gradient(165deg, #FAF7F2 0%, #F3EDE4 60%, #EEE6DA 100%);
+  background-attachment: fixed;
+}
+
+.planning-workspace > *:not(.pw-lg-scene) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Acessibilidade de foco visível */
+.planning-workspace button:focus-visible,
+.planning-workspace select:focus-visible,
+.planning-workspace a:focus-visible,
+.planning-workspace input:focus-visible,
+.planning-workspace textarea:focus-visible {
+  outline: 2px solid var(--pw-gold-ink) !important;
+  outline-offset: 2px !important;
+}
+
+.planning-workspace .font-archivo,
+.planning-workspace .pw-heading,
+.planning-workspace h1,
+.planning-workspace h2,
+.planning-workspace h3 {
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.planning-workspace .pw-section-label {
+  font-family: 'Archivo', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--pw-gold-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   MATERIAIS LIQUID GLASS (referência Painel VIVOX Liquid Glass.html)
+   ========================================================================== */
+
+/* Isolamento e contexto para pseudo-elementos de vidro */
+.planning-workspace .pw-glass,
+.planning-workspace .pw-glass-card,
+.planning-workspace .pw-glass-panel,
+.planning-workspace .pw-card,
+.planning-workspace .pw-glass-pill,
+.planning-workspace .pw-glass-control,
+.planning-workspace .pw-glass-tab,
+.planning-workspace .pw-glass-modal,
+.pw-glass-modal {
+  position: relative;
+  isolation: isolate;
+}
+
+/* 1. Vidro transparente (controles, pílulas, abas e cards interativos) */
+.planning-workspace .pw-glass,
+.planning-workspace .pw-glass-card,
+.planning-workspace .pw-glass-pill,
+.planning-workspace .pw-glass-control,
+.planning-workspace .pw-glass-tab {
+  border-color: transparent;
+  background-color: var(--lg-tint);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(3px) saturate(170%) brightness(1.04);
+  backdrop-filter: var(--lg-filter, ) blur(3px) saturate(170%) brightness(1.04);
+  box-shadow: var(--lg-inner), var(--lg-shadow);
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, --mx 0.35s ease-out, --my 0.35s ease-out;
+}
+
+/* 2. Vidro fosco para leitura confortável (painéis, seções e cards grandes) */
+/* Painéis exportados: foscos sem refração, apenas brilho/sombra conforme HTML original */
+.planning-workspace .pw-glass-panel,
+.planning-workspace .pw-card {
+  border-color: transparent;
+  border-radius: 26px;
+  background-color: var(--lg-panel-tint);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+  backdrop-filter: blur(26px) saturate(160%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.95), 0 8px 24px -16px rgba(74, 58, 32, 0.18), 0 1px 3px -1px rgba(74, 58, 32, 0.08);
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, --mx 0.35s ease-out, --my 0.35s ease-out;
+}
+
+/* 3. Vidro leitoso para modais */
+.planning-workspace .pw-glass-modal,
+.pw-glass-modal {
+  border-color: transparent;
+  border-radius: 28px !important;
+  background-color: rgba(255, 254, 251, 0.92) !important;
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: var(--lg-filter, ) blur(30px) saturate(180%);
+  box-shadow: var(--lg-inner), 0 40px 90px -30px rgba(46, 38, 26, 0.5) !important;
+  transition: --mx 0.35s ease-out, --my 0.35s ease-out;
+}
+
+/* Variantes de alto contraste para botões primários, dourados e semânticos */
+.planning-workspace .pw-glass-primary,
+.planning-workspace .pw-glass-control.pw-glass-primary,
+.planning-workspace .pw-glass-pill.pw-glass-primary {
+  background-color: #181512 !important;
+  color: #FFFFFF !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 50%) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.35), 0 4px 14px -3px rgba(24, 21, 18, 0.45) !important;
+}
+
+.planning-workspace .pw-glass-primary:hover,
+.planning-workspace .pw-glass-control.pw-glass-primary:hover {
+  background-color: #2B261F !important;
+  color: #FFFFFF !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.45), 0 6px 18px -3px rgba(24, 21, 18, 0.55) !important;
+}
+
+.planning-workspace .pw-glass-gold,
+.planning-workspace .pw-glass-control.pw-glass-gold {
+  background-color: #CCB691 !important;
+  color: #1E1B17 !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 50%) !important;
+}
+
+.planning-workspace .pw-glass-gold:hover,
+.planning-workspace .pw-glass-control.pw-glass-gold:hover {
+  background-color: #B59E79 !important;
+  color: #1E1B17 !important;
+}
+
+.planning-workspace .pw-glass-success,
+.planning-workspace .pw-glass-pill.pw-glass-success {
+  background-color: rgba(36, 122, 74, 0.12) !important;
+  color: #1E6B40 !important;
+  border-color: rgba(36, 122, 74, 0.3) !important;
+}
+
+.planning-workspace .pw-glass-warning,
+.planning-workspace .pw-glass-pill.pw-glass-warning {
+  background-color: rgba(204, 182, 145, 0.22) !important;
+  color: #7A6440 !important;
+  border-color: rgba(199, 161, 95, 0.35) !important;
+}
+
+.planning-workspace .pw-glass-error,
+.planning-workspace .pw-glass-control.pw-glass-error,
+.planning-workspace .pw-glass-pill.pw-glass-error {
+  background-color: #B83B32 !important;
+  color: #FFFFFF !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 50%) !important;
+}
+
+.planning-workspace .pw-glass-error:hover,
+.planning-workspace .pw-glass-control.pw-glass-error:hover {
+  background-color: #9B2F27 !important;
+}
+
+/* Borda especular mascarada (mais clara no alto à esquerda e embaixo à direita) */
+.planning-workspace .pw-glass::before,
+.planning-workspace .pw-glass-card::before,
+.planning-workspace .pw-glass-panel::before,
+.planning-workspace .pw-card::before,
+.planning-workspace .pw-glass-pill::before,
+.planning-workspace .pw-glass-control::before,
+.planning-workspace .pw-glass-tab::before,
+.planning-workspace .pw-glass-modal::before,
+.pw-glass-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(150deg,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(255, 255, 255, 0.35) 22%,
+      rgba(255, 255, 255, 0.04) 48%,
+      rgba(255, 255, 255, 0.2) 74%,
+      rgba(255, 255, 255, 0.9) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Reflexo do ponteiro: desliza e desvanece suavemente */
+.planning-workspace .pw-glass::after,
+.planning-workspace .pw-glass-card::after,
+.planning-workspace .pw-glass-panel::after,
+.planning-workspace .pw-card::after,
+.planning-workspace .pw-glass-pill::after,
+.planning-workspace .pw-glass-control::after,
+.planning-workspace .pw-glass-tab::after,
+.planning-workspace .pw-glass-modal::after,
+.pw-glass-modal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(120% 90% at var(--mx, 25%) var(--my, 0%), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.planning-workspace .lg-lit::after,
+.pw-glass-modal.lg-lit::after {
+  opacity: 1;
+}
+
+/* Hover com aprofundamento de profundidade (sem alteração abrupta de tamanho) */
+.planning-workspace .pw-glass:hover,
+.planning-workspace .pw-glass-card:hover,
+.planning-workspace .pw-glass-pill:hover,
+.planning-workspace .pw-glass-control:hover,
+.planning-workspace .pw-glass-tab:hover {
+  border-color: transparent;
+  background-color: var(--lg-tint-hover);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-inner), var(--lg-shadow-hover);
+}
+
+/* Estado de aba ativa: anel dourado sutil e gradiente de máscara */
+.planning-workspace .pw-glass-tab.is-active,
+.planning-workspace .pw-glass-tab.is-active:hover {
+  border-color: transparent;
+  background-color: rgba(255, 255, 255, 0.65);
+  background-image: var(--lg-sheen);
+  color: var(--pw-gold-ink);
+  font-weight: 800;
+  box-shadow: var(--lg-inner), 0 0 0 3px rgba(204, 182, 145, 0.3), 0 14px 28px -10px rgba(122, 100, 64, 0.35);
+}
+
+.planning-workspace .pw-glass-tab.is-active::before {
+  padding: 1.5px;
+  background: linear-gradient(150deg, #F1E3C4 0%, #CCB691 30%, #9C8150 55%, #CCB691 80%, #EBDAB7 100%);
+}
+
+/* ==========================================================================
+   FORMULÁRIOS & CAMPOS (Alta legibilidade sem oclusão de texto)
+   ========================================================================== */
+
+.planning-workspace .pw-field,
+.planning-workspace input[type="text"]:not(.pw-title-field),
+.planning-workspace input[type="date"],
+.planning-workspace input[type="search"],
+.planning-workspace select:not(.pw-status-field),
+.planning-workspace textarea {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pw-text);
+  background-color: rgba(255, 254, 250, 0.85);
+  border: 1px solid var(--pw-border);
+  border-radius: var(--pw-radius-field);
+  padding: 8px 12px;
+  min-height: 40px;
+  outline: none;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.planning-workspace .pw-field:focus,
+.planning-workspace input[type="text"]:not(.pw-title-field):focus,
+.planning-workspace input[type="date"]:focus,
+.planning-workspace input[type="search"]:focus,
+.planning-workspace select:not(.pw-status-field):focus,
+.planning-workspace textarea:focus {
+  background-color: #ffffff;
+  border-color: var(--pw-gold);
+  box-shadow: inset 0 1px 2px rgba(82, 75, 64, 0.06);
+}
+
+/* Header compacto: campos específicos de título e status */
+.planning-workspace .pw-status-field,
+.planning-workspace select.pw-status-field {
+  width: auto !important;
+  flex-shrink: 0 !important;
+  min-height: unset !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  line-height: normal !important;
+  border-radius: 9999px !important;
+}
+
+.planning-workspace .pw-title-field,
+.planning-workspace input[type="text"].pw-title-field {
+  background-color: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid transparent !important;
+  border-radius: 0 !important;
+  padding: 2px 0 !important;
+  min-height: unset !important;
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.planning-workspace .pw-title-field:hover,
+.planning-workspace input[type="text"].pw-title-field:hover {
+  border-bottom-color: rgba(82, 75, 64, 0.16) !important;
+}
+
+.planning-workspace .pw-title-field:focus,
+.planning-workspace input[type="text"].pw-title-field:focus {
+  background-color: transparent !important;
+  border-bottom-color: #CCB691 !important;
+  box-shadow: none !important;
+}
+
+.planning-workspace .pw-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pw-text-muted);
+  margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   ACESSIBILIDADE & FALLBACKS
+   ========================================================================== */
+
+@media (prefers-reduced-transparency: reduce) {
+  .planning-workspace .pw-glass,
+  .planning-workspace .pw-glass-card,
+  .planning-workspace .pw-glass-panel,
+  .planning-workspace .pw-card,
+  .planning-workspace .pw-glass-pill,
+  .planning-workspace .pw-glass-control,
+  .planning-workspace .pw-glass-tab,
+  .planning-workspace .pw-glass-modal,
+  .pw-glass-modal {
+    background-color: rgba(255, 253, 249, 0.96) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-workspace .pw-glass::after,
+  .planning-workspace .pw-glass-card::after,
+  .planning-workspace .pw-glass-panel::after,
+  .planning-workspace .pw-card::after,
+  .planning-workspace .pw-glass-pill::after,
+  .planning-workspace .pw-glass-control::after,
+  .planning-workspace .pw-glass-tab::after,
+  .planning-workspace .pw-glass-modal::after,
+  .pw-glass-modal::after {
+    display: none !important;
+  }
+}

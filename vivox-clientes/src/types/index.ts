@@ -349,6 +349,10 @@ export interface AtivoHospedagem {
   url: string;
   provedorVps?: string;
   ipServidor?: string;
+  servicoContratadoId?: string | null;
+  itemPlanejadoId?: string | null;
+  dataInicioHospedagem?: string | null; // YYYY-MM-DD or ISO string
+  prazoHospedagemMeses?: number | null;
   dataRenovacaoVps?: string; // ISO date string
   cicloVps: CicloRenovacao;
   custoVps?: number;
