@@ -417,7 +417,7 @@ export function ClientProfile() {
         <div className="pw-glass-panel p-5 md:p-6 rounded-[28px] overflow-hidden relative space-y-5">
           {/* Se houver banner, exibir faixa sutil de topo integrada */}
           {cliente.bannerUrl && (
-            <div className="w-full h-36 sm:h-48 lg:h-56 rounded-2xl overflow-hidden relative group -mt-1 -mx-1 mb-2">
+            <div className="w-full aspect-[820/312] min-h-[140px] max-h-[340px] rounded-2xl overflow-hidden relative group -mt-1 -mx-1 mb-2">
               <img
                 src={resolveMediaUrl(cliente.bannerUrl)}
                 alt={`Banner de ${cliente.nomeFantasia}`}
