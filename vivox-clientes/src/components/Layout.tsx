@@ -257,23 +257,6 @@ export function Layout() {
             </div>
             
             <NavLink
-              to="/configuracoes"
-              title={isSidebarCollapsed ? 'Configurações do Sistema' : undefined}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                  isSidebarCollapsed ? 'justify-center' : ''
-                } ${
-                  isActive
-                    ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
-                    : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
-                }`
-              }
-            >
-              <Settings className="w-4 h-4 text-[#C7A15F] shrink-0" />
-              {!isSidebarCollapsed && <span className="truncate">Configurações</span>}
-            </NavLink>
-            
-            <NavLink
               to="/educacional"
               title={isSidebarCollapsed ? 'Vivox Educacional' : undefined}
               className={({ isActive }) =>
@@ -337,8 +320,24 @@ export function Layout() {
             </div>
           </nav>
 
-          {/* Rodapé da Sidebar: Sair */}
-          <div className="p-3 border-t border-[#231F19] bg-[#0E0D0B]">
+          {/* Rodapé da Sidebar: Configurações + Sair */}
+          <div className="p-3 space-y-1 border-t border-[#231F19] bg-[#0E0D0B]">
+            <NavLink
+              to="/configuracoes"
+              title={isSidebarCollapsed ? 'Configurações do Sistema' : undefined}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                  isSidebarCollapsed ? 'justify-center' : ''
+                } ${
+                  isActive
+                    ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
+                    : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
+                }`
+              }
+            >
+              <Settings className="w-4 h-4 text-[#C7A15F] shrink-0" />
+              {!isSidebarCollapsed && <span className="truncate">Configurações</span>}
+            </NavLink>
             <button
               onClick={signOut}
               title={isSidebarCollapsed ? 'Sair da conta' : undefined}

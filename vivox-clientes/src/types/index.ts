@@ -42,6 +42,8 @@ export interface Cliente {
   instagramAccountId?: string;
   instagramUsername?: string;
   facebookPageId?: string;
+  createdAt?: string;
+  _count?: { servicosContratados: number; ativosHospedagem: number };
   responsavel?: { nome: string }; // Incluído caso o Prisma dê include
   fontesContexto?: FonteContexto[];
 }
