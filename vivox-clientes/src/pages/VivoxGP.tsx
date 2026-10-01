@@ -266,7 +266,7 @@ export const VivoxGP: React.FC = () => {
   };
 
   const handleDeleteWorkspace = async (workspaceId: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir este workspace? As tarefas continuarão salvas.')) {
+    if (!window.confirm('Tem certeza que deseja excluir este workspace? TODAS as tarefas dele também serão excluídas permanentemente.')) {
       return;
     }
     try {
