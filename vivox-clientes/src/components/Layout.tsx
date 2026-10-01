@@ -33,7 +33,8 @@ export function Layout() {
     location.pathname.startsWith('/cliente') || 
     location.pathname.startsWith('/analytics') ||
     location.pathname === '/hospedagens' ||
-    location.pathname === '/renovacoes';
+    location.pathname === '/renovacoes' ||
+    location.pathname === '/configuracoes';
 
   const isMarcaVisible =
     location.pathname === '/' ||
