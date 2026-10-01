@@ -97,7 +97,8 @@
   background-attachment: fixed;
 }
 
-.planning-workspace > *:not(.pw-lg-scene) {
+/* Exclui elementos fixed/absolute (ex.: modais), senão perdem o posicionamento */
+.planning-workspace > *:not(.pw-lg-scene):not(.fixed):not(.absolute) {
   position: relative;
   z-index: 1;
 }
