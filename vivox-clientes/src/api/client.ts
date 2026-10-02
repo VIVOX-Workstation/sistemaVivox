@@ -32,10 +32,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    // 401 no próprio login é senha errada: deixa a tela tratar o erro
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (error.response && error.response.status === 401 && !isLoginRequest) {
+      const isPortal = window.location.pathname.startsWith('/portal');
       localStorage.removeItem('@Vivox:token');
       localStorage.removeItem('@Vivox:user');
-      window.location.href = '/login';
+      window.location.href = isPortal ? '/portal/entrar' : '/login';
     }
     return Promise.reject(error);
   }

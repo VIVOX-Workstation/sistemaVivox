@@ -17,6 +17,7 @@ import { EducacionalAdmin } from './pages/EducacionalAdmin';
 import { EducacionalCursoEditor } from './pages/EducacionalCursoEditor';
 import Login from './pages/Login';
 import { PortalCliente } from './pages/PortalCliente';
+import { PortalLogin } from './pages/PortalLogin';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function InternalRoute() {
@@ -28,7 +29,7 @@ function InternalRoute() {
 
 function PortalRoute() {
   const { isAuthenticated, user } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/portal/entrar" replace />;
   if (user?.role !== 'CLIENTE') return <Navigate to="/" replace />;
   return <PortalCliente />;
 }
@@ -47,6 +48,7 @@ function App() {
           
           {/* Portal do Cliente: fora do Layout interno, protegido somente para CLIENTE */}
           <Route path="/portal" element={<PortalRoute />} />
+          <Route path="/portal/entrar" element={<PortalLogin />} />
           
           {/* Rotas internas: protegidas para usuários internos */}
           <Route element={<InternalRoute />}>

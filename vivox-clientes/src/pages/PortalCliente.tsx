@@ -99,7 +99,7 @@ export function PortalCliente() {
 
   const handleSignOut = () => {
     signOut();
-    navigate('/login', { replace: true });
+    navigate('/portal/entrar', { replace: true });
   };
 
   const handleAbrirInteresse = (servico: ServicoMapaItem) => {

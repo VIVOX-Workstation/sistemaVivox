@@ -93,7 +93,7 @@ export function AcessoPortalModal({ isOpen, onClose, clienteId, clienteNome }: A
     setTimeout(() => setCopiedFn(false), 2000);
   };
 
-  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
+  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/portal/entrar` : '/portal/entrar';
 
   const handleCopiarTudo = () => {
     if (!acesso) return;
