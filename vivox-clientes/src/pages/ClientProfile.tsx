@@ -37,6 +37,7 @@ import { OverviewTab } from '../components/ClientTabs/OverviewTab';
 import { NotesTab } from '../components/ClientTabs/NotesTab';
 import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
+import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
 import { chamadosApi } from '../api/chamados';
 import { formatarDataBR } from '../utils/hospedagemCalculo';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
@@ -84,7 +85,6 @@ export function ClientProfile() {
     const raw = searchParams.get('tab') as Tab;
     return raw && VALID_TABS.includes(raw) ? raw : 'overview';
   });
-  const [copiado, setCopiado] = useState(false);
 
   // Chamados em aberto deste cliente
   const [chamadosAbertos, setChamadosAbertos] = useState(0);
@@ -100,6 +100,9 @@ export function ClientProfile() {
   const [bannerUrlInput, setBannerUrlInput] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  // Modal de Acesso do Cliente ao Portal
+  const [isAcessoPortalModalOpen, setAcessoPortalModalOpen] = useState(false);
 
   // Modal de Edição dos Dados Cadastrais
   const [isEditClientModalOpen, setEditClientModalOpen] = useState(false);
@@ -177,11 +180,6 @@ export function ClientProfile() {
     }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
 
   // Alteração rápida de status do cliente direto no cabeçalho
   const handleQuickStatusChange = async (novoStatus: StatusCliente) => {
@@ -402,13 +400,6 @@ export function ClientProfile() {
               {cliente.nomeFantasia}
             </span>
           </nav>
-
-          {copiado && (
-            <div className="px-3 py-1 rounded-full bg-[#E6F4EA] border border-[#CEEAD6] text-[#247A4A] text-xs font-bold flex items-center gap-1.5 shadow-sm animate-fade-in">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Link do perfil copiado!</span>
-            </div>
-          )}
         </div>
 
         {/* ========================================================================= */}
@@ -609,11 +600,11 @@ export function ClientProfile() {
                   <span className="hidden sm:inline">Capa / Logo</span>
                 </button>
 
-                {/* Copiar Link */}
+                {/* Acesso ao Portal do Cliente / Compartilhar */}
                 <button
                   type="button"
-                  onClick={handleCopyLink}
-                  title="Copiar link do cliente"
+                  onClick={() => setAcessoPortalModalOpen(true)}
+                  title="Acesso do cliente ao portal"
                   className="pw-glass-control p-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center justify-center cursor-pointer shadow-2xs"
                 >
                   <Share2 className="w-4 h-4" />
@@ -986,6 +977,14 @@ export function ClientProfile() {
           onChamadoCreated={() => loadChamadosAbertos(cliente.id)}
         />
       )}
+
+      {/* Modal: Acesso do Cliente ao Portal */}
+      <AcessoPortalModal
+        isOpen={isAcessoPortalModalOpen}
+        onClose={() => setAcessoPortalModalOpen(false)}
+        clienteId={cliente.id}
+        clienteNome={cliente.nomeFantasia}
+      />
     </div>
   );
 }

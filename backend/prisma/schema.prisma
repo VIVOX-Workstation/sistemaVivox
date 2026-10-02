@@ -15,6 +15,14 @@ datasource db {
 enum Role {
   ADMIN
   COLABORADOR
+  CLIENTE
+}
+
+enum StatusInteresse {
+  NOVO
+  CONTATADO
+  CONVERTIDO
+  DESCARTADO
 }
 
 enum StatusCliente {
@@ -169,6 +177,11 @@ model User {
   senha String
   role  Role   @default(COLABORADOR)
 
+  // Portal do cliente: preenchidos só quando role = CLIENTE
+  clienteId                String?  @unique
+  cliente                  Cliente? @relation("UsuarioPortal", fields: [clienteId], references: [id], onDelete: Cascade)
+  senhaPortalCriptografada String?  @db.Text // AES-256-GCM, para o admin reexibir a senha gerada
+
   // Relações
   clientes              Cliente[]             @relation("ResponsavelInterno")
   producoes             Producao[]            @relation("ProdutorResponsavel")
@@ -195,13 +208,13 @@ model User {
 // ============================================
 
 model Cliente {
-  id                    String        @id @default(uuid())
+  id                    String          @id @default(uuid())
   nomeFantasia          String
   razaoSocial           String?
   cnpjCpf               String
   segmento              String
   responsavelId         String?
-  responsavel           User?         @relation("ResponsavelInterno", fields: [responsavelId], references: [id])
+  responsavel           User?           @relation("ResponsavelInterno", fields: [responsavelId], references: [id])
   contatos              Json // [{ nome, cargo, telefone, email, whatsapp }]
   status                StatusCliente
   dataInicioContrato    DateTime?
@@ -209,7 +222,7 @@ model Cliente {
   email                 String?
   telefone              String?
   localizacao           String?
-  loginsSenhas          String?       @db.Text
+  loginsSenhas          String?         @db.Text
   logoUrl               String?
   bannerUrl             String?
   observacoes           String?
@@ -218,7 +231,7 @@ model Cliente {
   openpanelProjectId    String?
   openpanelClientId     String?
   openpanelClientSecret String?
-  metaAccessToken       String?       @db.Text
+  metaAccessToken       String?         @db.Text
   instagramAccountId    String?
   instagramUsername     String?
   facebookPageId        String?
@@ -232,20 +245,37 @@ model Cliente {
   projetos            Projeto[]
   tarefas             Tarefa[]
   chamados            Chamado[]
+  usuarioPortal       User?               @relation("UsuarioPortal")
+  interessesServico   InteresseServico[]
 
   // Relações Analytics
-  analyticsSnapshots   AnalyticsSnapshot[]
+  analyticsSnapshots         AnalyticsSnapshot[]
   instagramFollowerSnapshots InstagramFollowerSnapshot[]
-  publicacoes          Publicacao[]
-  avaliacoesGmb        AvaliacaoGmb[]
-  oportunidades        Oportunidade[]
-  reunioes             Reuniao[]
-  fontesContexto       FonteContexto[]
-  documentosVetoriais  DocumentoVetorial[]
-  inteligenciasMercado InteligenciaMercado[]
+  publicacoes                Publicacao[]
+  avaliacoesGmb              AvaliacaoGmb[]
+  oportunidades              Oportunidade[]
+  reunioes                   Reuniao[]
+  fontesContexto             FonteContexto[]
+  documentosVetoriais        DocumentoVetorial[]
+  inteligenciasMercado       InteligenciaMercado[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// "Tenho interesse" clicado pelo cliente no mapa de serviços do portal
+model InteresseServico {
+  id          String          @id @default(uuid())
+  clienteId   String
+  cliente     Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipoServico TipoServico
+  status      StatusInteresse @default(NOVO)
+  mensagem    String?         @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clienteId, tipoServico])
 }
 
 model FonteContexto {
@@ -284,22 +314,22 @@ model InteligenciaMercado {
 }
 
 model ServicoContratado {
-  id              String               @id @default(uuid())
-  clienteId       String
-  cliente         Cliente              @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  tipoServico     TipoServico
-  status          StatusServico
-  dataContratacao DateTime
-  dataEntrega     DateTime?
-  valor           Decimal?
-  descricaoEscopo String?
-  historico       ServicoHistorico[]
-  producoes       Producao[]
-  planejamento    PlanejamentoServico?
+  id               String               @id @default(uuid())
+  clienteId        String
+  cliente          Cliente              @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipoServico      TipoServico
+  status           StatusServico
+  dataContratacao  DateTime
+  dataEntrega      DateTime?
+  valor            Decimal?
+  descricaoEscopo  String?
+  historico        ServicoHistorico[]
+  producoes        Producao[]
+  planejamento     PlanejamentoServico?
   ativosHospedagem AtivoHospedagem[]
-  tarefas         Tarefa[]
-  chamados        Chamado[]
-  devBoardCards   DevBoardCard[]
+  tarefas          Tarefa[]
+  chamados         Chamado[]
+  devBoardCards    DevBoardCard[]
 
   githubInstallationId String?
   githubRepoOwner      String?
@@ -311,18 +341,18 @@ model ServicoContratado {
 }
 
 model DevBoardCard {
-  id           String            @id @default(uuid())
-  servicoId    String
-  servico      ServicoContratado @relation(fields: [servicoId], references: [id], onDelete: Cascade)
-  prNumber     Int
-  title        String
-  tag          DevCardTag        @default(FEATURE)
-  coluna       DevCardColuna     @default(BACKLOG)
-  assignee     String?
-  branch       String
-  targetBranch String            @default("main")
-  description  String?
-  checklist    Json              @default("[]")
+  id             String            @id @default(uuid())
+  servicoId      String
+  servico        ServicoContratado @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  prNumber       Int
+  title          String
+  tag            DevCardTag        @default(FEATURE)
+  coluna         DevCardColuna     @default(BACKLOG)
+  assignee       String?
+  branch         String
+  targetBranch   String            @default("main")
+  description    String?
+  checklist      Json              @default("[]")
   githubPrNumber Int?
 
   createdAt DateTime @default(now())
@@ -553,10 +583,10 @@ model AtivoHospedagem {
   titulo String // ex: "LP Implante Capilar", "Site Institucional"
   url    String // ex: "https://drcliente.com.br/capilar"
 
-  servicoContratadoId String?
-  servicoContratado ServicoContratado? @relation(fields: [servicoContratadoId], references: [id], onDelete: SetNull)
-  itemPlanejadoId String?
-  dataInicioHospedagem DateTime? @db.Date
+  servicoContratadoId  String?
+  servicoContratado    ServicoContratado? @relation(fields: [servicoContratadoId], references: [id], onDelete: SetNull)
+  itemPlanejadoId      String?
+  dataInicioHospedagem DateTime?          @db.Date
   prazoHospedagemMeses Int?
 
   // Dados de Servidor / VPS
@@ -581,8 +611,8 @@ model AtivoHospedagem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([clienteId])
   @@unique([servicoContratadoId, itemPlanejadoId])
+  @@index([clienteId])
 }
 
 // ============================================
