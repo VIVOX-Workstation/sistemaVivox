@@ -16,11 +16,21 @@ import { EducacionalCurso } from './pages/EducacionalCurso';
 import { EducacionalAdmin } from './pages/EducacionalAdmin';
 import { EducacionalCursoEditor } from './pages/EducacionalCursoEditor';
 import Login from './pages/Login';
+import { PortalCliente } from './pages/PortalCliente';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-function PrivateRoute() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+function InternalRoute() {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role === 'CLIENTE') return <Navigate to="/portal" replace />;
+  return <Outlet />;
+}
+
+function PortalRoute() {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'CLIENTE') return <Navigate to="/" replace />;
+  return <PortalCliente />;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -35,7 +45,11 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           
-          <Route element={<PrivateRoute />}>
+          {/* Portal do Cliente: fora do Layout interno, protegido somente para CLIENTE */}
+          <Route path="/portal" element={<PortalRoute />} />
+          
+          {/* Rotas internas: protegidas para usuários internos */}
+          <Route element={<InternalRoute />}>
             <Route path="/" element={<Layout />}>
               <Route index element={<MainDashboard />} />
               <Route path="clientes" element={<ClientList />} />

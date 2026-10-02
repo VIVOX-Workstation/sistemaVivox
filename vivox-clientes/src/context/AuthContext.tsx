@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../api/client';
 
-interface User {
+export type UserRole = 'ADMIN' | 'COLABORADOR' | 'CLIENTE';
+
+export interface User {
   id: string;
   nome: string;
   email: string;
-  role: 'ADMIN' | 'COLABORADOR';
+  role: UserRole;
+  clienteId?: string | null;
 }
 
 interface AuthContextData {

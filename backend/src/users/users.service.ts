@@ -64,7 +64,7 @@ export class UsersService {
   }
 
   findAll() {
-    return this.prisma.user.findMany({ select: { id: true, nome: true, email: true, role: true } });
+    return this.prisma.user.findMany({ where: { role: { not: Role.CLIENTE } }, select: { id: true, nome: true, email: true, role: true } });
   }
 
   findOne(id: string) {

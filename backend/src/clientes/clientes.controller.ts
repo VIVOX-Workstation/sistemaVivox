@@ -17,6 +17,10 @@ import { StorageService } from '../storage/storage.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '@prisma/client';
+import { PortalService } from '../portal/portal.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('clientes')
@@ -24,7 +28,29 @@ export class ClientesController {
   constructor(
     private readonly clientesService: ClientesService,
     private readonly storageService: StorageService,
+    private readonly portalService: PortalService,
   ) {}
+
+  @Post(':id/acesso-portal')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.COLABORADOR)
+  criarAcessoPortal(@Param('id') id: string) {
+    return this.portalService.criarAcesso(id);
+  }
+
+  @Post(':id/acesso-portal/redefinir-senha')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.COLABORADOR)
+  redefinirSenhaPortal(@Param('id') id: string) {
+    return this.portalService.redefinirSenha(id);
+  }
+
+  @Get(':id/interesses')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.COLABORADOR)
+  listarInteresses(@Param('id') id: string) {
+    return this.portalService.listarInteresses(id);
+  }
 
   @Post()
   create(@Body() createClienteDto: CreateClienteDto) {

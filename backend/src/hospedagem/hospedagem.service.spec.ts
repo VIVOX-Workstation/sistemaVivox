@@ -21,13 +21,13 @@ describe('HospedagemService prazo e vínculo', () => {
   it('calcula vencimento e ciclo no cadastro', async () => {
     const resultado = await service.create({ clienteId: 'c1', titulo: 'LP', url: 'https://example.com',
       dataInicioHospedagem: '2026-10-01', prazoHospedagemMeses: 12 });
-    expect(resultado.dataRenovacaoVps.toISOString()).toBe('2027-10-01T00:00:00.000Z');
+    expect(resultado.dataRenovacaoVps?.toISOString()).toBe('2027-10-01T00:00:00.000Z');
     expect(resultado.cicloVps).toBe('ANUAL');
   });
 
   it('recalcula ao alterar só o prazo e mantém início', async () => {
     const resultado = await service.update('h1', { prazoHospedagemMeses: 24 });
-    expect(resultado.dataRenovacaoVps.toISOString()).toBe('2028-10-01T00:00:00.000Z');
+    expect(resultado.dataRenovacaoVps?.toISOString()).toBe('2028-10-01T00:00:00.000Z');
     expect(resultado.cicloVps).toBe('BIENAL');
   });
 
@@ -43,7 +43,7 @@ describe('HospedagemService prazo e vínculo', () => {
 
   it('mantém cadastro legado sem exigir prazo automático', async () => {
     const resultado = await service.create({ clienteId: 'c1', titulo: 'LP', url: 'https://example.com', dataRenovacaoVps: '2027-01-01' });
-    expect(resultado.dataRenovacaoVps.toISOString().slice(0, 10)).toBe('2027-01-01');
+    expect(resultado.dataRenovacaoVps?.toISOString().slice(0, 10)).toBe('2027-01-01');
     expect(resultado.dataInicioHospedagem).toBeUndefined();
   });
 
