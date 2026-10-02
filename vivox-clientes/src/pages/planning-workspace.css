@@ -69,13 +69,8 @@
   isolation: isolate;
   box-sizing: border-box;
   padding: 24px 24px 80px 24px;
-
-  /* Fundo 3 camadas de degradê idêntico ao .lg-scene (marfim + dois brilhos dourados) */
-  background-image:
-    radial-gradient(55% 60% at 0% 0%, rgba(204, 182, 145, 0.42) 0%, rgba(204, 182, 145, 0) 70%),
-    radial-gradient(50% 55% at 100% 100%, rgba(204, 182, 145, 0.3) 0%, rgba(204, 182, 145, 0) 70%),
-    linear-gradient(165deg, #FAF7F2 0%, #F3EDE4 60%, #EEE6DA 100%);
-  background-attachment: fixed;
+  /* O degradê (marfim + brilhos dourados) vive só em .pw-lg-scene, opaca e cobrindo todo o workspace;
+     repetir aqui com background-attachment: fixed dobrava o repaint no scroll sem efeito visual. */
 }
 
 @media (max-width: 640px) {
