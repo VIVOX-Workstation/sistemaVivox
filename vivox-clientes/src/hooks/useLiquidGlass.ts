@@ -36,30 +36,66 @@ export function useLiquidGlass(
       litEl = el;
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
-      if (prefersReducedMotion) return;
-      const targetEl = e.target as HTMLElement | null;
-      const el = targetEl?.closest ? (targetEl.closest(SHINE_SELECTOR) as HTMLElement | null) : null;
-      if (!el || !container.contains(el)) {
-        setLit(null);
-        return;
+    // Um update por frame (rAF) e rect reaproveitado enquanto o ponteiro estiver no mesmo elemento
+    let rafId: number | null = null;
+    let pendingX = 0;
+    let pendingY = 0;
+    let pendingEl: HTMLElement | null = null;
+    let rectEl: HTMLElement | null = null;
+    let cachedRect: DOMRect | null = null;
+    const invalidateRect = () => {
+      cachedRect = null;
+    };
+
+    const flushPointer = () => {
+      rafId = null;
+      const el = pendingEl;
+      if (!el) return;
+      if (rectEl !== el || !cachedRect) {
+        rectEl = el;
+        cachedRect = el.getBoundingClientRect();
       }
-      setLit(el);
-      const r = el.getBoundingClientRect();
+      const r = cachedRect;
       if (r.width > 0 && r.height > 0) {
-        const mx = (((e.clientX - r.left) / r.width) * 100).toFixed(1) + '%';
-        const my = (((e.clientY - r.top) / r.height) * 100).toFixed(1) + '%';
+        const mx = (((pendingX - r.left) / r.width) * 100).toFixed(1) + '%';
+        const my = (((pendingY - r.top) / r.height) * 100).toFixed(1) + '%';
         el.style.setProperty('--mx', mx);
         el.style.setProperty('--my', my);
       }
     };
 
+    const handlePointerMove = (e: PointerEvent) => {
+      if (prefersReducedMotion) return;
+      const targetEl = e.target as HTMLElement | null;
+      const el = targetEl?.closest ? (targetEl.closest(SHINE_SELECTOR) as HTMLElement | null) : null;
+      if (!el || !container.contains(el)) {
+        pendingEl = null;
+        setLit(null);
+        return;
+      }
+      setLit(el);
+      pendingEl = el;
+      pendingX = e.clientX;
+      pendingY = e.clientY;
+      if (rafId === null) rafId = requestAnimationFrame(flushPointer);
+    };
+
     const handlePointerLeave = () => {
+      pendingEl = null;
       setLit(null);
     };
 
     container.addEventListener('pointermove', handlePointerMove, { passive: true });
     container.addEventListener('pointerleave', handlePointerLeave);
+    window.addEventListener('scroll', invalidateRect, { passive: true, capture: true });
+    window.addEventListener('resize', invalidateRect, { passive: true });
+    const stopPointer = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = null;
+      pendingEl = null;
+      window.removeEventListener('scroll', invalidateRect, true);
+      window.removeEventListener('resize', invalidateRect);
+    };
 
     // 2. Refração SVG: apenas navegadores Chromium suportam filtro SVG em backdrop-filter
     const ua = navigator.userAgent;
@@ -68,6 +104,7 @@ export function useLiquidGlass(
       return () => {
         container.removeEventListener('pointermove', handlePointerMove);
         container.removeEventListener('pointerleave', handlePointerLeave);
+        stopPointer();
         setLit(null);
       };
     }
@@ -230,10 +267,18 @@ export function useLiquidGlass(
       return id;
     }
 
+    // Tamanho arredondado da ultima aplicacao: evita recalcular se nada mudou
+    const lastSize = new WeakMap<HTMLElement, string>();
+    // Apenas elementos proximos da viewport recebem filtro
+    const visible = new Set<HTMLElement>();
+
     function applyRefraction(el: HTMLElement) {
       const w = Math.round(el.offsetWidth);
       const h = Math.round(el.offsetHeight);
       if (!w || !h) return;
+      const sizeKey = w + 'x' + h;
+      if (lastSize.get(el) === sizeKey && elementFilters.has(el)) return;
+      lastSize.set(el, sizeKey);
       const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
       const id = filterFor(w, h, Math.round(Math.min(r, w / 2, h / 2)));
       const prevId = elementFilters.get(el);
@@ -257,45 +302,78 @@ export function useLiquidGlass(
         else filterRefCount.set(prevId, count);
         elementFilters.delete(el);
       }
+      lastSize.delete(el);
       el.style.removeProperty('--lg-filter');
     }
 
+    // Fila processada em lotes pequenos, um lote por frame
+    const BATCH = 6;
     const queue = new Set<HTMLElement>();
-    let timerId: ReturnType<typeof setTimeout> | null = null;
+    let rafQueueId: number | null = null;
+    function processQueue() {
+      rafQueueId = null;
+      let n = 0;
+      for (const element of queue) {
+        queue.delete(element);
+        if (visible.has(element) && container?.contains(element)) {
+          applyRefraction(element);
+          if (++n >= BATCH) break;
+        }
+      }
+      if (queue.size > 0) rafQueueId = requestAnimationFrame(processQueue);
+    }
     function scheduleRefraction(el: HTMLElement) {
+      if (!visible.has(el)) return;
       queue.add(el);
-      if (timerId !== null) return;
-      timerId = setTimeout(() => {
-        timerId = null;
-        queue.forEach((element) => {
-          if (container && container.contains(element)) {
-            applyRefraction(element);
+      if (rafQueueId === null) rafQueueId = requestAnimationFrame(processQueue);
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement;
+          if (entry.isIntersecting) {
+            visible.add(el);
+            scheduleRefraction(el);
+          } else {
+            visible.delete(el);
+            queue.delete(el);
+            releaseElement(el);
           }
         });
-        queue.clear();
-      }, 30);
-    }
+      },
+      { rootMargin: '300px 0px' }
+    );
 
     const ro = new ResizeObserver((entries) => {
       entries.forEach((entry) => {
-        scheduleRefraction(entry.target as HTMLElement);
+        const el = entry.target as HTMLElement;
+        const sizeKey = Math.round(el.offsetWidth) + 'x' + Math.round(el.offsetHeight);
+        if (lastSize.get(el) === sizeKey) return; // variacao sub-pixel ou disparo inicial redundante
+        scheduleRefraction(el);
       });
     });
+
+    function watch(el: HTMLElement) {
+      io.observe(el);
+      ro.observe(el);
+    }
+    function unwatch(el: HTMLElement) {
+      io.unobserve(el);
+      ro.unobserve(el);
+      visible.delete(el);
+      queue.delete(el);
+      releaseElement(el);
+    }
 
     function observeElements(root: Node) {
       if (root.nodeType !== 1) return;
       const el = root as HTMLElement;
-      if (el.matches?.(REFRACT_SELECTOR)) {
-        applyRefraction(el);
-        ro.observe(el);
-      }
-      el.querySelectorAll?.(REFRACT_SELECTOR).forEach((child) => {
-        applyRefraction(child as HTMLElement);
-        ro.observe(child);
-      });
+      if (el.matches?.(REFRACT_SELECTOR)) watch(el);
+      el.querySelectorAll?.(REFRACT_SELECTOR).forEach((child) => watch(child as HTMLElement));
     }
 
-    // Passada inicial nos elementos existentes
+    // Passada inicial: o IntersectionObserver notifica so os visiveis, aplicados em lotes
     observeElements(container);
 
     // MutationObserver para observar troca de abas e novos nós dinâmicos
@@ -307,15 +385,8 @@ export function useLiquidGlass(
         rec.removedNodes.forEach((node) => {
           if (node.nodeType === 1) {
             const el = node as HTMLElement;
-            if (el.matches?.(REFRACT_SELECTOR)) {
-              ro.unobserve(el);
-              releaseElement(el);
-            }
-            el.querySelectorAll?.(REFRACT_SELECTOR).forEach((child) => {
-              const ch = child as HTMLElement;
-              ro.unobserve(ch);
-              releaseElement(ch);
-            });
+            if (el.matches?.(REFRACT_SELECTOR)) unwatch(el);
+            el.querySelectorAll?.(REFRACT_SELECTOR).forEach((child) => unwatch(child as HTMLElement));
           }
         });
       });
@@ -324,9 +395,7 @@ export function useLiquidGlass(
     mo.observe(container, { childList: true, subtree: true });
 
     const handleWindowResize = () => {
-      container.querySelectorAll(REFRACT_SELECTOR).forEach((el) => {
-        scheduleRefraction(el as HTMLElement);
-      });
+      visible.forEach((el) => scheduleRefraction(el));
     };
     window.addEventListener('resize', handleWindowResize, { passive: true });
 
@@ -334,13 +403,17 @@ export function useLiquidGlass(
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerleave', handlePointerLeave);
       window.removeEventListener('resize', handleWindowResize);
+      stopPointer();
       setLit(null);
       ro.disconnect();
+      io.disconnect();
       mo.disconnect();
-      if (timerId !== null) {
-        clearTimeout(timerId);
-        timerId = null;
+      if (rafQueueId !== null) {
+        cancelAnimationFrame(rafQueueId);
+        rafQueueId = null;
       }
+      queue.clear();
+      visible.clear();
       elementFilters.forEach((_id, elem) => {
         elem.style.removeProperty('--lg-filter');
       });
