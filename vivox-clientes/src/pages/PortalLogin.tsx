@@ -50,7 +50,9 @@ export function PortalLogin() {
   return (
     <div
       ref={workspaceRef}
-      className="planning-workspace min-h-screen w-full flex items-center justify-center text-[#1E1A16]"
+      className="planning-workspace w-full flex items-center justify-center text-[#1E1A16]"
+      // inline porque .planning-workspace (CSS sem layer) sobrescreve min-h-screen e soma 80px de padding-bottom
+      style={{ minHeight: '100dvh', paddingBottom: 24 }}
     >
       <div className="pw-lg-scene" aria-hidden="true" />
 

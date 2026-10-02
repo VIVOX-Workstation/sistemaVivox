@@ -162,7 +162,7 @@ export function PortalCliente() {
   const servicosDisponiveis = data?.servicos.filter((s) => !s.contratado) || [];
 
   return (
-    <div ref={workspaceRef} className="planning-workspace min-h-screen w-full select-none flex flex-col text-[#1E1A16]">
+    <div ref={workspaceRef} className="planning-workspace w-full select-none flex flex-col text-[#1E1A16]" style={{ minHeight: '100dvh' }}>
       {/* Camada visual auxiliar de cena líquida */}
       <div className="pw-lg-scene" aria-hidden="true" />
 
