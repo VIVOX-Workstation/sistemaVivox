@@ -29,3 +29,6 @@ Thumbs.db
 dados/
 coolify*.txt
 dsada.txt
+
+# Configuração local do Claude Code
+.claude/settings.local.json
