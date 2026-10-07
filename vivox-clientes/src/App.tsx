@@ -19,6 +19,7 @@ import Login from './pages/Login';
 import { PortalCliente } from './pages/PortalCliente';
 import { PortalLogin } from './pages/PortalLogin';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { MODULOS, type ModuloId } from './config/modulos';
 
 function InternalRoute() {
   const { isAuthenticated, user } = useAuth();
@@ -39,6 +40,16 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return user?.role === 'ADMIN' ? <>{children}</> : <Navigate to="/educacional" replace />;
 }
 
+function ModuloRoute({ modulo, children }: { modulo: ModuloId; children?: React.ReactNode }) {
+  const { podeAcessar } = useAuth();
+  if (!podeAcessar(modulo)) {
+    const primeiroModuloLiberado = MODULOS.find((m) => podeAcessar(m.id));
+    const fallbackPath = primeiroModuloLiberado ? primeiroModuloLiberado.rotaInicial : '/configuracoes';
+    return <Navigate to={fallbackPath} replace />;
+  }
+  return children ? <>{children}</> : <Outlet />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -53,32 +64,58 @@ function App() {
           {/* Rotas internas: protegidas para usuários internos */}
           <Route element={<InternalRoute />}>
             <Route path="/" element={<Layout />}>
-              <Route index element={<MainDashboard />} />
-              <Route path="clientes" element={<ClientList />} />
-              <Route path="cliente/novo" element={<ClientForm />} />
-              <Route path="cliente/:id" element={<ClientProfile />} />
-              <Route path="clientes/:id" element={<ClientProfile />} />
-              <Route path="cliente/:id/servicos/:servicoId/planejamento" element={<PlanejamentoServico />} />
-              <Route path="cliente/:id/servicos/:servicoId/planejamento/:itemId" element={<PlanejamentoServico />} />
-              <Route path="cliente/:id/servicos/:servicoId/devboard" element={<DevBoard />} />
+              {/* DASHBOARD (index) */}
+              <Route
+                index
+                element={
+                  <ModuloRoute modulo="DASHBOARD">
+                    <MainDashboard />
+                  </ModuloRoute>
+                }
+              />
               
-              <Route path="hospedagens" element={<HostingRadar />} />
-              <Route path="renovacoes" element={<HostingRadar />} />
+              {/* CLIENTES */}
+              <Route element={<ModuloRoute modulo="CLIENTES" />}>
+                <Route path="clientes" element={<ClientList />} />
+                <Route path="cliente/novo" element={<ClientForm />} />
+                <Route path="cliente/:id" element={<ClientProfile />} />
+                <Route path="clientes/:id" element={<ClientProfile />} />
+                <Route path="cliente/:id/servicos/:servicoId/planejamento" element={<PlanejamentoServico />} />
+                <Route path="cliente/:id/servicos/:servicoId/planejamento/:itemId" element={<PlanejamentoServico />} />
+                <Route path="cliente/:id/servicos/:servicoId/devboard" element={<DevBoard />} />
+              </Route>
+              
+              {/* HOSPEDAGENS */}
+              <Route element={<ModuloRoute modulo="HOSPEDAGENS" />}>
+                <Route path="hospedagens" element={<HostingRadar />} />
+                <Route path="renovacoes" element={<HostingRadar />} />
+              </Route>
 
-              <Route path="analytics" element={<AnalyticsIndex />} />
-              <Route path="analytics/:id" element={<AnalyticsDashboard />} />
-              <Route path="gp" element={<VivoxGP />} />
-              <Route path="gp/tarefa/:tarefaId" element={<VivoxGP />} />
-              <Route path="gp/minhas-tarefas" element={<VivoxGP />} />
-              <Route path="gp/minhas-tarefas/tarefa/:tarefaId" element={<VivoxGP />} />
-              <Route path="gp/workspace/:workspaceId" element={<VivoxGP />} />
-              <Route path="gp/workspace/:workspaceId/tarefa/:tarefaId" element={<VivoxGP />} />
+              {/* ANALYTICS */}
+              <Route element={<ModuloRoute modulo="ANALYTICS" />}>
+                <Route path="analytics" element={<AnalyticsIndex />} />
+                <Route path="analytics/:id" element={<AnalyticsDashboard />} />
+              </Route>
+
+              {/* GP */}
+              <Route element={<ModuloRoute modulo="GP" />}>
+                <Route path="gp" element={<VivoxGP />} />
+                <Route path="gp/tarefa/:tarefaId" element={<VivoxGP />} />
+                <Route path="gp/minhas-tarefas" element={<VivoxGP />} />
+                <Route path="gp/minhas-tarefas/tarefa/:tarefaId" element={<VivoxGP />} />
+                <Route path="gp/workspace/:workspaceId" element={<VivoxGP />} />
+                <Route path="gp/workspace/:workspaceId/tarefa/:tarefaId" element={<VivoxGP />} />
+              </Route>
               
-              <Route path="educacional" element={<EducacionalHome />} />
-              <Route path="educacional/curso/:id" element={<EducacionalCurso />} />
-              <Route path="educacional/admin" element={<AdminRoute><EducacionalAdmin /></AdminRoute>} />
-              <Route path="educacional/admin/:cursoId" element={<AdminRoute><EducacionalCursoEditor /></AdminRoute>} />
+              {/* EDUCACIONAL */}
+              <Route element={<ModuloRoute modulo="EDUCACIONAL" />}>
+                <Route path="educacional" element={<EducacionalHome />} />
+                <Route path="educacional/curso/:id" element={<EducacionalCurso />} />
+                <Route path="educacional/admin" element={<AdminRoute><EducacionalAdmin /></AdminRoute>} />
+                <Route path="educacional/admin/:cursoId" element={<AdminRoute><EducacionalCursoEditor /></AdminRoute>} />
+              </Route>
               
+              {/* CONFIGURAÇÕES (sempre acessível para qualquer usuário interno autenticado) */}
               <Route path="configuracoes" element={<Configuracoes />} />
               
               <Route path="*" element={<Navigate to="/" replace />} />

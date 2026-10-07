@@ -11,9 +11,12 @@ import {
   UserCircle,
   RefreshCw,
   AlertTriangle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { MODULOS, TODOS_MODULOS } from '../config/modulos';
+import { usersApi } from '../api/users';
 import './planning-workspace.css';
 
 interface User {
@@ -22,6 +25,7 @@ interface User {
   email: string;
   role: 'ADMIN' | 'COLABORADOR';
   createdAt: string;
+  modulos?: string[];
 }
 
 type Role = 'ADMIN' | 'COLABORADOR';
@@ -74,7 +78,7 @@ function ConfigSkeleton() {
 }
 
 export function Configuracoes() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawSecao = searchParams.get('secao') || searchParams.get('tab');
   const secao: Secao = SECOES.some((s) => s.id === rawSecao) ? (rawSecao as Secao) : 'equipe';
@@ -93,6 +97,46 @@ export function Configuracoes() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Modulos Modal State
+  const [modulosUser, setModulosUser] = useState<User | null>(null);
+  const [selectedModulos, setSelectedModulos] = useState<string[]>([]);
+  const [savingModulos, setSavingModulos] = useState(false);
+  const [modulosError, setModulosError] = useState('');
+
+  const openModulosModal = (u: User) => {
+    setModulosUser(u);
+    setSelectedModulos(u.modulos || []);
+    setModulosError('');
+  };
+
+  const toggleModulo = (id: string) => {
+    setSelectedModulos((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
+    );
+  };
+
+  const handleSaveModulos = async () => {
+    if (!modulosUser) return;
+    setSavingModulos(true);
+    setModulosError('');
+    try {
+      const updated = await usersApi.updateUserModulos(modulosUser.id, selectedModulos);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === modulosUser.id ? { ...u, modulos: updated.modulos || selectedModulos } : u))
+      );
+      showToast('Módulos de acesso atualizados com sucesso.');
+      if (modulosUser.id === currentUser?.id) {
+        await refreshUser();
+      }
+      setModulosUser(null);
+    } catch (err: any) {
+      console.error('Erro ao atualizar módulos do usuário:', err);
+      setModulosError(err.response?.data?.message || 'Não foi possível salvar os módulos.');
+    } finally {
+      setSavingModulos(false);
+    }
+  };
 
   // Create User State
   const [nome, setNome] = useState('');
@@ -331,6 +375,30 @@ export function Configuracoes() {
                     ) : (
                       <RoleBadge role={user.role} />
                     )}
+
+                    {/* Resumo de Acesso e Botão Módulos */}
+                    {user.role === 'ADMIN' ? (
+                      <span className="pw-glass-pill px-2.5 py-1 text-[11px] font-bold text-[#7A6440] bg-[#FAF2E4] border border-[#E8D4B4] rounded-lg">
+                        Acesso total
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-[#5E574C] bg-white/60 border border-[#524B40]/10 px-2.5 py-1 rounded-xl">
+                          {(user.modulos || []).length} de {MODULOS.length} módulos
+                        </span>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => openModulosModal(user)}
+                            className="pw-glass-control rounded-xl px-3 py-1.5 text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            title="Configurar permissões de módulos"
+                          >
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-[#C7A15F]" /> Módulos
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <span className="text-xs text-[#5E574C] whitespace-nowrap">Desde {formatarDataBR(user.createdAt)}</span>
                     <div className="flex items-center gap-2">
                       <button
@@ -555,6 +623,120 @@ export function Configuracoes() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Permissões de Módulos */}
+      <Modal
+        isOpen={!!modulosUser}
+        onClose={() => !savingModulos && setModulosUser(null)}
+        title={`Permissões de Módulos: ${modulosUser?.nome || ''}`}
+      >
+        <div className="space-y-4 mt-2 text-[#1E1A16]">
+          <div className="flex items-center justify-between pb-2 border-b border-[#524B40]/10 flex-wrap gap-2">
+            <p className="text-xs text-[#5E574C]">
+              Selecione os módulos que o colaborador pode acessar:
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedModulos([...TODOS_MODULOS])}
+                className="pw-glass-control px-2.5 py-1 text-[11px] font-bold text-[#7A6440] hover:text-[#1E1A16] rounded-lg transition-colors cursor-pointer"
+              >
+                Marcar todos
+              </button>
+              <span className="text-[#5E574C]/30 text-xs">|</span>
+              <button
+                type="button"
+                onClick={() => setSelectedModulos([])}
+                className="pw-glass-control px-2.5 py-1 text-[11px] font-bold text-[#8F8271] hover:text-[#B83B32] rounded-lg transition-colors cursor-pointer"
+              >
+                Limpar
+              </button>
+            </div>
+          </div>
+
+          {/* Lista dos 6 módulos em toggles */}
+          <div className="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1">
+            {MODULOS.map((mod) => {
+              const Icon = mod.icone;
+              const ativo = selectedModulos.includes(mod.id);
+              return (
+                <div
+                  key={mod.id}
+                  onClick={() => toggleModulo(mod.id)}
+                  className={`pw-glass-panel p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    ativo
+                      ? 'border-[#C7A15F]/60 bg-white/80 shadow-2xs'
+                      : 'border-[#524B40]/10 bg-white/40 opacity-75 hover:opacity-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
+                        ativo
+                          ? 'bg-[#FAF2E4] border-[#E8D4B4] text-[#8A6828]'
+                          : 'bg-stone-100 border-stone-200 text-stone-500'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-[#1E1A16] truncate">{mod.label}</h4>
+                        <span className="font-mono text-[10px] text-[#8F8271] bg-stone-100 px-1.5 py-0.5 rounded">
+                          {mod.rotaInicial}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#5E574C] line-clamp-1">{mod.descricao}</p>
+                    </div>
+                  </div>
+
+                  {/* Toggle switch visual */}
+                  <div className="shrink-0 flex items-center pl-2">
+                    <div
+                      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${
+                        ativo ? 'bg-[#C7A15F]' : 'bg-stone-300'
+                      }`}
+                    >
+                      <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
+                          ativo ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {modulosError && <ErrorBox message={modulosError} />}
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#524B40]/10">
+            <button
+              type="button"
+              disabled={savingModulos}
+              onClick={() => setModulosUser(null)}
+              className="px-4 py-2 text-xs font-semibold text-[#625746] hover:bg-[#FAF6F0] rounded-xl transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={savingModulos}
+              onClick={handleSaveModulos}
+              className="px-4 py-2 rounded-xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+            >
+              {savingModulos ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
+                </>
+              ) : (
+                'Salvar alterações'
+              )}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
