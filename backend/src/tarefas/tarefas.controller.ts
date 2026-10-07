@@ -1,3 +1,5 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import {
   Controller,
   Get,
@@ -25,6 +27,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from '../storage/storage.service';
 import { PrioridadeTarefa } from '@prisma/client';
 
+@RequerModulo({ todos: [ModuloSistema.GP], leitura: [ModuloSistema.CLIENTES] })
 @Controller('tarefas')
 @UseGuards(JwtAuthGuard)
 export class TarefasController {

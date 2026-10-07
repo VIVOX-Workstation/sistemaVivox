@@ -1,6 +1,6 @@
 import { Controller, Get, INestApplication, Req, UseGuards } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Role } from '@prisma/client';
+import { ModuloSistema, Role } from '@prisma/client';
 import { sign } from 'jsonwebtoken';
 import request from 'supertest';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -13,6 +13,7 @@ import { PortalService } from '../portal/portal.service';
 import { ClientesController } from '../clientes/clientes.controller';
 import { ClientesService } from '../clientes/clientes.service';
 import { StorageService } from '../storage/storage.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 jest.mock('uuid', () => ({ v4: () => 'test-uuid' }));
 
@@ -54,6 +55,7 @@ describe('Portal JWT isolation (HTTP)', () => {
         { provide: PortalService, useValue: portalService },
         { provide: ClientesService, useValue: {} },
         { provide: StorageService, useValue: {} },
+        { provide: PrismaService, useValue: { user: { findUnique: jest.fn().mockResolvedValue({ role: Role.COLABORADOR, modulos: [ModuloSistema.CLIENTES] }) } } },
       ],
     }).compile();
     app = module.createNestApplication();

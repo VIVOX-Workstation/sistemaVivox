@@ -1,3 +1,5 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { DevboardService } from './devboard.service';
@@ -60,12 +62,14 @@ export class DevboardController {
     }
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Get('servico/:servicoId')
   findByServico(@Param('servicoId') servicoId: string) {
     return this.devboardService.findByServico(servicoId);
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Get('servico/:servicoId/github/install-url')
   getGithubInstallUrl(@Param('servicoId') servicoId: string) {
@@ -77,6 +81,7 @@ export class DevboardController {
     };
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Get('servico/:servicoId/github/installation-repos')
   async listInstallationRepos(
@@ -114,6 +119,7 @@ export class DevboardController {
     };
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Post('servico/:servicoId/github/select-repo')
   async selectGithubRepo(
@@ -124,6 +130,7 @@ export class DevboardController {
     return { success: true };
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Post('servico/:servicoId/github/disconnect')
   async disconnectGithub(@Param('servicoId') servicoId: string) {
@@ -131,6 +138,7 @@ export class DevboardController {
     return { success: true };
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Get('servico/:servicoId/github/sync')
   async syncGithubData(@Param('servicoId') servicoId: string) {
@@ -211,18 +219,21 @@ export class DevboardController {
     };
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() dto: CreateDevCardDto) {
     return this.devboardService.create(dto);
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateDevCardDto) {
     return this.devboardService.update(id, dto);
   }
 
+  @RequerModulo({ todos: [ModuloSistema.CLIENTES] })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {

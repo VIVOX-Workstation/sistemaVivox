@@ -1,8 +1,8 @@
-import { Injectable, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, ConflictException, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role } from '@prisma/client';
+import { ModuloSistema, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -64,7 +64,24 @@ export class UsersService {
   }
 
   findAll() {
-    return this.prisma.user.findMany({ where: { role: { not: Role.CLIENTE } }, select: { id: true, nome: true, email: true, role: true } });
+    return this.prisma.user.findMany({ where: { role: { not: Role.CLIENTE } }, select: { id: true, nome: true, email: true, role: true, modulos: true } });
+  }
+
+  async findCurrent(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id }, select: { id: true, nome: true, email: true, role: true, clienteId: true, modulos: true },
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+    return user;
+  }
+
+  async updateModulos(id: string, modulos: ModuloSistema[]) {
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { role: true } });
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+    if (user.role === Role.CLIENTE) throw new BadRequestException('Não é possível alterar módulos de um usuário CLIENTE.');
+    return this.prisma.user.update({
+      where: { id }, data: { modulos }, select: { id: true, nome: true, email: true, role: true, modulos: true },
+    });
   }
 
   findOne(id: string) {

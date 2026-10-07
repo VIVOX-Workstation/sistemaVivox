@@ -1,9 +1,12 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { HospedagemService } from './hospedagem.service';
 import { CreateHospedagemDto } from './dto/create-hospedagem.dto';
 import { UpdateHospedagemDto } from './dto/update-hospedagem.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@RequerModulo({ todos: [ModuloSistema.HOSPEDAGENS, ModuloSistema.CLIENTES] })
 @Controller('hospedagens')
 @UseGuards(JwtAuthGuard)
 export class HospedagemController {

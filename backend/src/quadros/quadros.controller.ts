@@ -1,9 +1,12 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Put, Post, Param, Body, Req, UseGuards } from '@nestjs/common';
 import { QuadrosService } from './quadros.service';
 import { StorageService } from '../storage/storage.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { Request } from 'express';
 
+@RequerModulo({ todos: [ModuloSistema.GP] })
 @Controller('quadros')
 @UseGuards(JwtAuthGuard)
 export class QuadrosController {

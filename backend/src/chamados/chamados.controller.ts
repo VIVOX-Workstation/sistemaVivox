@@ -1,3 +1,5 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import {
   Controller,
   Get,
@@ -21,6 +23,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StatusChamado } from '@prisma/client';
 import { StorageService } from '../storage/storage.service';
 
+@RequerModulo({ todos: [ModuloSistema.GP, ModuloSistema.CLIENTES] })
 @Controller('chamados')
 @UseGuards(JwtAuthGuard)
 export class ChamadosController {

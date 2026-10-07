@@ -1,5 +1,5 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
-import { Role } from '@prisma/client';
+import { ArrayUnique, IsArray, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { ModuloSistema, Role } from '@prisma/client';
 
 export class CreateUserDto {
   @IsString()
@@ -15,5 +15,10 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
-}
 
+  @IsOptional()
+  @IsArray()
+  @IsEnum(ModuloSistema, { each: true })
+  @ArrayUnique()
+  modulos?: ModuloSistema[];
+}
