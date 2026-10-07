@@ -1,3 +1,5 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import {
   Controller,
   Get,
@@ -14,6 +16,7 @@ import { CreateProjetoDto } from './dto/create-projeto.dto';
 import { UpdateProjetoDto } from './dto/update-projeto.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@RequerModulo({ todos: [ModuloSistema.GP] })
 @Controller('projetos')
 @UseGuards(JwtAuthGuard)
 export class ProjetosController {

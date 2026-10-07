@@ -18,6 +18,16 @@ enum Role {
   CLIENTE
 }
 
+// Módulos do painel interno que um COLABORADOR pode acessar (ADMIN acessa todos)
+enum ModuloSistema {
+  DASHBOARD
+  CLIENTES
+  HOSPEDAGENS
+  ANALYTICS
+  GP
+  EDUCACIONAL
+}
+
 enum StatusInteresse {
   NOVO
   CONTATADO
@@ -176,6 +186,9 @@ model User {
   email String @unique
   senha String
   role  Role   @default(COLABORADOR)
+
+  // Módulos liberados para COLABORADOR (ignorado para ADMIN e CLIENTE)
+  modulos ModuloSistema[] @default([DASHBOARD, CLIENTES, HOSPEDAGENS, ANALYTICS, GP, EDUCACIONAL])
 
   // Portal do cliente: preenchidos só quando role = CLIENTE
   clienteId                String?  @unique

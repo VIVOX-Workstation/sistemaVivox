@@ -1,3 +1,5 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { PlanejamentoServicoService } from './planejamento-servico.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,6 +13,7 @@ import {
 } from './dto/planejamento.dto';
 
 @UseGuards(JwtAuthGuard)
+@RequerModulo({ todos: [ModuloSistema.CLIENTES] })
 @Controller('planejamento-servico')
 export class PlanejamentoServicoController {
   constructor(private readonly planejamentoService: PlanejamentoServicoService) {}

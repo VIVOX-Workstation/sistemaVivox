@@ -1,7 +1,10 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Post, Delete, Param, UseGuards, Req } from '@nestjs/common';
 import { CursosService } from './cursos.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@RequerModulo({ todos: [ModuloSistema.EDUCACIONAL] })
 @Controller('educacional')
 @UseGuards(JwtAuthGuard)
 export class EducacionalController {

@@ -1,9 +1,10 @@
-import { Controller, Post, Get, Body, Query, Res, UnauthorizedException, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, Res, Req, UseGuards, UnauthorizedException, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { Role } from '@prisma/client';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -12,6 +13,12 @@ export class AuthController {
     private readonly usersService: UsersService,
     private readonly analyticsService: AnalyticsService,
   ) {}
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@Req() req: { user: { userId: string } }) {
+    return this.usersService.findCurrent(req.user.userId);
+  }
 
   @Post('seed-admin')
   @HttpCode(HttpStatus.OK)

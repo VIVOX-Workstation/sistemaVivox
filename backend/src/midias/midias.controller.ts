@@ -1,3 +1,5 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { MidiasService } from './midias.service';
 import { CreateMidiaDto } from './dto/create-midia.dto';
@@ -7,6 +9,7 @@ import { StorageService } from '../storage/storage.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
+@RequerModulo({ todos: [ModuloSistema.CLIENTES] })
 @Controller('midias')
 export class MidiasController {
   constructor(

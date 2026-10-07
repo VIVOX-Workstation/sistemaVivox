@@ -1,9 +1,12 @@
+import { ModuloSistema } from '@prisma/client';
+import { RequerModulo } from '../auth/modulos.decorator';
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { CreateMetricaDto } from './dto/create-analytics.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
+@RequerModulo({ todos: [ModuloSistema.ANALYTICS, ModuloSistema.CLIENTES], leitura: [ModuloSistema.DASHBOARD] })
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
