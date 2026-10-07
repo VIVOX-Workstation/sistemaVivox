@@ -341,6 +341,7 @@ export function Layout() {
 
           {/* Rodapé da Sidebar: Configurações + Sair */}
           <div className="p-3 space-y-1 border-t border-[#231F19] bg-[#0E0D0B]">
+            {isAdmin && (
             <NavLink
               to="/configuracoes"
               title={isSidebarCollapsed ? 'Configurações do Sistema' : undefined}
@@ -357,6 +358,7 @@ export function Layout() {
               <Settings className="w-4 h-4 text-[#C7A15F] shrink-0" />
               {!isSidebarCollapsed && <span className="truncate">Configurações</span>}
             </NavLink>
+            )}
             <button
               onClick={signOut}
               title={isSidebarCollapsed ? 'Sair da conta' : undefined}

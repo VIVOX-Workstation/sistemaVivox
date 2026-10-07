@@ -40,14 +40,43 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return user?.role === 'ADMIN' ? <>{children}</> : <Navigate to="/educacional" replace />;
 }
 
+// Primeira rota que o usuário pode abrir; sem nenhum módulo liberado, cai na tela de aviso
+function useRotaInicial() {
+  const { podeAcessar } = useAuth();
+  const primeiroModuloLiberado = MODULOS.find((m) => podeAcessar(m.id));
+  return primeiroModuloLiberado ? primeiroModuloLiberado.rotaInicial : '/sem-acesso';
+}
+
 function ModuloRoute({ modulo, children }: { modulo: ModuloId; children?: React.ReactNode }) {
   const { podeAcessar } = useAuth();
-  if (!podeAcessar(modulo)) {
-    const primeiroModuloLiberado = MODULOS.find((m) => podeAcessar(m.id));
-    const fallbackPath = primeiroModuloLiberado ? primeiroModuloLiberado.rotaInicial : '/configuracoes';
-    return <Navigate to={fallbackPath} replace />;
-  }
+  const rotaInicial = useRotaInicial();
+  if (!podeAcessar(modulo)) return <Navigate to={rotaInicial} replace />;
   return children ? <>{children}</> : <Outlet />;
+}
+
+function ConfiguracoesRoute() {
+  const { user } = useAuth();
+  const rotaInicial = useRotaInicial();
+  return user?.role === 'ADMIN' ? <Configuracoes /> : <Navigate to={rotaInicial} replace />;
+}
+
+function SemAcesso() {
+  const { user } = useAuth();
+  const rotaInicial = useRotaInicial();
+  // Se o admin liberar algum módulo depois, sai daqui sozinho
+  if (rotaInicial !== '/sem-acesso') return <Navigate to={rotaInicial} replace />;
+  return (
+    <div className="planning-workspace w-full">
+      <div className="pw-lg-scene" aria-hidden="true" />
+      <div className="pw-glass-panel p-8 max-w-md mx-auto mt-16 text-center space-y-2">
+        <h1 className="text-lg font-bold text-[#1E1A16]">Nenhum módulo liberado</h1>
+        <p className="text-xs text-[#5E574C]">
+          Olá{user?.nome ? `, ${user.nome}` : ''}! Sua conta ainda não tem acesso a nenhum módulo.
+          Peça a um administrador para liberar o que você precisa.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function App() {
@@ -115,8 +144,9 @@ function App() {
                 <Route path="educacional/admin/:cursoId" element={<AdminRoute><EducacionalCursoEditor /></AdminRoute>} />
               </Route>
               
-              {/* CONFIGURAÇÕES (sempre acessível para qualquer usuário interno autenticado) */}
-              <Route path="configuracoes" element={<Configuracoes />} />
+              {/* CONFIGURAÇÕES: somente ADMIN */}
+              <Route path="configuracoes" element={<ConfiguracoesRoute />} />
+              <Route path="sem-acesso" element={<SemAcesso />} />
               
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
