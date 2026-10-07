@@ -25,7 +25,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export function Layout() {
-  const { signOut, podeAcessar } = useAuth();
+  const { signOut, podeAcessar, user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const location = useLocation();
   const isFullBleed =
     location.pathname === '/' ||
@@ -286,6 +287,9 @@ export function Layout() {
               </NavLink>
             )}
             
+            {/* Em Breve: visível só para administradores */}
+            {isAdmin && (
+            <>
             {!isSidebarCollapsed && (
               <div className="pt-4 px-3 pb-1 text-[11px] font-bold text-[#8F8271] uppercase tracking-[0.13em] truncate">
                 Em Breve
@@ -331,6 +335,8 @@ export function Layout() {
               <Film className="w-4 h-4 text-[#6B6154] shrink-0" />
               {!isSidebarCollapsed && <span className="truncate">Vivox Film</span>}
             </div>
+            </>
+            )}
           </nav>
 
           {/* Rodapé da Sidebar: Configurações + Sair */}
