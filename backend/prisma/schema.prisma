@@ -26,6 +26,7 @@ enum ModuloSistema {
   ANALYTICS
   GP
   EDUCACIONAL
+  ACOMPANHAMENTO
 }
 
 enum StatusInteresse {
@@ -188,7 +189,7 @@ model User {
   role  Role   @default(COLABORADOR)
 
   // Módulos liberados para COLABORADOR (ignorado para ADMIN e CLIENTE)
-  modulos ModuloSistema[] @default([DASHBOARD, CLIENTES, HOSPEDAGENS, ANALYTICS, GP, EDUCACIONAL])
+  modulos ModuloSistema[] @default([DASHBOARD, CLIENTES, HOSPEDAGENS, ANALYTICS, GP, EDUCACIONAL, ACOMPANHAMENTO])
 
   // Portal do cliente: preenchidos só quando role = CLIENTE
   clienteId                String?  @unique
@@ -454,13 +455,20 @@ model Publicacao {
   producao          Producao?      @relation(fields: [producaoId], references: [id], onDelete: SetNull)
   tipo              TipoPublicacao
   dataPublicacao    DateTime
+  assunto           String?
+  link              String?
   alcance           Int?
   curtidas          Int?
   comentarios       Int?
-  compartilhamentos Int?
+  compartilhamentos Int? // "envios" na planilha de acompanhamento
+  salvamentos       Int?
+  visualizacoes     Int? // só faz sentido para vídeo (Reels, Vídeo, Story)
   origemDado        OrigemDado
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([clienteId, dataPublicacao])
 }
 
 model AvaliacaoGmb {
