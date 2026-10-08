@@ -102,6 +102,10 @@ export function TabelaAcompanhamento({
       return;
     }
 
+    // O clique dentro do campo em edição (ex.: escolher uma opção do select) sobe até a <td>;
+    // sem isso o valor voltava ao original antes de salvar
+    if (editingCell?.rowId === pub.id && editingCell?.field === field) return;
+
     setEditingCell({ rowId: pub.id, field });
 
     let val = '';
@@ -114,30 +118,32 @@ export function TabelaAcompanhamento({
     setCellValue(val);
   };
 
-  const handleCommitEdit = async (pub: Publicacao) => {
+  // valorEscolhido: usado pelo select, que salva no onChange (o estado cellValue ainda não atualizou)
+  const handleCommitEdit = async (pub: Publicacao, valorEscolhido?: string) => {
     if (!editingCell || !onUpdatePublicacao) return;
 
     const { field, rowId } = editingCell;
     const originalRaw = (pub as any)[field];
     setEditingCell(null);
+    const valor = valorEscolhido ?? cellValue;
 
     let processedValue: any = null;
 
     if (field === 'dataPublicacao') {
-      if (cellValue.trim()) {
-        processedValue = new Date(`${cellValue.trim()}T12:00:00-03:00`).toISOString(); // meio-dia de Brasília
+      if (valor.trim()) {
+        processedValue = new Date(`${valor.trim()}T12:00:00-03:00`).toISOString(); // meio-dia de Brasília
       } else {
         processedValue = pub.dataPublicacao; // fallback se deixar vazio
       }
     } else if (['curtidas', 'comentarios', 'compartilhamentos', 'salvamentos', 'visualizacoes'].includes(field)) {
-      if (cellValue.trim() === '') {
+      if (valor.trim() === '') {
         processedValue = null;
       } else {
-        const parsed = parseInt(cellValue.trim(), 10);
+        const parsed = parseInt(valor.trim(), 10);
         processedValue = isNaN(parsed) ? null : Math.max(0, parsed);
       }
     } else {
-      processedValue = cellValue.trim() || null;
+      processedValue = valor.trim() || null;
     }
 
     // Se não houve alteração real, não dispara chamada
@@ -280,7 +286,10 @@ export function TabelaAcompanhamento({
                         <select
                           ref={inputRef as any}
                           value={cellValue}
-                          onChange={(e) => setCellValue(e.target.value)}
+                          onChange={(e) => {
+                            setCellValue(e.target.value);
+                            handleCommitEdit(pub, e.target.value);
+                          }}
                           onBlur={() => handleCommitEdit(pub)}
                           onKeyDown={(e) => handleKeyDown(e, pub, idx)}
                           className="w-full px-2 py-1 text-xs rounded-lg border border-[#C7A15F] bg-white focus:outline-none shadow-xs"
