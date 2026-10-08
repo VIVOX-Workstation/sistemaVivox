@@ -206,7 +206,7 @@ export function TabelaAcompanhamento({
   return (
     <div className="pw-glass-panel rounded-3xl border border-white/60 bg-white/70 shadow-sm overflow-hidden">
       <div className="overflow-x-auto w-full">
-        <table className="w-full min-w-[960px] text-xs text-[#1E1A16] border-collapse">
+        <table className="w-full min-w-[1040px] text-xs text-[#1E1A16] border-collapse">
           <thead>
             <tr className="border-b border-[#524B40]/10 bg-white/40 text-[11px] font-bold text-[#7A6440] uppercase tracking-wider text-left select-none">
               <th className="py-3 px-3 w-10 text-center">#</th>
@@ -214,12 +214,12 @@ export function TabelaAcompanhamento({
               <th className="py-3 px-3 w-28">Tipo</th>
               <th className="py-3 px-4 min-w-[200px]">Assunto</th>
               <th className="py-3 px-3 min-w-[150px]">Link</th>
-              <th className="py-3 px-2.5 w-20 text-right">Curtidas</th>
-              <th className="py-3 px-2.5 w-20 text-right">Coment.</th>
-              <th className="py-3 px-2.5 w-20 text-right">Reposts</th>
+              <th className="py-3 px-2.5 w-20 text-right">Curtida</th>
+              <th className="py-3 px-2.5 w-24 text-right">Comentário</th>
+              <th className="py-3 px-2.5 w-20 text-right">Repost</th>
               <th className="py-3 px-2.5 w-20 text-right">Envios</th>
-              <th className="py-3 px-2.5 w-20 text-right">Salvos</th>
-              <th className="py-3 px-2.5 w-24 text-right">Visualiz.</th>
+              <th className="py-3 px-2.5 w-24 text-right">Salvamento</th>
+              <th className="py-3 px-2.5 w-28 text-right">Visualização</th>
               {!readOnly && <th className="py-3 px-3 w-20 text-center">Ações</th>}
             </tr>
           </thead>
