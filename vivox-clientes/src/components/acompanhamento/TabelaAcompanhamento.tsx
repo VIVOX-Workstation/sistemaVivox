@@ -19,9 +19,9 @@ const EDITABLE_FIELDS = [
   'link',
   'curtidas',
   'comentarios',
+  'reposts',
   'compartilhamentos',
   'salvamentos',
-  'reposts',
   'visualizacoes'
 ];
 
@@ -216,9 +216,9 @@ export function TabelaAcompanhamento({
               <th className="py-3 px-3 min-w-[150px]">Link</th>
               <th className="py-3 px-2.5 w-20 text-right">Curtidas</th>
               <th className="py-3 px-2.5 w-20 text-right">Coment.</th>
+              <th className="py-3 px-2.5 w-20 text-right">Reposts</th>
               <th className="py-3 px-2.5 w-20 text-right">Envios</th>
               <th className="py-3 px-2.5 w-20 text-right">Salvos</th>
-              <th className="py-3 px-2.5 w-20 text-right">Reposts</th>
               <th className="py-3 px-2.5 w-24 text-right">Visualiz.</th>
               {!readOnly && <th className="py-3 px-3 w-20 text-center">Ações</th>}
             </tr>
@@ -426,7 +426,30 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
-                    {/* 8. Envios (compartilhamentos) */}
+                    {/* 8. Reposts */}
+                    <td 
+                      onClick={() => handleStartEdit(pub, 'reposts')}
+                      className={`py-2.5 px-2.5 text-right font-mono font-medium ${
+                        !readOnly ? 'cursor-pointer hover:bg-white/80' : ''
+                      }`}
+                    >
+                      {editingCell?.rowId === pub.id && editingCell?.field === 'reposts' ? (
+                        <input
+                          ref={inputRef as any}
+                          type="number"
+                          min="0"
+                          value={cellValue}
+                          onChange={(e) => setCellValue(e.target.value)}
+                          onBlur={() => handleCommitEdit(pub)}
+                          onKeyDown={(e) => handleKeyDown(e, pub, idx)}
+                          className="w-16 px-1.5 py-0.5 text-xs text-right rounded-lg border border-[#C7A15F] bg-white focus:outline-none"
+                        />
+                      ) : (
+                        <span>{pub.reposts !== null && pub.reposts !== undefined ? pub.reposts : '-'}</span>
+                      )}
+                    </td>
+
+                    {/* 9. Envios (compartilhamentos) */}
                     <td 
                       onClick={() => handleStartEdit(pub, 'compartilhamentos')}
                       className={`py-2.5 px-2.5 text-right font-mono font-medium ${
@@ -449,7 +472,7 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
-                    {/* 9. Salvamentos */}
+                    {/* 10. Salvamentos */}
                     <td 
                       onClick={() => handleStartEdit(pub, 'salvamentos')}
                       className={`py-2.5 px-2.5 text-right font-mono font-medium ${
@@ -472,29 +495,7 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
-                    {/* 10. Reposts */}
-                    <td 
-                      onClick={() => handleStartEdit(pub, 'reposts')}
-                      className={`py-2.5 px-2.5 text-right font-mono font-medium ${
-                        !readOnly ? 'cursor-pointer hover:bg-white/80' : ''
-                      }`}
-                    >
-                      {editingCell?.rowId === pub.id && editingCell?.field === 'reposts' ? (
-                        <input
-                          ref={inputRef as any}
-                          type="number"
-                          min="0"
-                          value={cellValue}
-                          onChange={(e) => setCellValue(e.target.value)}
-                          onBlur={() => handleCommitEdit(pub)}
-                          onKeyDown={(e) => handleKeyDown(e, pub, idx)}
-                          className="w-16 px-1.5 py-0.5 text-xs text-right rounded-lg border border-[#C7A15F] bg-white focus:outline-none"
-                        />
-                      ) : (
-                        <span>{pub.reposts !== null && pub.reposts !== undefined ? pub.reposts : '-'}</span>
-                      )}
-                    </td>
-                    {/* 10. Visualizações */}
+                    {/* 11. Visualizações */}
                     <td 
                       onClick={() => isVisualizacoesApplicable && handleStartEdit(pub, 'visualizacoes')}
                       className={`py-2.5 px-2.5 text-right font-mono font-medium ${
@@ -519,7 +520,7 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
-                    {/* 11. Ações (se editável) */}
+                    {/* 12. Ações (se editável) */}
                     {!readOnly && (
                       <td className="py-2.5 px-3 text-center">
                         <button

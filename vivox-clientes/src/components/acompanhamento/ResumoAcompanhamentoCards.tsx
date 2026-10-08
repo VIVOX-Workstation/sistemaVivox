@@ -100,6 +100,21 @@ export function ResumoAcompanhamentoCards({ resumo, textoPeriodo, tiposFiltrados
           </div>
         </div>
 
+        {/* Reposts */}
+        <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-600 shrink-0">
+            <Repeat2 className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-bold text-[#5E574C] block uppercase tracking-wider">
+              Reposts
+            </span>
+            <span className="text-base font-extrabold text-[#1E1A16]">
+              {formatNumber(resumo.totais.reposts)}
+            </span>
+          </div>
+        </div>
+
         {/* Envios */}
         <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0">
@@ -130,22 +145,8 @@ export function ResumoAcompanhamentoCards({ resumo, textoPeriodo, tiposFiltrados
           </div>
         </div>
 
-        {/* Reposts */}
+        {/* Visualizações */}
         <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-600 shrink-0">
-            <Repeat2 className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[11px] font-bold text-[#5E574C] block uppercase tracking-wider">
-              Reposts
-            </span>
-            <span className="text-base font-extrabold text-[#1E1A16]">
-              {formatNumber(resumo.totais.reposts)}
-            </span>
-          </div>
-        </div>
-
-        {/* Visualizações */}        <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200/60 flex items-center justify-center text-purple-600 shrink-0">
             <Eye className="w-4 h-4" />
           </div>
