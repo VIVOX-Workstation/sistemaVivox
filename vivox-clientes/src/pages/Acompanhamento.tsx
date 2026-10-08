@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Building2, 
@@ -25,6 +25,7 @@ import { FiltrosAcompanhamento } from '../components/acompanhamento/FiltrosAcomp
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
 import { CronogramasPainel } from '../components/acompanhamento/CronogramasPainel';
 import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
+import { PopoverAncorado } from '../components/ui/PopoverAncorado';
 import {
   type Periodo,
   dataPadraoNova,
@@ -64,7 +65,7 @@ export function Acompanhamento() {
   // Busca no dropdown de clientes
   const [buscaCliente, setBuscaCliente] = useState('');
   const [dropdownClienteAberto, setDropdownClienteAberto] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLButtonElement>(null);
 
   // Dados do acompanhamento
   const [loading, setLoading] = useState(false);
@@ -107,16 +108,8 @@ export function Acompanhamento() {
     fetchClientes();
   }, []);
 
-  // Fecha dropdown de clientes ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownClienteAberto(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // Clique fora / Esc fecham a lista (tratado pelo PopoverAncorado)
+  const fecharDropdownCliente = useCallback(() => setDropdownClienteAberto(false), []);
 
   // Sincroniza se o cliente na URL mudar
   useEffect(() => {
@@ -277,7 +270,9 @@ export function Acompanhamento() {
 
       {/* CABEÇALHO */}
       <div className="relative z-10 space-y-6">
-        <div className="pw-glass-panel p-5 sm:p-6 rounded-3xl border border-white/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* z-30: cada pw-glass-panel isola o empilhamento (isolation/backdrop-filter);
+            sem isso a lista de clientes fica atrás dos painéis seguintes */}
+        <div className="pw-glass-panel z-30 p-5 sm:p-6 rounded-3xl border border-white/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <span className="pw-section-label flex items-center gap-1.5">
               <ClipboardList className="w-3.5 h-3.5" />
@@ -305,8 +300,9 @@ export function Acompanhamento() {
           </button>
 
           {/* Seletor de Cliente em Dropdown com Busca */}
-          <div className="relative" ref={dropdownRef}>
+          <div>
             <button
+              ref={dropdownRef}
               type="button"
               onClick={() => setDropdownClienteAberto(!dropdownClienteAberto)}
               className="pw-glass-control px-4 py-2.5 rounded-2xl flex items-center gap-3 cursor-pointer shadow-xs min-w-[240px] justify-between"
@@ -335,9 +331,9 @@ export function Acompanhamento() {
               <ChevronDown className="w-4 h-4 text-[#8F8271] shrink-0" />
             </button>
 
-            {/* Menu Suspenso de Clientes */}
-            {dropdownClienteAberto && (
-              <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#FFFDF8] border border-white/80 shadow-2xl p-2 z-50 animate-scale-in">
+            {/* Menu Suspenso de Clientes (no <body>, por cima dos painéis e do menu lateral) */}
+            <PopoverAncorado ancoraRef={dropdownRef} aberto={dropdownClienteAberto} onFechar={fecharDropdownCliente}>
+              <div className="w-72 max-w-[calc(100vw-16px)] rounded-2xl bg-[#FFFDF8] border border-white/80 shadow-2xl p-2 animate-scale-in">
                 <div className="relative mb-2">
                   <Search className="w-3.5 h-3.5 text-[#8F8271] absolute left-3 top-2.5" />
                   <input
@@ -379,7 +375,7 @@ export function Acompanhamento() {
                   )}
                 </div>
               </div>
-            )}
+            </PopoverAncorado>
           </div>
           </div>
         </div>

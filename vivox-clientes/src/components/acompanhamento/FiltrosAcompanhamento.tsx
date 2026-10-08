@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarRange, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { MesComDados, TipoPublicacao } from '../../api/acompanhamento';
 import { CalendarioPeriodo } from './CalendarioPeriodo';
+import { PopoverAncorado } from '../ui/PopoverAncorado';
 import { MESES_ABREV, MESES_NOMES, TIPOS_PUBLICACAO, type Periodo, deIso, limites, mesAtual, rotuloCurto } from './periodo';
 
 interface FiltrosAcompanhamentoProps {
@@ -22,19 +23,13 @@ export function FiltrosAcompanhamento({
   const anoDoPeriodo = periodo.modo === 'mes' ? periodo.ano : deIso(periodo.inicio).getFullYear();
   const [anoVisivel, setAnoVisivel] = useState(anoDoPeriodo);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const botaoPeriodoRef = useRef<HTMLButtonElement>(null);
 
   // Acompanha o ano quando o período muda por fora (URL, atalhos)
   useEffect(() => setAnoVisivel(anoDoPeriodo), [anoDoPeriodo]);
 
-  useEffect(() => {
-    if (!calendarioAberto) return;
-    const fora = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) setCalendarioAberto(false);
-    };
-    document.addEventListener('mousedown', fora);
-    return () => document.removeEventListener('mousedown', fora);
-  }, [calendarioAberto]);
+
+  const fecharCalendario = useCallback(() => setCalendarioAberto(false), []);
 
   const totalDoMes = (mes: number) =>
     mesesComDados.find((m) => m.ano === anoVisivel && m.mes === mes)?.total ?? 0;
@@ -47,7 +42,9 @@ export function FiltrosAcompanhamento({
   };
 
   return (
-    <div className="pw-glass-panel p-4 rounded-3xl border border-white/60 shadow-2xs space-y-3">
+    // z-20: o calendário do período precisa ficar por cima do resumo e da tabela
+    // (cada pw-glass-panel cria seu próprio contexto de empilhamento)
+    <div className="pw-glass-panel z-20 p-4 rounded-3xl border border-white/60 shadow-2xs space-y-3">
       {/* Ano + período personalizado */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 bg-white/70 p-1 rounded-2xl border border-[#524B40]/10 shadow-2xs">
@@ -72,9 +69,10 @@ export function FiltrosAcompanhamento({
           </button>
         </div>
 
-        <div className="relative" ref={popoverRef}>
+        <div>
           <div className="flex items-center gap-1.5">
             <button
+              ref={botaoPeriodoRef}
               type="button"
               onClick={() => setCalendarioAberto((v) => !v)}
               className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
@@ -98,18 +96,16 @@ export function FiltrosAcompanhamento({
             )}
           </div>
 
-          {calendarioAberto && (
-            <div className="absolute right-0 mt-2 z-50">
-              <CalendarioPeriodo
-                inicial={limites(periodo)}
-                onFechar={() => setCalendarioAberto(false)}
-                onAplicar={(inicio, fim) => {
-                  onChangePeriodo({ modo: 'personalizado', inicio, fim });
-                  setCalendarioAberto(false);
-                }}
-              />
-            </div>
-          )}
+          <PopoverAncorado ancoraRef={botaoPeriodoRef} aberto={calendarioAberto} onFechar={fecharCalendario}>
+            <CalendarioPeriodo
+              inicial={limites(periodo)}
+              onFechar={fecharCalendario}
+              onAplicar={(inicio, fim) => {
+                onChangePeriodo({ modo: 'personalizado', inicio, fim });
+                setCalendarioAberto(false);
+              }}
+            />
+          </PopoverAncorado>
         </div>
       </div>
 
