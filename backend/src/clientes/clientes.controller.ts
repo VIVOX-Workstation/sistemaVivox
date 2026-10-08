@@ -25,7 +25,7 @@ import { Role } from '@prisma/client';
 import { PortalService } from '../portal/portal.service';
 
 @UseGuards(JwtAuthGuard)
-@RequerModulo({ todos: [ModuloSistema.CLIENTES], leitura: [ModuloSistema.GP, ModuloSistema.ANALYTICS] })
+@RequerModulo({ todos: [ModuloSistema.CLIENTES], leitura: [ModuloSistema.GP, ModuloSistema.ANALYTICS, ModuloSistema.ACOMPANHAMENTO] })
 @Controller('clientes')
 export class ClientesController {
   constructor(

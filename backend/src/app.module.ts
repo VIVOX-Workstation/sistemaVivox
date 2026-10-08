@@ -20,9 +20,11 @@ import { CursosModule } from './cursos/cursos.module';
 import { DevboardModule } from './devboard/devboard.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PortalModule } from './portal/portal.module';
+import { AcompanhamentoModule } from './acompanhamento/acompanhamento.module';
 
 @Module({
   imports: [
+    AcompanhamentoModule,
     PortalModule,
     ScheduleModule.forRoot(),
     PrismaModule, ClientesModule, ServicosModule, UsersModule, AuthModule, StorageModule, ProducoesModule, MidiasModule, AnalyticsModule, PlanejamentoServicoModule, IaModule, HospedagemModule, TarefasModule, QuadrosModule, ChamadosModule, CursosModule, DevboardModule

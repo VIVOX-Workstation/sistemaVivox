@@ -14,6 +14,7 @@ import { ClientesController } from '../clientes/clientes.controller';
 import { ClientesService } from '../clientes/clientes.service';
 import { StorageService } from '../storage/storage.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AcompanhamentoService } from '../acompanhamento/acompanhamento.service';
 
 jest.mock('uuid', () => ({ v4: () => 'test-uuid' }));
 
@@ -55,6 +56,7 @@ describe('Portal JWT isolation (HTTP)', () => {
         { provide: PortalService, useValue: portalService },
         { provide: ClientesService, useValue: {} },
         { provide: StorageService, useValue: {} },
+        { provide: AcompanhamentoService, useValue: {} },
         { provide: PrismaService, useValue: { user: { findUnique: jest.fn().mockResolvedValue({ role: Role.COLABORADOR, modulos: [ModuloSistema.CLIENTES] }) } } },
       ],
     }).compile();
