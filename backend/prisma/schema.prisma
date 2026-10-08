@@ -198,6 +198,7 @@ model User {
 
   // Relações
   clientes              Cliente[]             @relation("ResponsavelInterno")
+  cronogramasEnviados   CronogramaCliente[]   @relation("CronogramasEnviados")
   producoes             Producao[]            @relation("ProdutorResponsavel")
   historicoAcoes        ServicoHistorico[]
   reunioes              Reuniao[]             @relation("ReuniaoParticipantes")
@@ -260,6 +261,7 @@ model Cliente {
   tarefas             Tarefa[]
   chamados            Chamado[]
   usuarioPortal       User?               @relation("UsuarioPortal")
+  cronogramas         CronogramaCliente[]
   interessesServico   InteresseServico[]
 
   // Relações Analytics
@@ -275,6 +277,26 @@ model Cliente {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Cronogramas em PDF enviados pela equipe na aba Acompanhamento; o cliente vê no portal.
+// O arquivo é servido só pelo backend autenticado (o bucket é público, a chave nunca vai ao frontend).
+model CronogramaCliente {
+  id           String  @id @default(uuid())
+  clienteId    String
+  cliente      Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  titulo       String
+  ano          Int? // mês de referência (opcional)
+  mes          Int?
+  arquivoKey   String
+  nomeArquivo  String
+  tamanho      Int
+  enviadoPorId String?
+  enviadoPor   User?   @relation("CronogramasEnviados", fields: [enviadoPorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([clienteId, createdAt])
 }
 
 // "Tenho interesse" clicado pelo cliente no mapa de serviços do portal
