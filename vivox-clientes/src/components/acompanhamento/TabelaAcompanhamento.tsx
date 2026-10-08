@@ -222,7 +222,7 @@ export function TabelaAcompanhamento({
                   colSpan={readOnly ? 10 : 11} 
                   className="py-12 text-center text-xs text-[#5E574C] font-semibold"
                 >
-                  Nenhuma publicação cadastrada neste mês.
+                  Nenhuma publicação cadastrada neste período.
                 </td>
               </tr>
             ) : (

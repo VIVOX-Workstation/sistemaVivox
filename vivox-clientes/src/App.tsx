@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { MainDashboard } from './pages/MainDashboard';
 import { ClientList } from './pages/ClientList';
@@ -39,7 +39,12 @@ function PortalRoute() {
 
 function PortalAcompanhamentoRoute() {
   const { isAuthenticated, user } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/portal/entrar" replace />;
+  const location = useLocation();
+  // Volta para a mesma página (com o período) depois do login
+  if (!isAuthenticated) {
+    const destino = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/portal/entrar?destino=${destino}`} replace />;
+  }
   if (user?.role !== 'CLIENTE') return <Navigate to="/" replace />;
   return <PortalAcompanhamento />;
 }

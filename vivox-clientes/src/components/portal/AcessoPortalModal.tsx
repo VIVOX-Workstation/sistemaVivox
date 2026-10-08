@@ -22,9 +22,20 @@ interface AcessoPortalModalProps {
   onClose: () => void;
   clienteId: string;
   clienteNome: string;
+  /** Página do portal aberta após o login (ex.: acompanhamento já filtrado) */
+  caminhoDestino?: string;
+  /** Texto do convite enviado ao cliente */
+  descricaoDestino?: string;
 }
 
-export function AcessoPortalModal({ isOpen, onClose, clienteId, clienteNome }: AcessoPortalModalProps) {
+export function AcessoPortalModal({
+  isOpen,
+  onClose,
+  clienteId,
+  clienteNome,
+  caminhoDestino,
+  descricaoDestino,
+}: AcessoPortalModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acesso, setAcesso] = useState<AcessoPortalResponse | null>(null);
@@ -93,7 +104,10 @@ export function AcessoPortalModal({ isOpen, onClose, clienteId, clienteNome }: A
     setTimeout(() => setCopiedFn(false), 2000);
   };
 
-  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/portal/entrar` : '/portal/entrar';
+  const caminhoLogin = caminhoDestino
+    ? `/portal/entrar?destino=${encodeURIComponent(caminhoDestino)}`
+    : '/portal/entrar';
+  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}${caminhoLogin}` : caminhoLogin;
 
   const handleCopiarTudo = () => {
     if (!acesso) return;
@@ -105,7 +119,7 @@ Olá! Seguem seus dados exclusivos de acesso ao nosso Portal:
 👤 *Login:* ${acesso.login}
 🔑 *Senha:* ${acesso.senha}
 
-Acesse para visualizar os serviços contratados e novidades disponíveis para a sua marca!`;
+${descricaoDestino || 'Acesse para visualizar os serviços contratados e novidades disponíveis para a sua marca!'}`;
 
     copyToClipboard(mensagemWhatsApp, setCopiadoTudo);
   };

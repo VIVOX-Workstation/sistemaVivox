@@ -8,7 +8,8 @@ import {
   AlertCircle, 
   ClipboardList, 
   Calendar as CalendarIcon,
-  ChevronDown
+  ChevronDown,
+  Share2,
 } from 'lucide-react';
 import { 
   acompanhamentoApi, 
@@ -21,6 +22,7 @@ import {
 import { ResumoAcompanhamentoCards } from '../components/acompanhamento/ResumoAcompanhamentoCards';
 import { FiltrosAcompanhamento } from '../components/acompanhamento/FiltrosAcompanhamento';
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
+import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
 import {
   type Periodo,
   dataPadraoNova,
@@ -61,6 +63,8 @@ export function Acompanhamento() {
   const [error, setError] = useState<string | null>(null);
   const [dados, setDados] = useState<AcompanhamentoResponse | null>(null);
   const [mesesComDados, setMesesComDados] = useState<MesComDados[]>([]);
+
+  const [compartilharAberto, setCompartilharAberto] = useState(false);
 
   // Status de salvamento por linha da tabela
   const [rowStatus, setRowStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
@@ -273,6 +277,19 @@ export function Acompanhamento() {
             </p>
           </div>
 
+          <div className="flex items-center gap-2 flex-wrap">
+          {/* Compartilhar: login do portal + link direto para este acompanhamento */}
+          <button
+            type="button"
+            onClick={() => setCompartilharAberto(true)}
+            disabled={!clienteSelecionadoId}
+            title="Compartilhar este acompanhamento com o cliente"
+            className="pw-glass-control px-4 py-2.5 rounded-2xl text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Share2 className="w-4 h-4 text-[#C7A15F]" />
+            <span>Compartilhar</span>
+          </button>
+
           {/* Seletor de Cliente em Dropdown com Busca */}
           <div className="relative" ref={dropdownRef}>
             <button
@@ -349,6 +366,7 @@ export function Acompanhamento() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
 
@@ -440,6 +458,18 @@ export function Acompanhamento() {
           </div>
         ) : null}
       </div>
+
+      {/* Compartilhar: o link leva o cliente direto a este período no portal, após o login */}
+      {clienteSelecionadoId && (
+        <AcessoPortalModal
+          isOpen={compartilharAberto}
+          onClose={() => setCompartilharAberto(false)}
+          clienteId={clienteSelecionadoId}
+          clienteNome={clienteAtual?.nomeFantasia || 'cliente'}
+          caminhoDestino={`/portal/acompanhamento?${new URLSearchParams(paramsDaUrl(periodo, tipos))}`}
+          descricaoDestino={`Acesse para ver o acompanhamento das suas publicações (${textoPeriodo(periodo).toLowerCase()}).`}
+        />
+      )}
     </div>
   );
 }

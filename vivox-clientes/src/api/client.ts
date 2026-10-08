@@ -38,7 +38,8 @@ api.interceptors.response.use(
       const isPortal = window.location.pathname.startsWith('/portal');
       localStorage.removeItem('@Vivox:token');
       localStorage.removeItem('@Vivox:user');
-      window.location.href = isPortal ? '/portal/entrar' : '/login';
+      const destino = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = isPortal ? `/portal/entrar?destino=${destino}` : '/login';
     }
     return Promise.reject(error);
   }
