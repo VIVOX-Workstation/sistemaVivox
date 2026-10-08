@@ -12,7 +12,7 @@ describe('AcompanhamentoService', () => {
   const service = new AcompanhamentoService(prisma as unknown as PrismaService);
   const publication = (id: string, data: string, values = {}) => ({
     id, dataPublicacao: new Date(data), tipo: TipoPublicacao.POST, assunto: null, link: null,
-    curtidas: null, comentarios: null, compartilhamentos: null, salvamentos: null,
+    curtidas: null, comentarios: null, compartilhamentos: null, salvamentos: null, reposts: null,
     visualizacoes: null, alcance: null, origemDado: OrigemDado.MANUAL, ...values,
   });
   beforeEach(() => {
@@ -47,13 +47,13 @@ describe('AcompanhamentoService', () => {
   it('summarizes all five types and treats null metrics as zero', async () => {
     prisma.publicacao.findMany.mockResolvedValue([
       publication('p1', '2025-01-02T03:00:00Z', { curtidas: 3, compartilhamentos: 2 }),
-      publication('p2', '2025-01-03T03:00:00Z', { tipo: TipoPublicacao.REELS, comentarios: 5, salvamentos: 4, visualizacoes: 50 }),
+      publication('p2', '2025-01-03T03:00:00Z', { tipo: TipoPublicacao.REELS, comentarios: 5, salvamentos: 4, reposts: 7, visualizacoes: 50 }),
       publication('p3', '2025-01-04T03:00:00Z'),
     ]);
     const result = await service.listar('c1', 2025, 1);
     expect(result.resumo).toEqual({ total: 3,
       porTipo: { POST: 2, REELS: 1, CARROSSEL: 0, STORY: 0, VIDEO: 0 },
-      totais: { curtidas: 3, comentarios: 5, compartilhamentos: 2, salvamentos: 4, visualizacoes: 50 },
+      totais: { curtidas: 3, comentarios: 5, compartilhamentos: 2, salvamentos: 4, reposts: 7, visualizacoes: 50 },
     });
     expect(result.cliente).toEqual(cliente);
   });
@@ -62,7 +62,7 @@ describe('AcompanhamentoService', () => {
     prisma.publicacao.findMany.mockResolvedValue([]);
     expect((await service.listar('c1', 2025, 1)).resumo).toEqual({ total: 0,
       porTipo: { POST: 0, REELS: 0, CARROSSEL: 0, STORY: 0, VIDEO: 0 },
-      totais: { curtidas: 0, comentarios: 0, compartilhamentos: 0, salvamentos: 0, visualizacoes: 0 },
+      totais: { curtidas: 0, comentarios: 0, compartilhamentos: 0, salvamentos: 0, reposts: 0, visualizacoes: 0 },
     });
   });
 

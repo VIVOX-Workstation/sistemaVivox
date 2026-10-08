@@ -6,7 +6,7 @@ import { UpdatePublicacaoDto } from './dto/update-publicacao.dto';
 
 const PUBLICACAO_SELECT = {
   id: true, dataPublicacao: true, tipo: true, assunto: true, link: true,
-  curtidas: true, comentarios: true, compartilhamentos: true, salvamentos: true,
+  curtidas: true, comentarios: true, compartilhamentos: true, salvamentos: true, reposts: true,
   visualizacoes: true, alcance: true, origemDado: true,
 } satisfies Prisma.PublicacaoSelect;
 
@@ -109,7 +109,7 @@ export class AcompanhamentoService {
       select: PUBLICACAO_SELECT,
     });
     const porTipo = Object.fromEntries(Object.values(TipoPublicacao).map((tipo) => [tipo, 0])) as Record<TipoPublicacao, number>;
-    const totais = { curtidas: 0, comentarios: 0, compartilhamentos: 0, salvamentos: 0, visualizacoes: 0 };
+    const totais = { curtidas: 0, comentarios: 0, compartilhamentos: 0, salvamentos: 0, reposts: 0, visualizacoes: 0 };
     for (const publicacao of publicacoes) {
       porTipo[publicacao.tipo]++;
       for (const campo of Object.keys(totais) as (keyof typeof totais)[]) {

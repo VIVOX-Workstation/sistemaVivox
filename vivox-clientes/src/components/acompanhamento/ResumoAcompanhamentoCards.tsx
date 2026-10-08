@@ -5,6 +5,7 @@ import {
   Send, 
   Bookmark, 
   Eye, 
+  Repeat2,
   Sparkles,
   BarChart3
 } from 'lucide-react';
@@ -68,7 +69,7 @@ export function ResumoAcompanhamentoCards({ resumo, textoPeriodo, tiposFiltrados
       </div>
 
       {/* Grid de Totais das Métricas */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Curtidas */}
         <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200/60 flex items-center justify-center text-rose-600 shrink-0">
@@ -129,8 +130,22 @@ export function ResumoAcompanhamentoCards({ resumo, textoPeriodo, tiposFiltrados
           </div>
         </div>
 
-        {/* Visualizações */}
-        <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3 col-span-2 sm:col-span-1">
+        {/* Reposts */}
+        <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-600 shrink-0">
+            <Repeat2 className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-bold text-[#5E574C] block uppercase tracking-wider">
+              Reposts
+            </span>
+            <span className="text-base font-extrabold text-[#1E1A16]">
+              {formatNumber(resumo.totais.reposts)}
+            </span>
+          </div>
+        </div>
+
+        {/* Visualizações */}        <div className="pw-glass-panel p-3.5 rounded-2xl border border-white/60 bg-white/60 shadow-2xs flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200/60 flex items-center justify-center text-purple-600 shrink-0">
             <Eye className="w-4 h-4" />
           </div>

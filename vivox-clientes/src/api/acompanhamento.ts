@@ -12,6 +12,7 @@ export interface Publicacao {
   comentarios: number | null;
   compartilhamentos: number | null; // (= Envios)
   salvamentos: number | null;
+  reposts: number | null;
   visualizacoes: number | null;
   alcance?: number | null;
   origemDado?: string;
@@ -40,6 +41,7 @@ export interface ResumoAcompanhamento {
     comentarios: number;
     compartilhamentos: number;
     salvamentos: number;
+    reposts: number;
     visualizacoes: number;
   };
 }
@@ -82,6 +84,7 @@ export interface CriarPublicacaoDTO {
   comentarios?: number | null;
   compartilhamentos?: number | null;
   salvamentos?: number | null;
+  reposts?: number | null;
   visualizacoes?: number | null;
 }
 

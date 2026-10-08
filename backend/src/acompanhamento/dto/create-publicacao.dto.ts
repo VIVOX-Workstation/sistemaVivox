@@ -40,5 +40,10 @@ export class CreatePublicacaoDto {
   @IsOptional()
   @IsInt()
   @Min(0)
+  reposts?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   visualizacoes?: number | null;
 }

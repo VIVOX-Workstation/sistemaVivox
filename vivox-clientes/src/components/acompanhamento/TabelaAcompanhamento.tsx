@@ -21,6 +21,7 @@ const EDITABLE_FIELDS = [
   'comentarios',
   'compartilhamentos',
   'salvamentos',
+  'reposts',
   'visualizacoes'
 ];
 
@@ -135,7 +136,7 @@ export function TabelaAcompanhamento({
       } else {
         processedValue = pub.dataPublicacao; // fallback se deixar vazio
       }
-    } else if (['curtidas', 'comentarios', 'compartilhamentos', 'salvamentos', 'visualizacoes'].includes(field)) {
+    } else if (['curtidas', 'comentarios', 'compartilhamentos', 'salvamentos', 'reposts', 'visualizacoes'].includes(field)) {
       if (valor.trim() === '') {
         processedValue = null;
       } else {
@@ -217,6 +218,7 @@ export function TabelaAcompanhamento({
               <th className="py-3 px-2.5 w-20 text-right">Coment.</th>
               <th className="py-3 px-2.5 w-20 text-right">Envios</th>
               <th className="py-3 px-2.5 w-20 text-right">Salvos</th>
+              <th className="py-3 px-2.5 w-20 text-right">Reposts</th>
               <th className="py-3 px-2.5 w-24 text-right">Visualiz.</th>
               {!readOnly && <th className="py-3 px-3 w-20 text-center">Ações</th>}
             </tr>
@@ -225,7 +227,7 @@ export function TabelaAcompanhamento({
             {publicacoes.length === 0 ? (
               <tr>
                 <td 
-                  colSpan={readOnly ? 10 : 11} 
+                  colSpan={readOnly ? 11 : 12} 
                   className="py-12 text-center text-xs text-[#5E574C] font-semibold"
                 >
                   Nenhuma publicação cadastrada neste período.
@@ -470,6 +472,28 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
+                    {/* 10. Reposts */}
+                    <td 
+                      onClick={() => handleStartEdit(pub, 'reposts')}
+                      className={`py-2.5 px-2.5 text-right font-mono font-medium ${
+                        !readOnly ? 'cursor-pointer hover:bg-white/80' : ''
+                      }`}
+                    >
+                      {editingCell?.rowId === pub.id && editingCell?.field === 'reposts' ? (
+                        <input
+                          ref={inputRef as any}
+                          type="number"
+                          min="0"
+                          value={cellValue}
+                          onChange={(e) => setCellValue(e.target.value)}
+                          onBlur={() => handleCommitEdit(pub)}
+                          onKeyDown={(e) => handleKeyDown(e, pub, idx)}
+                          className="w-16 px-1.5 py-0.5 text-xs text-right rounded-lg border border-[#C7A15F] bg-white focus:outline-none"
+                        />
+                      ) : (
+                        <span>{pub.reposts !== null && pub.reposts !== undefined ? pub.reposts : '-'}</span>
+                      )}
+                    </td>
                     {/* 10. Visualizações */}
                     <td 
                       onClick={() => isVisualizacoesApplicable && handleStartEdit(pub, 'visualizacoes')}

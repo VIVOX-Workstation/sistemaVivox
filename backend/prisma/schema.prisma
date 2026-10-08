@@ -484,6 +484,7 @@ model Publicacao {
   comentarios       Int?
   compartilhamentos Int? // "envios" na planilha de acompanhamento
   salvamentos       Int?
+  reposts           Int?
   visualizacoes     Int? // só faz sentido para vídeo (Reels, Vídeo, Story)
   origemDado        OrigemDado
 
