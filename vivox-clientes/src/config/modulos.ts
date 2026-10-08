@@ -3,6 +3,7 @@ import {
   Users,
   Globe,
   BarChart2,
+  ClipboardList,
   Kanban,
   GraduationCap,
   type LucideIcon,
@@ -13,6 +14,7 @@ export type ModuloId =
   | 'CLIENTES'
   | 'HOSPEDAGENS'
   | 'ANALYTICS'
+  | 'ACOMPANHAMENTO'
   | 'GP'
   | 'EDUCACIONAL';
 
@@ -52,6 +54,13 @@ export const MODULOS: ModuloConfig[] = [
     descricao: 'Dashboards de performance GA4, GSC e OpenPanel',
     icone: BarChart2,
     rotaInicial: '/analytics',
+  },
+  {
+    id: 'ACOMPANHAMENTO',
+    label: 'Acompanhamento',
+    descricao: 'Planilha mensal de publicações e métricas',
+    icone: ClipboardList,
+    rotaInicial: '/acompanhamento',
   },
   {
     id: 'GP',

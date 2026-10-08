@@ -17,6 +17,8 @@ import { EducacionalAdmin } from './pages/EducacionalAdmin';
 import { EducacionalCursoEditor } from './pages/EducacionalCursoEditor';
 import Login from './pages/Login';
 import { PortalCliente } from './pages/PortalCliente';
+import { PortalAcompanhamento } from './pages/PortalAcompanhamento';
+import { Acompanhamento } from './pages/Acompanhamento';
 import { PortalLogin } from './pages/PortalLogin';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MODULOS, type ModuloId } from './config/modulos';
@@ -33,6 +35,13 @@ function PortalRoute() {
   if (!isAuthenticated) return <Navigate to="/portal/entrar" replace />;
   if (user?.role !== 'CLIENTE') return <Navigate to="/" replace />;
   return <PortalCliente />;
+}
+
+function PortalAcompanhamentoRoute() {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/portal/entrar" replace />;
+  if (user?.role !== 'CLIENTE') return <Navigate to="/" replace />;
+  return <PortalAcompanhamento />;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -88,6 +97,7 @@ function App() {
           
           {/* Portal do Cliente: fora do Layout interno, protegido somente para CLIENTE */}
           <Route path="/portal" element={<PortalRoute />} />
+          <Route path="/portal/acompanhamento" element={<PortalAcompanhamentoRoute />} />
           <Route path="/portal/entrar" element={<PortalLogin />} />
           
           {/* Rotas internas: protegidas para usuários internos */}
@@ -124,6 +134,12 @@ function App() {
               <Route element={<ModuloRoute modulo="ANALYTICS" />}>
                 <Route path="analytics" element={<AnalyticsIndex />} />
                 <Route path="analytics/:id" element={<AnalyticsDashboard />} />
+              </Route>
+
+              {/* ACOMPANHAMENTO */}
+              <Route element={<ModuloRoute modulo="ACOMPANHAMENTO" />}>
+                <Route path="acompanhamento" element={<Acompanhamento />} />
+                <Route path="acompanhamento/:clienteId" element={<Acompanhamento />} />
               </Route>
 
               {/* GP */}

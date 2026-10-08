@@ -20,7 +20,8 @@ import {
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-  Globe
+  Globe,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -33,6 +34,7 @@ export function Layout() {
     location.pathname.startsWith('/gp') ||
     location.pathname.startsWith('/cliente') || 
     location.pathname.startsWith('/analytics') ||
+    location.pathname.startsWith('/acompanhamento') ||
     location.pathname === '/hospedagens' ||
     location.pathname === '/renovacoes' ||
     location.pathname === '/configuracoes';
@@ -198,6 +200,25 @@ export function Layout() {
               >
                 <BarChart2 className="w-4 h-4 text-[#C7A15F] shrink-0" />
                 {!isSidebarCollapsed && <span className="truncate">Vivox Analytics</span>}
+              </NavLink>
+            )}
+
+            {podeAcessar('ACOMPANHAMENTO') && (
+              <NavLink
+                to="/acompanhamento"
+                title={isSidebarCollapsed ? 'Acompanhamento' : undefined}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                    isSidebarCollapsed ? 'justify-center' : ''
+                  } ${
+                    isActive
+                      ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
+                      : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
+                  }`
+                }
+              >
+                <ClipboardList className="w-4 h-4 text-[#C7A15F] shrink-0" />
+                {!isSidebarCollapsed && <span className="truncate">Acompanhamento</span>}
               </NavLink>
             )}
 
