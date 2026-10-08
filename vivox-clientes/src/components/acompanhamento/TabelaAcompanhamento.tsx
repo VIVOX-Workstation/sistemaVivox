@@ -99,11 +99,6 @@ export function TabelaAcompanhamento({
   const handleStartEdit = (pub: Publicacao, field: string) => {
     if (readOnly) return;
 
-    // Visualizações só é editável para REELS, VIDEO e STORY
-    if (field === 'visualizacoes' && (pub.tipo === 'POST' || pub.tipo === 'CARROSSEL')) {
-      return;
-    }
-
     // O clique dentro do campo em edição (ex.: escolher uma opção do select) sobe até a <td>;
     // sem isso o valor voltava ao original antes de salvar
     if (editingCell?.rowId === pub.id && editingCell?.field === field) return;
@@ -238,7 +233,6 @@ export function TabelaAcompanhamento({
             ) : (
               publicacoes.map((pub, idx) => {
                 const status = rowStatus[pub.id];
-                const isVisualizacoesApplicable = pub.tipo === 'REELS' || pub.tipo === 'VIDEO' || pub.tipo === 'STORY';
 
                 return (
                   <tr 
@@ -497,16 +491,14 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
-                    {/* 11. Visualizações */}
+                    {/* 11. Visualizações (desde o fim de 2024 o Instagram conta views em todos os formatos) */}
                     <td 
-                      onClick={() => isVisualizacoesApplicable && handleStartEdit(pub, 'visualizacoes')}
+                      onClick={() => handleStartEdit(pub, 'visualizacoes')}
                       className={`py-2.5 px-2.5 text-right font-mono font-medium ${
-                        !readOnly && isVisualizacoesApplicable ? 'cursor-pointer hover:bg-white/80' : ''
+                        !readOnly ? 'cursor-pointer hover:bg-white/80' : ''
                       }`}
                     >
-                      {!isVisualizacoesApplicable ? (
-                        <span className="text-[#8F8271] select-none">-</span>
-                      ) : editingCell?.rowId === pub.id && editingCell?.field === 'visualizacoes' ? (
+                      {editingCell?.rowId === pub.id && editingCell?.field === 'visualizacoes' ? (
                         <input
                           ref={inputRef as any}
                           type="number"
