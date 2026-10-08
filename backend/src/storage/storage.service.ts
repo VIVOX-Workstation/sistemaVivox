@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
 
@@ -56,6 +57,21 @@ export class StorageService {
       this.logger.error('Erro ao fazer upload raw para o Storage', err);
       throw new InternalServerErrorException('Erro ao fazer upload raw para o Storage');
     }
+  }
+
+  // Leitura pelo backend, para arquivos que não devem ser expostos por URL pública
+  async getFileStream(key: string): Promise<{ stream: Readable; contentLength?: number }> {
+    try {
+      const res = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      return { stream: res.Body as Readable, contentLength: res.ContentLength };
+    } catch (err) {
+      this.logger.error(`Erro ao ler ${key} do Storage`, err);
+      throw new InternalServerErrorException('Erro ao ler o arquivo do Storage');
+    }
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   getFileUrl(key: string): string {

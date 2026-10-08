@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { 
-  Building2, 
-  LogOut, 
-  Layers, 
-  ClipboardList, 
   RefreshCw, 
   AlertCircle 
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { 
   acompanhamentoApi, 
   type AcompanhamentoResponse, 
@@ -26,13 +21,11 @@ import {
   tiposDaUrl,
 } from '../components/acompanhamento/periodo';
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
-import { resolveMediaUrl } from '../utils/mediaUrl';
+import { PortalHeader } from '../components/portal/PortalHeader';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
 import './planning-workspace.css';
 
 export function PortalAcompanhamento() {
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoDaUrl(searchParams));
@@ -74,11 +67,6 @@ export function PortalAcompanhamento() {
     setSearchParams(paramsDaUrl(novoPeriodo, novosTipos), { replace: true });
   };
 
-  const handleSignOut = () => {
-    signOut();
-    navigate('/portal/entrar', { replace: true });
-  };
-
   return (
     <div 
       ref={workspaceRef} 
@@ -88,76 +76,7 @@ export function PortalAcompanhamento() {
       <div className="pw-lg-scene" aria-hidden="true" />
 
       {/* Topo do Portal */}
-      <header className="relative z-10 w-full mb-8">
-        <div className="pw-glass-panel p-4 sm:p-5 rounded-3xl border border-white/60 flex items-center justify-between gap-4 flex-wrap shadow-sm">
-          {/* Logo e Nome do Cliente */}
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-[#FAF2E4] border border-[#E8D4B4] flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-              {dados?.cliente.logoUrl ? (
-                <img
-                  src={resolveMediaUrl(dados.cliente.logoUrl)}
-                  alt={dados.cliente.nomeFantasia}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Building2 className="w-6 h-6 text-[#8A6828]" />
-              )}
-            </div>
-            <div className="truncate">
-              <span className="text-[11px] font-bold text-[#7A6440] uppercase tracking-wider block">
-                Portal do Cliente
-              </span>
-              <h1 className="font-archivo text-lg sm:text-xl font-extrabold text-[#1E1A16] truncate">
-                {dados?.cliente.nomeFantasia || 'Carregando...'}
-              </h1>
-            </div>
-          </div>
-
-          {/* Navegação entre Serviços e Acompanhamento + Sair */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <nav className="flex items-center gap-1.5 bg-white/60 p-1 rounded-2xl border border-[#524B40]/10 shadow-2xs">
-              <NavLink
-                to="/portal"
-                end
-                className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                    isActive
-                      ? 'bg-[#181512] text-[#C7A15F] shadow-xs'
-                      : 'text-[#625746] hover:text-[#1E1A16] hover:bg-white/80'
-                  }`
-                }
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Serviços</span>
-              </NavLink>
-
-              <NavLink
-                to="/portal/acompanhamento"
-                className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                    isActive
-                      ? 'bg-[#181512] text-[#C7A15F] shadow-xs'
-                      : 'text-[#625746] hover:text-[#1E1A16] hover:bg-white/80'
-                  }`
-                }
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                <span>Acompanhamento</span>
-              </NavLink>
-            </nav>
-
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="pw-glass-control px-4 py-2 rounded-xl text-xs font-bold text-[#1E1A16] hover:bg-white hover:text-red-700 flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
-              title="Encerrar sessão no portal"
-            >
-              <LogOut className="w-4 h-4 text-[#8A6828]" />
-              <span>Sair</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <PortalHeader cliente={dados?.cliente} />
 
       {/* Conteúdo Principal */}
       <main className="relative z-10 flex-1 space-y-6">

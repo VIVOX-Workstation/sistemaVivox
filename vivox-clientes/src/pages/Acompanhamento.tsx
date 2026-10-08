@@ -8,6 +8,7 @@ import {
   AlertCircle, 
   ClipboardList, 
   Calendar as CalendarIcon,
+  CalendarDays,
   ChevronDown,
   Share2,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import {
 import { ResumoAcompanhamentoCards } from '../components/acompanhamento/ResumoAcompanhamentoCards';
 import { FiltrosAcompanhamento } from '../components/acompanhamento/FiltrosAcompanhamento';
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
+import { CronogramasPainel } from '../components/acompanhamento/CronogramasPainel';
 import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
 import {
   type Periodo,
@@ -33,8 +35,13 @@ import {
   tiposDaUrl,
 } from '../components/acompanhamento/periodo';
 
-const urlPara = (clienteId: string, periodo: Periodo, tipos: TipoPublicacao[]) =>
-  `/acompanhamento/${clienteId}?${new URLSearchParams(paramsDaUrl(periodo, tipos))}`;
+const urlPara = (clienteId: string, periodo: Periodo, tipos: TipoPublicacao[], aba?: string) => {
+  const params = new URLSearchParams(paramsDaUrl(periodo, tipos));
+  if (aba && aba === 'cronogramas') {
+    params.set('aba', 'cronogramas');
+  }
+  return `/acompanhamento/${clienteId}?${params.toString()}`;
+};
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
 import './planning-workspace.css';
@@ -47,6 +54,7 @@ export function Acompanhamento() {
   // Período (mês ou personalizado) e tipos ficam na URL para o link poder ser compartilhado
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoDaUrl(searchParams));
   const [tipos, setTipos] = useState<TipoPublicacao[]>(() => tiposDaUrl(searchParams));
+  const abaAtiva = searchParams.get('aba') === 'cronogramas' ? 'cronogramas' : 'publicacoes';
 
   // Lista de clientes para o seletor
   const [clientes, setClientes] = useState<AcompanhamentoCliente[]>([]);
@@ -72,6 +80,12 @@ export function Acompanhamento() {
   const workspaceRef = useRef<HTMLDivElement>(null);
   useLiquidGlass(workspaceRef, !loading);
 
+  const handleMudarAba = (novaAba: 'publicacoes' | 'cronogramas') => {
+    if (clienteSelecionadoId) {
+      navigate(urlPara(clienteSelecionadoId, periodo, tipos, novaAba));
+    }
+  };
+
   // Carrega lista inicial de clientes
   useEffect(() => {
     const fetchClientes = async () => {
@@ -82,7 +96,7 @@ export function Acompanhamento() {
         // Se não houver cliente na URL, mas houver clientes, seleciona o primeiro opcionalmente ou aguarda seleção
         if (!urlClienteId && res.length > 0 && !clienteSelecionadoId) {
           setClienteSelecionadoId(res[0].id);
-          navigate(urlPara(res[0].id, periodo, tipos), { replace: true });
+          navigate(urlPara(res[0].id, periodo, tipos, abaAtiva), { replace: true });
         }
       } catch (err) {
         console.error('Erro ao carregar lista de clientes:', err);
@@ -140,14 +154,14 @@ export function Acompanhamento() {
     setClienteSelecionadoId(novoId);
     setDropdownClienteAberto(false);
     setBuscaCliente('');
-    navigate(urlPara(novoId, periodo, tipos));
+    navigate(urlPara(novoId, periodo, tipos, abaAtiva));
   };
 
   const aplicarFiltros = (novoPeriodo: Periodo, novosTipos: TipoPublicacao[]) => {
     setPeriodo(novoPeriodo);
     setTipos(novosTipos);
     if (clienteSelecionadoId) {
-      navigate(urlPara(clienteSelecionadoId, novoPeriodo, novosTipos), { replace: true });
+      navigate(urlPara(clienteSelecionadoId, novoPeriodo, novosTipos, abaAtiva), { replace: true });
     }
   };
 
@@ -370,93 +384,128 @@ export function Acompanhamento() {
           </div>
         </div>
 
-        {/* FILTROS: meses, período personalizado e tipo */}
-        <FiltrosAcompanhamento
-          periodo={periodo}
-          tipos={tipos}
-          mesesComDados={mesesComDados}
-          onChangePeriodo={(p) => aplicarFiltros(p, tipos)}
-          onChangeTipos={(t) => aplicarFiltros(periodo, t)}
-        />
+        {/* NAVEGAÇÃO DE ABAS: Publicações | Cronogramas */}
+        <div className="flex items-center gap-2 border-b border-[#524B40]/10 pb-1">
+          <button
+            type="button"
+            onClick={() => handleMudarAba('publicacoes')}
+            className={`pw-glass-tab px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+              abaAtiva === 'publicacoes' ? 'is-active text-[#8A6828]' : 'text-[#625746]'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>Publicações</span>
+          </button>
 
-        {/* CONTEÚDO PRINCIPAL */}
-        {loading ? (
-          // Skeleton Loading
-          <div className="space-y-4 animate-pulse" aria-busy="true">
-            <div className="h-20 rounded-2xl bg-white/40" />
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-20 rounded-2xl bg-white/40" />
-              ))}
-            </div>
-            <div className="h-64 rounded-3xl bg-white/40" />
-          </div>
-        ) : error ? (
-          // Estado de Erro
-          <div className="pw-glass-panel p-8 rounded-3xl border border-red-200 text-center max-w-md mx-auto space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-base font-extrabold text-[#1E1A16]">Erro ao carregar publicações</h2>
-              <p className="text-xs text-[#5E574C] mt-1">{error}</p>
-            </div>
-            {clienteSelecionadoId && (
-              <button
-                type="button"
-                onClick={() => carregarDados(clienteSelecionadoId)}
-                className="pw-glass-control pw-glass-gold px-5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-sm"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Tentar novamente</span>
-              </button>
-            )}
-          </div>
-        ) : !clienteSelecionadoId ? (
-          // Estado sem cliente selecionado
-          <div className="pw-glass-panel p-12 rounded-3xl border border-white/60 text-center max-w-md mx-auto space-y-3">
-            <Building2 className="w-10 h-10 text-[#C7A15F] mx-auto opacity-70" />
-            <h2 className="text-base font-bold text-[#1E1A16]">Selecione um cliente</h2>
-            <p className="text-xs text-[#5E574C]">
-              Escolha um cliente no seletor acima para visualizar e editar sua planilha de acompanhamento.
-            </p>
-          </div>
-        ) : dados ? (
-          <div className="space-y-6">
-            {/* 1. Resumo em frase + Cards de métricas */}
-            <ResumoAcompanhamentoCards
-              resumo={dados.resumo}
-              textoPeriodo={textoPeriodo(periodo)}
-              tiposFiltrados={tipos}
+          <button
+            type="button"
+            onClick={() => handleMudarAba('cronogramas')}
+            className={`pw-glass-tab px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+              abaAtiva === 'cronogramas' ? 'is-active text-[#8A6828]' : 'text-[#625746]'
+            }`}
+          >
+            <CalendarDays className="w-4 h-4" />
+            <span>Cronogramas</span>
+          </button>
+        </div>
+
+        {abaAtiva === 'cronogramas' ? (
+          <CronogramasPainel
+            clienteId={clienteSelecionadoId}
+            clienteNome={clienteAtual?.nomeFantasia}
+            periodoAtual={periodo}
+          />
+        ) : (
+          <>
+            {/* FILTROS: meses, período personalizado e tipo */}
+            <FiltrosAcompanhamento
+              periodo={periodo}
+              tipos={tipos}
+              mesesComDados={mesesComDados}
+              onChangePeriodo={(p) => aplicarFiltros(p, tipos)}
+              onChangeTipos={(t) => aplicarFiltros(periodo, t)}
             />
 
-            {/* 2. Barra de Ações da Tabela */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="font-archivo text-xs font-bold uppercase tracking-wider text-[#7A6440]">
-                  Publicações do período ({dados.publicacoes.length})
-                </span>
+            {/* CONTEÚDO PRINCIPAL */}
+            {loading ? (
+              // Skeleton Loading
+              <div className="space-y-4 animate-pulse" aria-busy="true">
+                <div className="h-20 rounded-2xl bg-white/40" />
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-20 rounded-2xl bg-white/40" />
+                  ))}
+                </div>
+                <div className="h-64 rounded-3xl bg-white/40" />
               </div>
-              <button
-                type="button"
-                onClick={handleCriarPublicacao}
-                className="pw-glass-control pw-glass-gold px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all hover:scale-[1.01]"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Nova publicação</span>
-              </button>
-            </div>
+            ) : error ? (
+              // Estado de Erro
+              <div className="pw-glass-panel p-8 rounded-3xl border border-red-200 text-center max-w-md mx-auto space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-[#1E1A16]">Erro ao carregar publicações</h2>
+                  <p className="text-xs text-[#5E574C] mt-1">{error}</p>
+                </div>
+                {clienteSelecionadoId && (
+                  <button
+                    type="button"
+                    onClick={() => carregarDados(clienteSelecionadoId)}
+                    className="pw-glass-control pw-glass-gold px-5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-sm"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Tentar novamente</span>
+                  </button>
+                )}
+              </div>
+            ) : !clienteSelecionadoId ? (
+              // Estado sem cliente selecionado
+              <div className="pw-glass-panel p-12 rounded-3xl border border-white/60 text-center max-w-md mx-auto space-y-3">
+                <Building2 className="w-10 h-10 text-[#C7A15F] mx-auto opacity-70" />
+                <h2 className="text-base font-bold text-[#1E1A16]">Selecione um cliente</h2>
+                <p className="text-xs text-[#5E574C]">
+                  Escolha um cliente no seletor acima para visualizar e editar sua planilha de acompanhamento.
+                </p>
+              </div>
+            ) : dados ? (
+              <div className="space-y-6">
+                {/* 1. Resumo em frase + Cards de métricas */}
+                <ResumoAcompanhamentoCards
+                  resumo={dados.resumo}
+                  textoPeriodo={textoPeriodo(periodo)}
+                  tiposFiltrados={tipos}
+                />
 
-            {/* 3. Tabela Estilo Planilha com Edição Inline */}
-            <TabelaAcompanhamento
-              publicacoes={dados.publicacoes}
-              readOnly={false}
-              onUpdatePublicacao={handleUpdatePublicacao}
-              onDeletePublicacao={handleDeletePublicacao}
-              rowStatus={rowStatus}
-            />
-          </div>
-        ) : null}
+                {/* 2. Barra de Ações da Tabela */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="font-archivo text-xs font-bold uppercase tracking-wider text-[#7A6440]">
+                      Publicações do período ({dados.publicacoes.length})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCriarPublicacao}
+                    className="pw-glass-control pw-glass-gold px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all hover:scale-[1.01]"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Nova publicação</span>
+                  </button>
+                </div>
+
+                {/* 3. Tabela Estilo Planilha com Edição Inline */}
+                <TabelaAcompanhamento
+                  publicacoes={dados.publicacoes}
+                  readOnly={false}
+                  onUpdatePublicacao={handleUpdatePublicacao}
+                  onDeletePublicacao={handleDeletePublicacao}
+                  rowStatus={rowStatus}
+                />
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* Compartilhar: o link leva o cliente direto a este período no portal, após o login */}
