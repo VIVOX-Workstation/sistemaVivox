@@ -46,4 +46,9 @@ export class CreatePublicacaoDto {
   @IsInt()
   @Min(0)
   visualizacoes?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  alcance?: number | null;
 }

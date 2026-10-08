@@ -22,7 +22,8 @@ const EDITABLE_FIELDS = [
   'reposts',
   'compartilhamentos',
   'salvamentos',
-  'visualizacoes'
+  'visualizacoes',
+  'alcance',
 ];
 
 interface TabelaAcompanhamentoProps {
@@ -136,7 +137,7 @@ export function TabelaAcompanhamento({
       } else {
         processedValue = pub.dataPublicacao; // fallback se deixar vazio
       }
-    } else if (['curtidas', 'comentarios', 'compartilhamentos', 'salvamentos', 'reposts', 'visualizacoes'].includes(field)) {
+    } else if (['curtidas', 'comentarios', 'compartilhamentos', 'salvamentos', 'reposts', 'visualizacoes', 'alcance'].includes(field)) {
       if (valor.trim() === '') {
         processedValue = null;
       } else {
@@ -206,7 +207,7 @@ export function TabelaAcompanhamento({
   return (
     <div className="pw-glass-panel rounded-3xl border border-white/60 bg-white/70 shadow-sm overflow-hidden">
       <div className="overflow-x-auto w-full">
-        <table className="w-full min-w-[1040px] text-xs text-[#1E1A16] border-collapse">
+        <table className="w-full min-w-[1120px] text-xs text-[#1E1A16] border-collapse">
           <thead>
             <tr className="border-b border-[#524B40]/10 bg-white/40 text-[11px] font-bold text-[#7A6440] uppercase tracking-wider text-left select-none">
               <th className="py-3 px-3 w-10 text-center">#</th>
@@ -220,6 +221,7 @@ export function TabelaAcompanhamento({
               <th className="py-3 px-2.5 w-20 text-right">Envios</th>
               <th className="py-3 px-2.5 w-24 text-right">Salvamento</th>
               <th className="py-3 px-2.5 w-28 text-right">Visualização</th>
+              <th className="py-3 px-2.5 w-24 text-right">Alcance</th>
               {!readOnly && <th className="py-3 px-3 w-20 text-center">Ações</th>}
             </tr>
           </thead>
@@ -227,7 +229,7 @@ export function TabelaAcompanhamento({
             {publicacoes.length === 0 ? (
               <tr>
                 <td 
-                  colSpan={readOnly ? 11 : 12} 
+                  colSpan={readOnly ? 12 : 13} 
                   className="py-12 text-center text-xs text-[#5E574C] font-semibold"
                 >
                   Nenhuma publicação cadastrada neste período.
@@ -520,7 +522,30 @@ export function TabelaAcompanhamento({
                       )}
                     </td>
 
-                    {/* 12. Ações (se editável) */}
+                    {/* 12. Alcance (vale para qualquer tipo) */}
+                    <td 
+                      onClick={() => handleStartEdit(pub, 'alcance')}
+                      className={`py-2.5 px-2.5 text-right font-mono font-medium ${
+                        !readOnly ? 'cursor-pointer hover:bg-white/80' : ''
+                      }`}
+                    >
+                      {editingCell?.rowId === pub.id && editingCell?.field === 'alcance' ? (
+                        <input
+                          ref={inputRef as any}
+                          type="number"
+                          min="0"
+                          value={cellValue}
+                          onChange={(e) => setCellValue(e.target.value)}
+                          onBlur={() => handleCommitEdit(pub)}
+                          onKeyDown={(e) => handleKeyDown(e, pub, idx)}
+                          className="w-20 px-1.5 py-0.5 text-xs text-right rounded-lg border border-[#C7A15F] bg-white focus:outline-none"
+                        />
+                      ) : (
+                        <span>{pub.alcance !== null && pub.alcance !== undefined ? pub.alcance : '-'}</span>
+                      )}
+                    </td>
+
+                    {/* 13. Ações (se editável) */}
                     {!readOnly && (
                       <td className="py-2.5 px-3 text-center">
                         <button

@@ -33,4 +33,11 @@ describe('Acompanhamento DTO validation', () => {
       expect((await validate(plainToInstance(UpdatePublicacaoDto, data))).length).toBeGreaterThan(0);
     }
   });
+
+  it('aceita alcance inteiro >= 0 (ou null para limpar) e recusa negativo/decimal', async () => {
+    expect(await validate(plainToInstance(CreatePublicacaoDto, { ...base, alcance: 1500 }))).toHaveLength(0);
+    expect(await validate(plainToInstance(UpdatePublicacaoDto, { alcance: null }))).toHaveLength(0);
+    expect((await validate(plainToInstance(CreatePublicacaoDto, { ...base, alcance: -1 }))).length).toBeGreaterThan(0);
+    expect((await validate(plainToInstance(CreatePublicacaoDto, { ...base, alcance: 1.5 }))).length).toBeGreaterThan(0);
+  });
 });
