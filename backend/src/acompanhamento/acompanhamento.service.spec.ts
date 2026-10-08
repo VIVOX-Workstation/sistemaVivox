@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrigemDado, Prisma, TipoPublicacao } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AcompanhamentoService, intervaloMensal, paraDataPublicacao } from './acompanhamento.service';
+import { AcompanhamentoService, intervaloMensal, intervaloPersonalizado, paraDataPublicacao } from './acompanhamento.service';
 
 describe('AcompanhamentoService', () => {
   const cliente = { id: 'c1', nomeFantasia: 'Cliente', logoUrl: null };
@@ -134,5 +134,55 @@ describe('paraDataPublicacao', () => {
 
   it('mantém data com horário explícito', () => {
     expect(paraDataPublicacao('2025-02-01T10:00:00.000Z').toISOString()).toBe('2025-02-01T10:00:00.000Z');
+  });
+});
+
+describe('período personalizado e filtro de tipos', () => {
+  const prisma = {
+    cliente: { findUnique: jest.fn() },
+    publicacao: { findMany: jest.fn() },
+  };
+  const service = new AcompanhamentoService(prisma as unknown as PrismaService);
+  beforeEach(() => {
+    jest.resetAllMocks();
+    prisma.cliente.findUnique.mockResolvedValue({ id: 'c1', nomeFantasia: 'Cliente', logoUrl: null });
+    prisma.publicacao.findMany.mockResolvedValue([]);
+  });
+
+  it('usa dias inteiros de Brasília com fim inclusivo e devolve o período', async () => {
+    const result = await service.consultar('c1', { inicio: '2025-01-16', fim: '2025-02-28' });
+    expect(prisma.publicacao.findMany.mock.calls[0][0].where).toEqual({
+      clienteId: 'c1',
+      dataPublicacao: { gte: new Date('2025-01-16T03:00:00Z'), lt: new Date('2025-03-01T03:00:00Z') },
+    });
+    expect(result.periodo).toEqual({ inicio: '2025-01-16', fim: '2025-02-28' });
+    expect(result.ano).toBeNull();
+    expect(result.mes).toBeNull();
+  });
+
+  it('aceita período de um único dia', () => {
+    expect(intervaloPersonalizado('2025-03-10', '2025-03-10')).toEqual({
+      inicio: new Date('2025-03-10T03:00:00Z'), fim: new Date('2025-03-11T03:00:00Z'),
+    });
+  });
+
+  it('devolve o período do mês quando consultado por ano/mês', async () => {
+    expect((await service.consultar('c1', { ano: 2024, mes: 2 })).periodo).toEqual({ inicio: '2024-02-01', fim: '2024-02-29' });
+  });
+
+  it('filtra por tipos quando informados', async () => {
+    await service.consultar('c1', { ano: 2025, mes: 1, tipos: [TipoPublicacao.REELS, TipoPublicacao.VIDEO] });
+    expect(prisma.publicacao.findMany.mock.calls[0][0].where.tipo).toEqual({ in: [TipoPublicacao.REELS, TipoPublicacao.VIDEO] });
+  });
+
+  it.each([
+    [{ inicio: '2025-02-10', fim: '2025-02-01' }],
+    [{ inicio: '2025-02-30', fim: '2025-03-05' }],
+    [{ inicio: '2025-01-01' }],
+    [{ inicio: '2020-01-01', fim: '2025-01-01' }],
+    [{}],
+  ])('recusa período inválido %j sem consultar o banco', async (filtro) => {
+    await expect(service.consultar('c1', filtro)).rejects.toThrow(BadRequestException);
+    expect(prisma.cliente.findUnique).not.toHaveBeenCalled();
   });
 });

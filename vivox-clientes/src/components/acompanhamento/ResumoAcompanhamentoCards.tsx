@@ -8,21 +8,18 @@ import {
   Sparkles,
   BarChart3
 } from 'lucide-react';
-import type { ResumoAcompanhamento } from '../../api/acompanhamento';
-
-export const MESES_NOMES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
+import type { ResumoAcompanhamento, TipoPublicacao } from '../../api/acompanhamento';
+import { TIPOS_PUBLICACAO } from './periodo';
 
 interface ResumoAcompanhamentoCardsProps {
   resumo: ResumoAcompanhamento;
-  ano: number;
-  mes: number;
+  /** Ex.: "Em janeiro de 2025" ou "De 16 de janeiro a 28 de fevereiro de 2025" */
+  textoPeriodo: string;
+  tiposFiltrados?: TipoPublicacao[];
 }
 
-export function ResumoAcompanhamentoCards({ resumo, ano, mes }: ResumoAcompanhamentoCardsProps) {
-  const nomeMes = MESES_NOMES[mes - 1] || `Mês ${mes}`;
+export function ResumoAcompanhamentoCards({ resumo, textoPeriodo, tiposFiltrados = [] }: ResumoAcompanhamentoCardsProps) {
+  const rotulosFiltro = TIPOS_PUBLICACAO.filter((t) => tiposFiltrados.includes(t.id)).map((t) => t.label);
 
   // Montar partes por tipo
   const partesTipos: string[] = [];
@@ -57,11 +54,16 @@ export function ResumoAcompanhamentoCards({ resumo, ano, mes }: ResumoAcompanham
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-[#1E1A16] leading-relaxed">
-            Em <span className="text-[#8A6828]">{nomeMes.toLowerCase()} de {ano}</span> foram postadas{' '}
+            <span className="text-[#8A6828]">{textoPeriodo}</span> foram postadas{' '}
             <strong className="text-base text-[#1E1A16] font-extrabold">{resumo.total}</strong>{' '}
             {resumo.total === 1 ? 'publicação' : 'publicações'}
             {textoTipos}.
           </p>
+          {rotulosFiltro.length > 0 && (
+            <p className="text-[11px] font-semibold text-[#8F8271] mt-0.5">
+              Filtrando por tipo: {rotulosFiltro.join(', ')}
+            </p>
+          )}
         </div>
       </div>
 

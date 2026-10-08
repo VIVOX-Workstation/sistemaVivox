@@ -3,7 +3,7 @@ import { ModuloSistema } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequerModulo } from '../auth/modulos.decorator';
 import { AcompanhamentoService } from './acompanhamento.service';
-import { MesAcompanhamentoDto } from './dto/mes-acompanhamento.dto';
+import { FiltroAcompanhamentoDto } from './dto/filtro-acompanhamento.dto';
 import { CreatePublicacaoDto } from './dto/create-publicacao.dto';
 import { UpdatePublicacaoDto } from './dto/update-publicacao.dto';
 
@@ -14,8 +14,8 @@ export class AcompanhamentoController {
   constructor(private readonly acompanhamentoService: AcompanhamentoService) {}
 
   @Get('clientes/:clienteId')
-  listar(@Param('clienteId') clienteId: string, @Query() query: MesAcompanhamentoDto) {
-    return this.acompanhamentoService.listar(clienteId, query.ano, query.mes);
+  listar(@Param('clienteId') clienteId: string, @Query() filtro: FiltroAcompanhamentoDto) {
+    return this.acompanhamentoService.consultar(clienteId, filtro);
   }
 
   @Get('clientes/:clienteId/meses')

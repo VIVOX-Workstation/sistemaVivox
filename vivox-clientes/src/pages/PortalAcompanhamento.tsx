@@ -12,10 +12,19 @@ import { useAuth } from '../context/AuthContext';
 import { 
   acompanhamentoApi, 
   type AcompanhamentoResponse, 
-  type MesComDados 
+  type MesComDados,
+  type TipoPublicacao,
 } from '../api/acompanhamento';
 import { ResumoAcompanhamentoCards } from '../components/acompanhamento/ResumoAcompanhamentoCards';
-import { SeletorMes } from '../components/acompanhamento/SeletorMes';
+import { FiltrosAcompanhamento } from '../components/acompanhamento/FiltrosAcompanhamento';
+import {
+  type Periodo,
+  filtroApi,
+  paramsDaUrl,
+  periodoDaUrl,
+  textoPeriodo,
+  tiposDaUrl,
+} from '../components/acompanhamento/periodo';
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
@@ -26,12 +35,8 @@ export function PortalAcompanhamento() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const hoje = new Date();
-  const initialAno = searchParams.get('ano') ? parseInt(searchParams.get('ano')!, 10) : hoje.getFullYear();
-  const initialMes = searchParams.get('mes') ? parseInt(searchParams.get('mes')!, 10) : hoje.getMonth() + 1;
-
-  const [ano, setAno] = useState<number>(initialAno);
-  const [mes, setMes] = useState<number>(initialMes);
+  const [periodo, setPeriodo] = useState<Periodo>(() => periodoDaUrl(searchParams));
+  const [tipos, setTipos] = useState<TipoPublicacao[]>(() => tiposDaUrl(searchParams));
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +46,12 @@ export function PortalAcompanhamento() {
   const workspaceRef = useRef<HTMLDivElement>(null);
   useLiquidGlass(workspaceRef, !loading);
 
-  const carregarDados = async (a: number, m: number) => {
+  const carregarDados = async () => {
     setLoading(true);
     setError(null);
     try {
       const [resAcomp, resMeses] = await Promise.all([
-        acompanhamentoApi.getPortalAcompanhamento(a, m),
+        acompanhamentoApi.getPortalAcompanhamento(filtroApi(periodo, tipos)),
         acompanhamentoApi.getPortalMeses(),
       ]);
       setDados(resAcomp);
@@ -60,18 +65,18 @@ export function PortalAcompanhamento() {
   };
 
   useEffect(() => {
-    carregarDados(ano, mes);
-  }, [ano, mes]);
+    carregarDados();
+  }, [periodo, tipos]);
 
-  const handleMudarMes = (novoAno: number, novoMes: number) => {
-    setAno(novoAno);
-    setMes(novoMes);
-    setSearchParams({ ano: String(novoAno), mes: String(novoMes) });
+  const aplicarFiltros = (novoPeriodo: Periodo, novosTipos: TipoPublicacao[]) => {
+    setPeriodo(novoPeriodo);
+    setTipos(novosTipos);
+    setSearchParams(paramsDaUrl(novoPeriodo, novosTipos), { replace: true });
   };
 
   const handleSignOut = () => {
     signOut();
-    navigate('/login', { replace: true });
+    navigate('/portal/entrar', { replace: true });
   };
 
   return (
@@ -156,12 +161,13 @@ export function PortalAcompanhamento() {
 
       {/* Conteúdo Principal */}
       <main className="relative z-10 flex-1 space-y-6">
-        {/* Navegação de Mês */}
-        <SeletorMes
-          ano={ano}
-          mes={mes}
-          onChangeMes={handleMudarMes}
+        {/* Filtros: meses, período personalizado e tipo */}
+        <FiltrosAcompanhamento
+          periodo={periodo}
+          tipos={tipos}
           mesesComDados={mesesComDados}
+          onChangePeriodo={(p) => aplicarFiltros(p, tipos)}
+          onChangeTipos={(t) => aplicarFiltros(periodo, t)}
         />
 
         {loading ? (
@@ -187,7 +193,7 @@ export function PortalAcompanhamento() {
             </div>
             <button
               type="button"
-              onClick={() => carregarDados(ano, mes)}
+              onClick={() => carregarDados()}
               className="pw-glass-control pw-glass-gold px-5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-sm"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -199,15 +205,15 @@ export function PortalAcompanhamento() {
             {/* 1. Resumo em frase + Cards de métricas */}
             <ResumoAcompanhamentoCards
               resumo={dados.resumo}
-              ano={ano}
-              mes={mes}
+              textoPeriodo={textoPeriodo(periodo)}
+              tiposFiltrados={tipos}
             />
 
             {/* 2. Tabela de Publicações (Somente Leitura) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-archivo text-xs font-bold uppercase tracking-wider text-[#7A6440]">
-                  Publicações do Mês ({dados.publicacoes.length})
+                  Publicações do período ({dados.publicacoes.length})
                 </span>
               </div>
               <TabelaAcompanhamento

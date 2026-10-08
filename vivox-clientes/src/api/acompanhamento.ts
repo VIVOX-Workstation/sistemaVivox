@@ -52,11 +52,26 @@ export interface AcompanhamentoCliente {
 
 export interface AcompanhamentoResponse {
   cliente: AcompanhamentoCliente;
-  ano: number;
-  mes: number;
+  ano: number | null; // null quando o período é personalizado
+  mes: number | null;
+  periodo: { inicio: string; fim: string }; // AAAA-MM-DD, datas inclusivas
   publicacoes: Publicacao[];
   resumo: ResumoAcompanhamento;
 }
+
+// Mês (ano + mes) ou período personalizado (inicio + fim), com filtro opcional de tipos
+export interface FiltroAcompanhamento {
+  ano?: number;
+  mes?: number;
+  inicio?: string;
+  fim?: string;
+  tipos?: TipoPublicacao[];
+}
+
+const paramsFiltro = ({ tipos, ...resto }: FiltroAcompanhamento) => ({
+  ...resto,
+  ...(tipos && tipos.length > 0 ? { tipos: tipos.join(',') } : {}),
+});
 
 export interface CriarPublicacaoDTO {
   dataPublicacao: string;
@@ -74,9 +89,9 @@ export type AtualizarPublicacaoDTO = Partial<CriarPublicacaoDTO>;
 
 export const acompanhamentoApi = {
   // Interno (modulo ACOMPANHAMENTO)
-  getAcompanhamento: async (clienteId: string, ano: number, mes: number): Promise<AcompanhamentoResponse> => {
+  getAcompanhamento: async (clienteId: string, filtro: FiltroAcompanhamento): Promise<AcompanhamentoResponse> => {
     const { data } = await api.get(`/acompanhamento/clientes/${clienteId}`, {
-      params: { ano, mes },
+      params: paramsFiltro(filtro),
     });
     return data;
   },
@@ -107,9 +122,9 @@ export const acompanhamentoApi = {
   },
 
   // Portal (Cliente logado, somente leitura)
-  getPortalAcompanhamento: async (ano?: number, mes?: number): Promise<AcompanhamentoResponse> => {
+  getPortalAcompanhamento: async (filtro: FiltroAcompanhamento): Promise<AcompanhamentoResponse> => {
     const { data } = await api.get('/portal/acompanhamento', {
-      params: { ano, mes },
+      params: paramsFiltro(filtro),
     });
     return data;
   },

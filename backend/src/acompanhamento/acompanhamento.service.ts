@@ -29,6 +29,47 @@ export function intervaloMensal(ano: number, mes: number) {
   return { inicio, fim };
 }
 
+// Período personalizado em dias inteiros de Brasília: [inicio 00h, dia seguinte ao fim 00h)
+const MAX_DIAS_PERIODO = 731;
+
+export function dataLocalIso(data: Date): string {
+  return new Date(data.getTime() - FUSO_MS).toISOString().slice(0, 10);
+}
+
+export function intervaloPersonalizado(inicioIso: string, fimIso: string) {
+  const inicio = new Date(`${inicioIso}T00:00:00-03:00`);
+  const fim = new Date(`${fimIso}T00:00:00-03:00`);
+  // Recusa datas inexistentes (ex.: 2025-02-30), que o Date ajustaria em silêncio
+  if (isNaN(inicio.getTime()) || isNaN(fim.getTime()) || dataLocalIso(inicio) !== inicioIso || dataLocalIso(fim) !== fimIso) {
+    throw new BadRequestException('Informe datas válidas no formato AAAA-MM-DD.');
+  }
+  if (fim < inicio) throw new BadRequestException('A data final deve ser igual ou posterior à inicial.');
+  fim.setUTCDate(fim.getUTCDate() + 1);
+  if ((fim.getTime() - inicio.getTime()) / 86_400_000 > MAX_DIAS_PERIODO) {
+    throw new BadRequestException('O período pode ter no máximo 2 anos.');
+  }
+  return { inicio, fim };
+}
+
+export interface FiltroPeriodo {
+  ano?: number;
+  mes?: number;
+  inicio?: string;
+  fim?: string;
+  tipos?: TipoPublicacao[];
+}
+
+function resolverPeriodo(filtro: FiltroPeriodo) {
+  if (filtro.inicio !== undefined || filtro.fim !== undefined) {
+    if (!filtro.inicio || !filtro.fim) throw new BadRequestException('Informe a data inicial e a final do período.');
+    return intervaloPersonalizado(filtro.inicio, filtro.fim);
+  }
+  if (filtro.ano === undefined || filtro.mes === undefined) {
+    throw new BadRequestException('Informe ano e mês ou um período (inicio e fim).');
+  }
+  return intervaloMensal(filtro.ano, filtro.mes);
+}
+
 // "2025-02-01" puro viraria meia-noite UTC = 21h de 31/01 em Brasília (mês errado).
 // Data sem horário é fixada ao meio-dia de Brasília, longe das viradas de dia.
 export function paraDataPublicacao(valor: string): Date {
@@ -51,11 +92,19 @@ export class AcompanhamentoService {
     return cliente;
   }
 
-  async listar(clienteId: string, ano: number, mes: number) {
-    const { inicio, fim } = intervaloMensal(ano, mes);
+  listar(clienteId: string, ano: number, mes: number) {
+    return this.consultar(clienteId, { ano, mes });
+  }
+
+  async consultar(clienteId: string, filtro: FiltroPeriodo) {
+    const { inicio, fim } = resolverPeriodo(filtro);
     const cliente = await this.cliente(clienteId);
     const publicacoes = await this.prisma.publicacao.findMany({
-      where: { clienteId, dataPublicacao: { gte: inicio, lt: fim } },
+      where: {
+        clienteId,
+        dataPublicacao: { gte: inicio, lt: fim },
+        ...(filtro.tipos?.length ? { tipo: { in: filtro.tipos } } : {}),
+      },
       orderBy: [{ dataPublicacao: 'asc' }, { createdAt: 'asc' }],
       select: PUBLICACAO_SELECT,
     });
@@ -67,7 +116,15 @@ export class AcompanhamentoService {
         totais[campo] += publicacao[campo] ?? 0;
       }
     }
-    return { cliente, ano, mes, publicacoes: publicacoes.map(respostaPublicacao), resumo: { total: publicacoes.length, porTipo, totais } };
+    return {
+      cliente,
+      ano: filtro.inicio ? null : filtro.ano ?? null,
+      mes: filtro.inicio ? null : filtro.mes ?? null,
+      // Datas inclusivas, no fuso de Brasília
+      periodo: { inicio: dataLocalIso(inicio), fim: dataLocalIso(new Date(fim.getTime() - 1)) },
+      publicacoes: publicacoes.map(respostaPublicacao),
+      resumo: { total: publicacoes.length, porTipo, totais },
+    };
   }
 
   async meses(clienteId: string) {

@@ -15,11 +15,24 @@ import {
   type AcompanhamentoResponse, 
   type MesComDados, 
   type Publicacao,
-  type AcompanhamentoCliente 
+  type AcompanhamentoCliente,
+  type TipoPublicacao,
 } from '../api/acompanhamento';
 import { ResumoAcompanhamentoCards } from '../components/acompanhamento/ResumoAcompanhamentoCards';
-import { SeletorMes } from '../components/acompanhamento/SeletorMes';
+import { FiltrosAcompanhamento } from '../components/acompanhamento/FiltrosAcompanhamento';
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
+import {
+  type Periodo,
+  dataPadraoNova,
+  filtroApi,
+  paramsDaUrl,
+  periodoDaUrl,
+  textoPeriodo,
+  tiposDaUrl,
+} from '../components/acompanhamento/periodo';
+
+const urlPara = (clienteId: string, periodo: Periodo, tipos: TipoPublicacao[]) =>
+  `/acompanhamento/${clienteId}?${new URLSearchParams(paramsDaUrl(periodo, tipos))}`;
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
 import './planning-workspace.css';
@@ -29,12 +42,9 @@ export function Acompanhamento() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const hoje = new Date();
-  const initialAno = searchParams.get('ano') ? parseInt(searchParams.get('ano')!, 10) : hoje.getFullYear();
-  const initialMes = searchParams.get('mes') ? parseInt(searchParams.get('mes')!, 10) : hoje.getMonth() + 1;
-
-  const [ano, setAno] = useState<number>(initialAno);
-  const [mes, setMes] = useState<number>(initialMes);
+  // Período (mês ou personalizado) e tipos ficam na URL para o link poder ser compartilhado
+  const [periodo, setPeriodo] = useState<Periodo>(() => periodoDaUrl(searchParams));
+  const [tipos, setTipos] = useState<TipoPublicacao[]>(() => tiposDaUrl(searchParams));
 
   // Lista de clientes para o seletor
   const [clientes, setClientes] = useState<AcompanhamentoCliente[]>([]);
@@ -68,7 +78,7 @@ export function Acompanhamento() {
         // Se não houver cliente na URL, mas houver clientes, seleciona o primeiro opcionalmente ou aguarda seleção
         if (!urlClienteId && res.length > 0 && !clienteSelecionadoId) {
           setClienteSelecionadoId(res[0].id);
-          navigate(`/acompanhamento/${res[0].id}?ano=${ano}&mes=${mes}`, { replace: true });
+          navigate(urlPara(res[0].id, periodo, tipos), { replace: true });
         }
       } catch (err) {
         console.error('Erro ao carregar lista de clientes:', err);
@@ -97,13 +107,13 @@ export function Acompanhamento() {
     }
   }, [urlClienteId]);
 
-  // Carrega dados quando cliente, ano ou mês mudam
-  const carregarDados = async (cId: string, a: number, m: number) => {
+  // Carrega dados quando cliente, período ou tipos mudam
+  const carregarDados = async (cId: string) => {
     setLoading(true);
     setError(null);
     try {
       const [resAcomp, resMeses] = await Promise.all([
-        acompanhamentoApi.getAcompanhamento(cId, a, m),
+        acompanhamentoApi.getAcompanhamento(cId, filtroApi(periodo, tipos)),
         acompanhamentoApi.getMesesComDados(cId),
       ]);
       setDados(resAcomp);
@@ -118,23 +128,30 @@ export function Acompanhamento() {
 
   useEffect(() => {
     if (clienteSelecionadoId) {
-      carregarDados(clienteSelecionadoId, ano, mes);
+      carregarDados(clienteSelecionadoId);
     }
-  }, [clienteSelecionadoId, ano, mes]);
+  }, [clienteSelecionadoId, periodo, tipos]);
 
   const handleMudarCliente = (novoId: string) => {
     setClienteSelecionadoId(novoId);
     setDropdownClienteAberto(false);
     setBuscaCliente('');
-    navigate(`/acompanhamento/${novoId}?ano=${ano}&mes=${mes}`);
+    navigate(urlPara(novoId, periodo, tipos));
   };
 
-  const handleMudarMes = (novoAno: number, novoMes: number) => {
-    setAno(novoAno);
-    setMes(novoMes);
+  const aplicarFiltros = (novoPeriodo: Periodo, novosTipos: TipoPublicacao[]) => {
+    setPeriodo(novoPeriodo);
+    setTipos(novosTipos);
     if (clienteSelecionadoId) {
-      navigate(`/acompanhamento/${clienteSelecionadoId}?ano=${novoAno}&mes=${novoMes}`, { replace: true });
+      navigate(urlPara(clienteSelecionadoId, novoPeriodo, novosTipos), { replace: true });
     }
+  };
+
+  const recarregarResumo = () => {
+    if (!clienteSelecionadoId) return;
+    acompanhamentoApi.getAcompanhamento(clienteSelecionadoId, filtroApi(periodo, tipos)).then((res) => {
+      setDados((prev) => (prev ? { ...prev, resumo: res.resumo } : res));
+    });
   };
 
   const handleUpdatePublicacao = async (id: string, campo: keyof Publicacao, valor: any) => {
@@ -172,11 +189,7 @@ export function Acompanhamento() {
       }, 2000);
 
       // Recarrega o resumo para atualizar totais
-      if (clienteSelecionadoId) {
-        acompanhamentoApi.getAcompanhamento(clienteSelecionadoId, ano, mes).then((res) => {
-          setDados((prev) => prev ? { ...prev, resumo: res.resumo } : res);
-        });
-      }
+      recarregarResumo();
     } catch (err) {
       console.error('Erro ao atualizar publicação:', err);
       setRowStatus((prev) => ({ ...prev, [id]: 'error' }));
@@ -194,7 +207,7 @@ export function Acompanhamento() {
         };
       });
       if (clienteSelecionadoId) {
-        carregarDados(clienteSelecionadoId, ano, mes);
+        carregarDados(clienteSelecionadoId);
       }
     } catch (err: any) {
       console.error('Erro ao excluir publicação:', err);
@@ -205,19 +218,14 @@ export function Acompanhamento() {
   const handleCriarPublicacao = async () => {
     if (!clienteSelecionadoId) return;
 
-    // Data padrão: hoje se for o mês atual, senão dia 1
-    const agora = new Date();
-    let dataPadrao: Date;
-    if (ano === agora.getFullYear() && mes === agora.getMonth() + 1) {
-      dataPadrao = agora;
-    } else {
-      dataPadrao = new Date(ano, mes - 1, 1, 12, 0, 0);
-    }
+    // Data padrão: hoje se estiver no período, senão o primeiro dia; tipo segue o filtro se houver um só
+    const dataPadrao = dataPadraoNova(periodo);
+    const tipoPadrao: TipoPublicacao = tipos.length === 1 ? tipos[0] : 'POST';
 
     try {
       const nova = await acompanhamentoApi.criarPublicacao(clienteSelecionadoId, {
         dataPublicacao: dataPadrao.toISOString(),
-        tipo: 'POST',
+        tipo: tipoPadrao,
         assunto: '',
       });
 
@@ -233,9 +241,7 @@ export function Acompanhamento() {
 
       // Atualiza os meses com dados caso seja o primeiro item
       acompanhamentoApi.getMesesComDados(clienteSelecionadoId).then(setMesesComDados);
-      acompanhamentoApi.getAcompanhamento(clienteSelecionadoId, ano, mes).then((res) => {
-        setDados((prev) => prev ? { ...prev, resumo: res.resumo } : res);
-      });
+      recarregarResumo();
     } catch (err: any) {
       console.error('Erro ao criar publicação:', err);
       alert(err.response?.data?.message || 'Não foi possível adicionar nova publicação.');
@@ -346,12 +352,13 @@ export function Acompanhamento() {
           </div>
         </div>
 
-        {/* NAVEGAÇÃO DE MÊS E ATALHOS */}
-        <SeletorMes
-          ano={ano}
-          mes={mes}
-          onChangeMes={handleMudarMes}
+        {/* FILTROS: meses, período personalizado e tipo */}
+        <FiltrosAcompanhamento
+          periodo={periodo}
+          tipos={tipos}
           mesesComDados={mesesComDados}
+          onChangePeriodo={(p) => aplicarFiltros(p, tipos)}
+          onChangeTipos={(t) => aplicarFiltros(periodo, t)}
         />
 
         {/* CONTEÚDO PRINCIPAL */}
@@ -379,7 +386,7 @@ export function Acompanhamento() {
             {clienteSelecionadoId && (
               <button
                 type="button"
-                onClick={() => carregarDados(clienteSelecionadoId, ano, mes)}
+                onClick={() => carregarDados(clienteSelecionadoId)}
                 className="pw-glass-control pw-glass-gold px-5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-sm"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -401,15 +408,15 @@ export function Acompanhamento() {
             {/* 1. Resumo em frase + Cards de métricas */}
             <ResumoAcompanhamentoCards
               resumo={dados.resumo}
-              ano={ano}
-              mes={mes}
+              textoPeriodo={textoPeriodo(periodo)}
+              tiposFiltrados={tipos}
             />
 
             {/* 2. Barra de Ações da Tabela */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="font-archivo text-xs font-bold uppercase tracking-wider text-[#7A6440]">
-                  Publicações do Mês ({dados.publicacoes.length})
+                  Publicações do período ({dados.publicacoes.length})
                 </span>
               </div>
               <button

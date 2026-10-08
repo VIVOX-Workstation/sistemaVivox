@@ -15,7 +15,7 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
   const secret = 'acompanhamento-test-secret';
   const originalSecret = process.env.JWT_SECRET;
   const service = {
-    listar: jest.fn(async (clienteId, ano, mes) => ({ clienteId, ano, mes })),
+    consultar: jest.fn(async (clienteId, filtro) => ({ clienteId, ...filtro })),
     meses: jest.fn(async () => [{ ano: 2025, mes: 1, total: 1 }]),
     criar: jest.fn(async () => ({ id: 'p1' })),
     atualizar: jest.fn(async () => ({ id: 'p1' })),
@@ -51,7 +51,7 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
     const jwt = token(Role.CLIENTE);
     await request(app.getHttpServer()).get('/portal/acompanhamento?ano=2025&mes=1&clienteId=other-client')
       .auth(jwt, { type: 'bearer' }).expect(200, { clienteId: 'token-client', ano: 2025, mes: 1 });
-    expect(service.listar).toHaveBeenCalledWith('token-client', 2025, 1);
+    expect(service.consultar).toHaveBeenCalledWith('token-client', expect.objectContaining({ ano: 2025, mes: 1 }));
     await request(app.getHttpServer()).get('/portal/acompanhamento/meses?clienteId=other-client')
       .auth(jwt, { type: 'bearer' }).expect(200, [{ ano: 2025, mes: 1, total: 1 }]);
     expect(service.meses).toHaveBeenCalledWith('token-client');
@@ -63,7 +63,7 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
       await request(app.getHttpServer()).get('/portal/acompanhamento?ano=2025&mes=1').auth(jwt, { type: 'bearer' }).expect(403);
       await request(app.getHttpServer()).get('/portal/acompanhamento/meses').auth(jwt, { type: 'bearer' }).expect(403);
     }
-    expect(service.listar).not.toHaveBeenCalled();
+    expect(service.consultar).not.toHaveBeenCalled();
     expect(service.meses).not.toHaveBeenCalled();
   });
 
@@ -73,10 +73,11 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
     expect(service.criar).not.toHaveBeenCalled();
   });
 
-  it.each(['', '?ano=2025', '?ano=2025&mes=13', '?ano=2025&mes=0'])('validates mandatory monthly parameters %s in both controllers', async (query) => {
+  // Falta de ano/mês ou de inicio/fim é recusada no service (ver acompanhamento.service.spec); aqui só o formato
+  it.each(['?ano=2025&mes=13', '?ano=2025&mes=0', '?inicio=2025-1-5&fim=2025-01-10', '?inicio=2025-01-05&fim=10/01/2025', '?ano=2025&mes=1&tipos=REELS,FOTO'])('validates period and type formats %s in both controllers', async (query) => {
     await request(app.getHttpServer()).get(`/portal/acompanhamento${query}`).auth(token(Role.CLIENTE), { type: 'bearer' }).expect(400);
     await request(app.getHttpServer()).get(`/acompanhamento/clientes/c1${query}`).auth(token(Role.COLABORADOR), { type: 'bearer' }).expect(400);
-    expect(service.listar).not.toHaveBeenCalled();
+    expect(service.consultar).not.toHaveBeenCalled();
   });
 
   it('allows the internal module and returns its service contracts on all CRUD endpoints', async () => {
@@ -95,7 +96,7 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
     prisma.user.findUnique.mockResolvedValue({ role: Role.COLABORADOR, modulos: [ModuloSistema.CLIENTES] });
     await request(app.getHttpServer()).get('/acompanhamento/clientes/c1?ano=2025&mes=1').auth(token(Role.COLABORADOR), { type: 'bearer' }).expect(403);
     await request(app.getHttpServer()).delete('/acompanhamento/publicacoes/p1').auth(token(Role.COLABORADOR), { type: 'bearer' }).expect(403);
-    expect(service.listar).not.toHaveBeenCalled();
+    expect(service.consultar).not.toHaveBeenCalled();
     expect(service.remover).not.toHaveBeenCalled();
   });
 });

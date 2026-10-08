@@ -7,7 +7,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateInteresseDto } from './dto/create-interesse.dto';
 import { PortalService } from './portal.service';
 import { AcompanhamentoService } from '../acompanhamento/acompanhamento.service';
-import { MesAcompanhamentoDto } from '../acompanhamento/dto/mes-acompanhamento.dto';
+import { FiltroAcompanhamentoDto } from '../acompanhamento/dto/filtro-acompanhamento.dto';
 
 type PortalRequest = { user: { clienteId?: string | null } };
 
@@ -37,8 +37,8 @@ export class PortalController {
   }
 
   @Get('acompanhamento')
-  acompanhamento(@Req() req: PortalRequest, @Query() query: MesAcompanhamentoDto) {
-    return this.acompanhamentoService.listar(this.clienteId(req), query.ano, query.mes);
+  acompanhamento(@Req() req: PortalRequest, @Query() filtro: FiltroAcompanhamentoDto) {
+    return this.acompanhamentoService.consultar(this.clienteId(req), filtro);
   }
 
   @Get('acompanhamento/meses')
