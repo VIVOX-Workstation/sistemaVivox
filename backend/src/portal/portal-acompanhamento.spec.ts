@@ -5,10 +5,14 @@ import { sign } from 'jsonwebtoken';
 import request from 'supertest';
 import { AcompanhamentoController } from '../acompanhamento/acompanhamento.controller';
 import { AcompanhamentoService } from '../acompanhamento/acompanhamento.service';
+import { CronogramasService } from '../acompanhamento/cronogramas.service';
 import { JwtStrategy } from '../auth/jwt.strategy';
 import { PrismaService } from '../prisma/prisma.service';
 import { PortalController } from './portal.controller';
 import { PortalService } from './portal.service';
+
+// uuid v14 é só ESM; o StorageService o importa (mesmo padrão de portal-security.spec)
+jest.mock('uuid', () => ({ v4: () => 'test-uuid' }));
 
 describe('Acompanhamento and portal endpoints (HTTP)', () => {
   let app: INestApplication;
@@ -21,6 +25,10 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
     atualizar: jest.fn(async () => ({ id: 'p1' })),
     remover: jest.fn(async () => ({ ok: true })),
   };
+  const cronogramas = {
+    listar: jest.fn(async (clienteId, comAutor) => [{ clienteId, comAutor }]),
+    arquivo: jest.fn(),
+  };
   const prisma = { user: { findUnique: jest.fn() } };
   const token = (role: Role, clienteId: string | null = 'token-client') => sign({ sub: 'u1', role, clienteId }, secret);
   beforeAll(async () => {
@@ -30,6 +38,7 @@ describe('Acompanhamento and portal endpoints (HTTP)', () => {
       providers: [JwtStrategy,
         { provide: PortalService, useValue: {} },
         { provide: AcompanhamentoService, useValue: service },
+        { provide: CronogramasService, useValue: cronogramas },
         { provide: PrismaService, useValue: prisma },
       ],
     }).compile();

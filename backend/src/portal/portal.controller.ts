@@ -1,4 +1,5 @@
-import { Body, Controller, ForbiddenException, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { CronogramasService, respostaPdf } from '../acompanhamento/cronogramas.service';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PortalCliente } from '../auth/portal-cliente.decorator';
@@ -19,6 +20,7 @@ export class PortalController {
   constructor(
     private readonly portalService: PortalService,
     private readonly acompanhamentoService: AcompanhamentoService,
+    private readonly cronogramasService: CronogramasService,
   ) {}
 
   private clienteId(req: PortalRequest): string {
@@ -44,5 +46,15 @@ export class PortalController {
   @Get('acompanhamento/meses')
   mesesAcompanhamento(@Req() req: PortalRequest) {
     return this.acompanhamentoService.meses(this.clienteId(req));
+  }
+
+  @Get('cronogramas')
+  cronogramas(@Req() req: PortalRequest) {
+    return this.cronogramasService.listar(this.clienteId(req), false);
+  }
+
+  @Get('cronogramas/:id/arquivo')
+  async arquivoCronograma(@Req() req: PortalRequest, @Param('id') id: string) {
+    return respostaPdf(await this.cronogramasService.arquivo(id, this.clienteId(req)));
   }
 }
