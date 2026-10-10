@@ -11,6 +11,8 @@ import { DevBoard } from './pages/DevBoard';
 import { Configuracoes } from './pages/Configuracoes';
 import { HostingRadar } from './pages/HostingRadar';
 import { VivoxGP } from './pages/VivoxGP';
+import { KanbanPage } from './features/kanban/KanbanPage';
+import { VvoxSync } from './features/kanban/VvoxSync';
 import { EducacionalHome } from './pages/EducacionalHome';
 import { EducacionalCurso } from './pages/EducacionalCurso';
 import { EducacionalAdmin } from './pages/EducacionalAdmin';
@@ -128,8 +130,11 @@ function App() {
 
               {/* GP */}
               <Route element={<ModuloRoute modulo="GP" />}>
-                <Route path="gp" element={<VivoxGP />} />
-                <Route path="gp/tarefa/:tarefaId" element={<VivoxGP />} />
+                <Route path="gp" element={<VvoxSync />} />
+                <Route path="gp/kanban" element={<KanbanPage />} />
+                <Route path="gp/projetos" element={<VivoxGP />} />
+                <Route path="gp/projetos/tarefa/:tarefaId" element={<VivoxGP />} />
+                <Route path="gp/tarefa/:tarefaId" element={<VvoxSync />} />
                 <Route path="gp/minhas-tarefas" element={<VivoxGP />} />
                 <Route path="gp/minhas-tarefas/tarefa/:tarefaId" element={<VivoxGP />} />
                 <Route path="gp/workspace/:workspaceId" element={<VivoxGP />} />

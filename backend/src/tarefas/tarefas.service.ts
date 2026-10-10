@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, HttpException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTarefaDto } from './dto/create-tarefa.dto';
 import { UpdateTarefaDto } from './dto/update-tarefa.dto';
@@ -8,7 +8,7 @@ import { SetObservadoresDto } from './dto/observadores.dto';
 import { GerarChecklistIaDto } from './dto/gerar-checklist-ia.dto';
 import { CreateProjetoDto } from './dto/create-projeto.dto';
 import { UpdateProjetoDto } from './dto/update-projeto.dto';
-import { PrioridadeTarefa } from '@prisma/client';
+import { Prisma, PrioridadeTarefa } from '@prisma/client';
 import { generateText } from 'ai';
 import { groq } from '@ai-sdk/groq';
 import * as bcrypt from 'bcrypt';
@@ -99,9 +99,9 @@ export class TarefasService {
     servicoId?: string;
     skip?: number;
     take?: number;
-  }) {
+  }, visibility: Prisma.TarefaWhereInput = {}) {
     const { skip = 0, take = 30, ...filtros } = params;
-    const where = this.buildTarefaWhere(filtros);
+    const where = { AND: [this.buildTarefaWhere(filtros), visibility] };
 
     const [items, total] = await Promise.all([
       this.prisma.tarefa.findMany({
@@ -128,8 +128,8 @@ export class TarefasService {
     responsavelId?: string;
     clienteId?: string;
     servicoId?: string;
-  }) {
-    const where = this.buildTarefaWhere(params);
+  }, visibility: Prisma.TarefaWhereInput = {}) {
+    const where = { AND: [this.buildTarefaWhere(params), visibility] };
 
     const [porEtapa, total, emAndamento, concluidas, urgentes] = await Promise.all([
       this.prisma.tarefa.groupBy({ by: ['status'], where, _count: { _all: true } }),
@@ -503,7 +503,12 @@ Gere o checklist em formato JSON:
     ];
   }
 
-  async importarBitrix(fileBuffer: Buffer, projetoId: string | undefined, etapa?: string) {
+  async importarBitrix(
+    fileBuffer: Buffer,
+    projetoId: string | undefined,
+    etapa?: string,
+    updateExisting?: (id: string, status: string, projetoId?: string) => Promise<void>,
+  ) {
     const htmlContent = fileBuffer.toString('utf-8');
 
     const tbodyMatch = htmlContent.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
@@ -617,13 +622,10 @@ Gere o checklist em formato JSON:
           // para este workspace/etapa, não apenas ignorar. Sem etapa, mantemos o
           // comportamento antigo de só ignorar duplicidade.
           if (etapa) {
-            await this.prisma.tarefa.update({
-              where: { origemBitrixId },
-              data: {
-                status: etapa,
-                projetoId: projetoId || existing.projetoId,
-              },
-            });
+            if (!updateExisting) {
+              throw new ForbiddenException('A atualização de uma tarefa existente exige as permissões e ações do Kanban.');
+            }
+            await updateExisting(existing.id, etapa, projetoId || undefined);
             atualizadas++;
           } else {
             ignoradasDuplicadas++;
@@ -697,6 +699,9 @@ Gere o checklist em formato JSON:
 
         criadas++;
       } catch (err) {
+        // Permission and workflow failures must reach the caller, rather than
+        // being reported as an ignored duplicate after bypassing the Sync UI.
+        if (err instanceof HttpException) throw err;
         this.logger.error(`Error processing bitrix row ${tds[0]}:`, err);
         ignoradasDuplicadas++;
       }

@@ -28,6 +28,11 @@ export function Layout() {
   const { signOut, podeAcessar, user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isLegacySyncView = searchParams.has('clienteId') || searchParams.has('servicoId') ||
+    searchParams.get('visao') === 'lista' || searchParams.get('visao') === 'prazos';
+  const isSyncEntry = /^\/gp(?:\/tarefa\/[^/]+)?\/?$/.test(location.pathname);
+  const isSyncCanvas = /^\/gp\/kanban\/?$/.test(location.pathname) || (isSyncEntry && !isLegacySyncView);
   const isFullBleed =
     location.pathname === '/' ||
     location.pathname.startsWith('/gp') ||
@@ -87,7 +92,7 @@ export function Layout() {
         {/* Sidebar VIVOX Design System com Recolhimento Dinâmico */}
         <aside
           className={`bg-[#14120E] border-r border-[#2B261F] flex flex-col shadow-2xl z-20 select-none transition-all duration-300 ease-in-out shrink-0 ${
-            isSidebarCollapsed ? 'w-[72px]' : 'w-64'
+            isSyncCanvas ? 'hidden' : isSidebarCollapsed ? 'w-[72px]' : 'w-64'
           }`}
         >
           {/* Header da Sidebar com Botão Recolher */}
@@ -201,7 +206,27 @@ export function Layout() {
               </NavLink>
             )}
 
-            {/* Grupo Vivox GP */}
+            {podeAcessar('GP') && (
+              <NavLink
+                to="/gp"
+                end
+                title={isSidebarCollapsed ? 'VVOX Sync' : undefined}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                    isSidebarCollapsed ? 'justify-center' : ''
+                  } ${
+                    isActive
+                      ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
+                      : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
+                  }`
+                }
+              >
+                <Kanban className="w-4 h-4 text-[#C7A15F] shrink-0" />
+                {!isSidebarCollapsed && <span className="truncate">VVOX Sync</span>}
+              </NavLink>
+            )}
+
+            {/* Projetos e tarefas existentes */}
             {podeAcessar('GP') && (
               <div className="flex flex-col">
                 <button
@@ -213,18 +238,18 @@ export function Layout() {
                       setIsGpExpanded(!isGpExpanded);
                     }
                   }}
-                  title={isSidebarCollapsed ? 'Vivox GP • Gestão de Projetos' : undefined}
+                  title={isSidebarCollapsed ? 'Projetos • Gestão de Projetos' : undefined}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
                     isSidebarCollapsed ? 'justify-center' : ''
                   } ${
-                    location.pathname.startsWith('/gp')
+                    location.pathname.startsWith('/gp/') && !isSyncCanvas
                       ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
                       : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3 truncate">
                     <Kanban className="w-4 h-4 text-[#C7A15F] shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Vivox GP</span>}
+                    {!isSidebarCollapsed && <span className="truncate">Projetos</span>}
                   </div>
                   {!isSidebarCollapsed && (
                     isGpExpanded ? (
@@ -235,7 +260,7 @@ export function Layout() {
                   )}
                 </button>
 
-                {/* Submenu do Vivox GP */}
+                {/* Submenu dos projetos */}
                 {!isSidebarCollapsed && isGpExpanded && (
                   <div className="flex flex-col gap-1 mt-1 pl-4 ml-3 border-l border-[#2B261F]">
                     <NavLink
@@ -251,7 +276,7 @@ export function Layout() {
                       Minhas Tarefas
                     </NavLink>
                     <NavLink
-                      to="/gp"
+                      to="/gp/projetos"
                       end
                       className={({ isActive }) =>
                         `flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
@@ -375,7 +400,7 @@ export function Layout() {
         {/* Conteúdo Principal (Expande para preencher o espaço restante) */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#FAF7F2] min-w-0 relative">
           {/* Marca D'água Vivox no canto inferior direito - camada de fundo z-0 */}
-          {isMarcaVisible && (
+          {isMarcaVisible && !isSyncCanvas && (
             <div className="fixed -bottom-2 -right-2 pointer-events-none select-none z-0 overflow-hidden leading-none">
               <img
                 src={marcaImg}
@@ -392,7 +417,7 @@ export function Layout() {
         </main>
 
         {/* Assistente IA Flutuante Global */}
-        <FloatingAssistant />
+        {!isSyncCanvas && <FloatingAssistant />}
       </div>
     </>
   );

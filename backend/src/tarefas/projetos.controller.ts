@@ -1,3 +1,5 @@
+import { KanbanService } from '../kanban/kanban.service';
+import { syncActor } from '../kanban/kanban.controller';
 import { ModuloSistema } from '@prisma/client';
 import { RequerModulo } from '../auth/modulos.decorator';
 import {
@@ -10,6 +12,8 @@ import {
   Delete,
   Query,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { TarefasService } from './tarefas.service';
 import { CreateProjetoDto } from './dto/create-projeto.dto';
@@ -20,7 +24,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('projetos')
 @UseGuards(JwtAuthGuard)
 export class ProjetosController {
-  constructor(private readonly tarefasService: TarefasService) {}
+  constructor(private readonly tarefasService: TarefasService, private readonly kanban: KanbanService) {}
 
   @Get()
   findAll(@Query('clienteId') clienteId?: string) {
@@ -28,8 +32,9 @@ export class ProjetosController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tarefasService.findProjetoById(id);
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const project = await this.tarefasService.findProjetoById(id);
+    return { ...project, tarefas: await this.kanban.listTasks(syncActor(req), { projetoId: id }) };
   }
 
   @Post()
@@ -43,7 +48,8 @@ export class ProjetosController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string, @Req() req: any) {
+    if (req.user?.role !== 'ADMIN') throw new ForbiddenException('Somente administradores podem excluir workspaces.');
     return this.tarefasService.removeProjeto(id);
   }
 }

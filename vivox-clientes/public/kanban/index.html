@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="white">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Quadro de Demandas VIVOX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/integration.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="vxgold" x1="24.4498" y1="13.4474" x2="74.9795" y2="84.7594" gradientUnits="userSpaceOnUse"><stop stop-color="#CCB691"/><stop offset="1" stop-color="#876224"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 342 85"><path d="M11.0434 0H0L8.56097 22.7998L8.87321 21.6236C9.80997 18.0899 11.5378 14.8581 12.1415 11.2463C12.7504 7.58777 12.4381 3.75746 11.1475 0.291436L11.0382 0H11.0434Z" fill="url(#vxgold)"/><path d="M63.6009 3.4149e-06L37.3247 71.2928L17.252 16.8253L16.9449 16.0551L16.539 16.7941C12.667 23.7833 12.0686 32.1101 14.8945 39.6354C20.5098 54.582 26.12 69.5286 31.7301 84.4751H42.9192L74.6443 3.4149e-06H63.6009Z" fill="url(#vxgold)"/><path d="M151.84 72.401L125.57 0.208984H115.339L146.77 83.901L146.841 84.0888H156.482L188.101 0.208984H178.116L151.84 72.401Z" fill="currentColor"/><path d="M290.06 0L290.131 0.188477L310.702 34.042L331.273 0.188477L331.345 0H340.986L315.445 42.0498L341.025 84.0869H331.385L331.312 83.8994L310.741 50.0459L290.17 83.8994L290.099 84.0869H280.457L305.997 42.1143L280.418 0H290.06Z" fill="currentColor"/><path d="M99.8252 0.208984H90.6045V84.0888H99.8252V0.208984Z" fill="currentColor"/><path d="M275.669 41.7651C275.669 64.8313 256.97 83.5301 233.904 83.5301C210.838 83.5301 192.139 64.8313 192.139 41.7651C192.139 18.6989 210.838 0 233.904 0C256.97 0 275.669 18.6989 275.669 41.7651ZM201.08 41.7651C201.08 59.8932 215.776 74.5889 233.904 74.5889C252.032 74.5889 266.728 59.8932 266.728 41.7651C266.728 23.6369 252.032 8.94116 233.904 8.94116C215.776 8.94116 201.08 23.6369 201.08 41.7651Z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<header class="top" id="topbar">
+  <a class="brand" href="/gp/projetos" target="_parent" aria-label="Voltar aos projetos do sistemaVIVOX">
+    <svg class="logo" viewBox="0 0 342 85" role="img" aria-label="VIVOX"><use href="#logo"/></svg>
+    <span class="brand-sep" aria-hidden="true"></span>
+    <div class="sr-only">
+      <p>Quadros de trabalho</p>
+      <h1 id="bTitleH">Quadro de demandas</h1>
+      <p id="bdesc"></p>
+    </div>
+  </a>
+  <div class="bt">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Quadros"></div>
+    <button class="icon-btn tabadd" id="tabAdd" type="button" aria-label="Criar novo Kanban" title="Criar novo Kanban"></button>
+  </div>
+  <label class="search" for="q">
+    <span id="searchIc"></span>
+    <input id="q" type="search" placeholder="Buscar tarefas" autocomplete="off" aria-label="Buscar tarefas por título, cliente ou número">
+    <kbd id="qKbd">/</kbd>
+    <button class="clr" id="qClear" type="button" aria-label="Limpar busca" hidden></button>
+  </label>
+  <button class="pill fbtn" id="fToggle" type="button" aria-expanded="false" aria-controls="toolbar"></button>
+  <button class="pill fbtn" id="cardOptsBtn" type="button" aria-haspopup="dialog" aria-expanded="false"></button>
+  <span class="bsp"></span>
+  <div class="seg" id="viewSeg" role="group" aria-label="Modo de visualização"><button type="button" data-view="board" aria-pressed="true"></button><button type="button" data-view="cal" aria-pressed="false"></button><button type="button" data-view="act" aria-pressed="false"></button></div>
+  <button class="icon-btn" id="boardMenuBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Configurar este quadro" title="Configurar este quadro"></button>
+  <button class="btn sm" id="newBoardBtn" type="button" hidden></button>
+  <button class="btn primary" id="newBtn" type="button"></button>
+  <button class="icon-btn bell" id="bellBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Notificações" title="Notificações"></button>
+  <button class="pfbtn" id="viewerBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Meu perfil" title="Meu perfil"></button>
+</header>
+
+<div class="toolbar fpanel" id="toolbar" role="group" aria-label="Filtros" hidden>
+  <div class="fgroup" id="gDue" role="group" aria-label="Filtrar por prazo"></div>
+  <span class="fsep" aria-hidden="true"></span>
+  <div class="fgroup" id="gFlag" role="group" aria-label="Filtrar por situação do prazo"></div>
+  <span class="fsep" aria-hidden="true"></span>
+  <div class="fgroup">
+    <button class="pill" id="fCat" type="button" data-pop="f-cat" aria-haspopup="dialog" aria-expanded="false"><span class="lbl">Categoria</span></button>
+    <button class="pill" id="fWho" type="button" data-pop="f-who" aria-haspopup="dialog" aria-expanded="false"><span class="lbl">Pessoa</span></button>
+  </div>
+  <button class="pill ghost" id="fClear" type="button" hidden>Limpar filtros</button>
+  <span class="results" id="results" aria-live="polite"></span>
+  <div class="presets" id="presets" role="group" aria-label="Meus filtros salvos" hidden></div>
+</div>
+
+<section class="calv" id="calView" aria-label="Calendário de publicações" hidden></section>
+<section class="actv" id="actView" aria-label="Atividade da equipe" hidden></section>
+
+<main class="board" id="board">
+  <div class="track" id="track" role="group" aria-label="Quadro de demandas"></div>
+  <div class="rail" id="rail" aria-hidden="true"><div class="thumb" id="thumb"></div></div>
+</main>
+
+<div class="ov" id="ov" hidden>
+  <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <button class="icon-btn close" id="closeBtn" type="button" aria-label="Fechar tarefa"></button>
+    <div class="infocol" id="infocol"><section class="info" id="info" aria-label="Informações da tarefa"></section><div class="infof" id="infof" role="region" aria-label="Controle da tarefa"></div></div>
+    <section class="chat" aria-label="Bate-papo da tarefa">
+      <div class="c-h"><div><h3>Bate-papo da tarefa</h3><p id="chatSub"></p></div><div class="avs" id="chatAvs"></div></div>
+      <div class="msgs" id="msgs" role="log" aria-live="polite"></div>
+      <form class="compose" id="compose">
+        <div class="mlist" id="mlist" role="listbox" aria-label="Citar alguém" hidden></div>
+        <div class="cbox">
+          <textarea id="msgInput" rows="1" maxlength="1000" placeholder="Escreva para a equipe da tarefa" aria-label="Mensagem"></textarea>
+          <button class="micb" type="button" id="mic2Btn" aria-label="Anexar um arquivo de áudio" title="Anexar um arquivo de áudio"></button>
+          <button class="micb" type="button" id="micBtn" aria-label="Gravar um áudio" title="Gravar um áudio"></button><input type="file" id="audIn" accept="audio/*" hidden>
+          <button class="send" type="submit" aria-label="Enviar mensagem" id="sendBtn"></button>
+        </div>
+        <div class="recbar" id="recBar" hidden role="status"><span class="recdot" aria-hidden="true"></span><b id="recTime">0:00</b><span class="recmsg">Gravando. Fale agora.</span><span class="recsp"></span><button class="ib" type="button" id="recCancel" aria-label="Descartar a gravação" title="Descartar"></button><button class="send" type="button" id="recSend" aria-label="Enviar o áudio gravado" title="Enviar áudio"></button></div>
+        <p class="chint">Enter envia · Shift+Enter quebra a linha · O microfone grava um áudio e o clipe anexa um arquivo</p>
+      </form>
+    </section>
+  </div>
+</div>
+<div class="ov" id="bov" hidden>
+  <div class="dlg bdlg" id="bdlg" role="dialog" aria-modal="true" aria-labelledby="bTitle">
+    <button class="icon-btn close" id="bClose" type="button" aria-label="Fechar"></button>
+    <div class="bhead"><p class="kick">Novo quadro</p><h2 id="bTitle">Escolha um modelo de fluxo</h2><p class="sub">Cada modelo já traz as colunas e as funções delas. Depois você renomeia, reordena e cria colunas do seu jeito.</p></div>
+    <div class="tgrid" id="tgrid" role="radiogroup" aria-label="Modelos de quadro"></div>
+    <form class="bfoot" id="bform">
+      <div class="fld"><label for="bName">Nome do quadro</label><input id="bName" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: Campanhas de novembro"></div>
+      <div class="grp2"><button class="btn primary" type="submit">Criar quadro</button><button class="btn" type="button" id="bCancel">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+<div class="ov" id="nov" hidden>
+  <div class="dlg bdlg ndlg" id="ndlg" role="dialog" aria-modal="true" aria-labelledby="nTitle">
+    <button class="icon-btn close" id="nClose" type="button" aria-label="Fechar"></button>
+    <div class="bhead"><p class="kick">Criar tarefas</p><h2 id="nTitle">Adicione várias tarefas de uma vez</h2><p class="sub">Cada linha vira uma tarefa. Só o tema é obrigatório. Enter pula para o próximo campo.</p></div>
+    <form class="nform" id="nform" autocomplete="off">
+      <div class="nscroll">
+        <div class="nhead" aria-hidden="true"><span>Tema</span><span>Descrição</span><span>Cliente</span><span>Fonte</span><span>Prazo de entrega</span><span></span></div>
+        <div id="nrows"></div>
+      </div>
+      <div class="nbar">
+        <button class="btn sm" id="nAdd" type="button"></button>
+        <div class="nsel"><span id="nColLab">Coluna</span><button class="nselb" id="nColBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="nColLab nColBtn"></button></div>
+        <span class="nsp"></span>
+        <button class="btn" id="nCancel" type="button">Cancelar</button>
+        <button class="btn primary" id="nGo" type="submit">Criar tarefas</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="lbx" id="lbx" role="dialog" aria-modal="true" aria-label="Prévia dos anexos" hidden>
+  <div class="lbh"><div class="lbt"><b id="lbName"></b><small id="lbMeta"></small></div><div class="lba"><button class="btn sm" id="lbDl" type="button"></button><button class="btn sm" id="lbAll" type="button"></button><button class="icon-btn" id="lbX" type="button" aria-label="Fechar a prévia"></button></div></div>
+  <div class="lbs"><button class="lbn" id="lbPrev" type="button" aria-label="Arquivo anterior"></button><div class="lbm" id="lbMedia"></div><button class="lbn" id="lbNext" type="button" aria-label="Próximo arquivo"></button></div>
+  <div class="lbf" id="lbFilm" role="listbox" aria-label="Todos os anexos"></div>
+</div>
+<div class="pops" id="pops" aria-live="polite"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<p class="sr-only" role="status" aria-live="polite" id="live"></p>
+
+<script src="js/host.js"></script>
+<script src="js/task-extras.js"></script>
+<script src="js/backend.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

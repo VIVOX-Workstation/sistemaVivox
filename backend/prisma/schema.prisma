@@ -204,6 +204,8 @@ model User {
   historicoPlanejamento HistoricoServico[]
   tarefasCriadas        Tarefa[]              @relation("TarefaCriador")
   tarefasAtribuidas     Tarefa[]              @relation("TarefaResponsavel")
+  tarefasRevisadas      Tarefa[]              @relation("TarefaRevisor")
+  sessoesTrabalho       TarefaSessao[]
   tarefasObservadas     Tarefa[]              @relation("TarefaObservadores")
   projetosGerenciados   Projeto[]             @relation("ProjetoResponsavel")
   comentariosTarefas    TarefaComentario[]
@@ -671,6 +673,10 @@ model Tarefa {
   id             String           @id @default(uuid())
   titulo         String
   descricao      String?          @db.Text
+  clienteNome    String?
+  fonte          String?
+  subtitulo      String?
+  linksReferencia Json           @default("[]")
   status         String           @default("A_FAZER")
   prioridade     PrioridadeTarefa @default(MEDIA)
   prazo          DateTime?
@@ -681,6 +687,18 @@ model Tarefa {
   tags           String[]         @default([])
   ordem          Int              @default(0)
   origemBitrixId String?          @unique
+  quadroId       String?
+  quadro         KanbanQuadro? @relation(fields: [quadroId], references: [id], onDelete: Restrict)
+  colunaId       String?
+  coluna         KanbanColuna? @relation(fields: [colunaId], references: [id], onDelete: Restrict)
+  numero         Int?
+  versao         Int @default(0)
+  entregueEm     DateTime?
+  aprovadoEm     DateTime?
+  aprovadoPorId  String?
+  revisorId      String?
+  revisor        User? @relation("TarefaRevisor", fields: [revisorId], references: [id], onDelete: SetNull)
+  sessoes        TarefaSessao[]
 
   // Relações
   autorId       String?
@@ -709,6 +727,58 @@ model Tarefa {
   @@index([responsavelId])
   @@index([clienteId])
   @@index([projetoId])
+  @@unique([quadroId, numero])
+  @@index([quadroId, colunaId, ordem])
+}
+
+model KanbanQuadro {
+  id                  String @id @default(uuid())
+  nome                String
+  descricao           String? @db.Text
+  icone               String?
+  cor                 String?
+  fixo                Boolean @default(false)
+  revisaoObrigatoria  Boolean @default(true)
+  proximoNumero       Int @default(1)
+  criadorId           String?
+  colunas             KanbanColuna[]
+  tarefas             Tarefa[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model KanbanColuna {
+  id            String @id @default(uuid())
+  quadroId      String
+  quadro        KanbanQuadro @relation(fields: [quadroId], references: [id], onDelete: Cascade)
+  nome          String
+  papel         String @default("none")
+  cor           String @default("#C7A15F")
+  corInterface  String?
+  icone         String?
+  marcador      String @default("dot")
+  preenchida    Boolean @default(false)
+  planoPublicacao String?
+  ordem         Int @default(0)
+  statusLegado  String?
+  tarefas       Tarefa[]
+
+  @@index([quadroId, ordem])
+}
+
+model TarefaSessao {
+  id          String @id @default(uuid())
+  tarefaId    String
+  tarefa      Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  usuario     User @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  autorId     String
+  inicio      DateTime @default(now())
+  fim         DateTime?
+  segundos    Float @default(0)
+
+  @@index([tarefaId, inicio])
+  @@index([usuarioId, fim])
 }
 
 model TarefaChecklist {
@@ -730,9 +800,12 @@ model TarefaComentario {
   tarefaId String
   tarefa   Tarefa  @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
   autorId  String
-  autor    User    @relation(fields: [autorId], references: [id], onDelete: Cascade)
-  texto    String  @db.Text
+  autor    User   @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  texto    String @db.Text
   sistema  Boolean @default(false)
+  anexoTipo String?
+  anexoTamanho Int?
+  audioDuracao Int?
 
   createdAt DateTime @default(now())
 

@@ -1,0 +1,11 @@
+/* Browser compatibility for the original exported layout; app.css stays unchanged. */
+[hidden] { display: none !important; }
+
+/* Let the original stacked mobile sections keep their content height. */
+@media (max-width: 860px) {
+  #dlg { grid-template-rows: max-content max-content; align-content: start; }
+  #dlg .infocol .info { flex: none; }
+}
+
+/* The brand remains the original visual element and links back to the project area. */
+.brand { color:inherit; text-decoration:none; }

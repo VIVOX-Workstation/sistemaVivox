@@ -195,7 +195,7 @@ export const VivoxGP: React.FC = () => {
     } else if (id) {
       navigate(`/gp/workspace/${id}`);
     } else {
-      navigate('/gp');
+      navigate('/gp/projetos');
     }
   };
 
@@ -207,7 +207,7 @@ export const VivoxGP: React.FC = () => {
     } else if (selectedWorkspaceId === 'ALL') {
       navigate(`/gp/workspace/all/tarefa/${t.id}`);
     } else {
-      navigate(`/gp/tarefa/${t.id}`);
+      navigate(`/gp/projetos/tarefa/${t.id}`);
     }
   }, [isMinhasTarefas, selectedWorkspaceId, navigate]);
 
@@ -219,7 +219,7 @@ export const VivoxGP: React.FC = () => {
     } else if (selectedWorkspaceId === 'ALL') {
       navigate(`/gp/workspace/all`);
     } else {
-      navigate('/gp');
+      navigate('/gp/projetos');
     }
   };
 
@@ -272,7 +272,7 @@ export const VivoxGP: React.FC = () => {
     try {
       await tarefasApi.deleteProjeto(workspaceId);
       if (selectedWorkspaceId === workspaceId) {
-        navigate('/gp');
+        navigate('/gp/projetos');
       }
       carregarDados();
     } catch (err) {
@@ -523,7 +523,7 @@ export const VivoxGP: React.FC = () => {
           {/* Lado Esquerdo: Botão Voltar + Eyebrow + Título Principal */}
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/gp')}
+              onClick={() => navigate('/gp/projetos')}
               className="w-9 h-9 rounded-full bg-[#FAF7F2] border border-[#D8CBB8] hover:border-[#1E1A16] flex items-center justify-center text-[#1E1A16] hover:scale-105 transition-all shadow-2xs cursor-pointer"
               title="Voltar para a lista de workspaces"
             >

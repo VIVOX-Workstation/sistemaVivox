@@ -1,20 +1,6 @@
 import { ModuloSistema } from '@prisma/client';
 import { RequerModulo } from '../auth/modulos.decorator';
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Query,
-  UseGuards,
-  Req,
-  UseInterceptors,
-  UploadedFile,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TarefasService } from './tarefas.service';
 import { CreateTarefaDto } from './dto/create-tarefa.dto';
 import { UpdateTarefaDto } from './dto/update-tarefa.dto';
@@ -25,7 +11,15 @@ import { GerarChecklistIaDto } from './dto/gerar-checklist-ia.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from '../storage/storage.service';
-import { PrioridadeTarefa } from '@prisma/client';
+import { KanbanService } from '../kanban/kanban.service';
+import { syncActor } from '../kanban/kanban.controller';
+import { moveAction } from '../kanban/kanban.policy';
+import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class UploadAnexoDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(86400) audioDuracao?: number;
+}
 
 @RequerModulo({ todos: [ModuloSistema.GP], leitura: [ModuloSistema.CLIENTES] })
 @Controller('tarefas')
@@ -34,79 +28,47 @@ export class TarefasController {
   constructor(
     private readonly tarefasService: TarefasService,
     private readonly storageService: StorageService,
+    private readonly kanban: KanbanService,
   ) {}
 
   @Get()
-  findAll(
-    @Query('search') search?: string,
-    @Query('status') status?: string,
-    @Query('prioridade') prioridade?: PrioridadeTarefa,
-    @Query('responsavelId') responsavelId?: string,
-    @Query('clienteId') clienteId?: string,
-    @Query('projetoId') projetoId?: string,
-    @Query('servicoId') servicoId?: string,
-  ) {
-    return this.tarefasService.findAll({
-      search,
-      status,
-      prioridade,
-      responsavelId,
-      clienteId,
-      projetoId,
-      servicoId,
-    });
+  findAll(@Query() query: any, @Req() req: any) {
+    return this.kanban.listTasks(syncActor(req), query);
   }
 
   @Get('metricas')
-  getMetricas() {
-    return this.tarefasService.getMetricas();
+  async getMetricas(@Req() req: any) {
+    const items = await this.kanban.listTasks(syncActor(req));
+    const now = new Date();
+    const week = new Date(now); week.setDate(now.getDate() - now.getDay()); week.setHours(0,0,0,0);
+    return {
+      total: items.length,
+      emAndamento: items.filter(t => t.status === 'EM_ANDAMENTO').length,
+      atrasadas: items.filter(t => !['CONCLUIDA','CANCELADA'].includes(t.status) && t.prazo && new Date(t.prazo) < now).length,
+      concluidasSemana: items.filter(t => t.status === 'CONCLUIDA' && t.dataConclusao && new Date(t.dataConclusao) >= week).length,
+      horasGastasTotal: items.reduce((sum, t) => sum + t.tempo.totalSegundos / 3600, 0),
+    };
   }
 
   @Get('coluna')
-  findColuna(
-    @Query('status') status: string,
-    @Query('projetoId') projetoId?: string,
-    @Query('search') search?: string,
-    @Query('prioridade') prioridade?: PrioridadeTarefa,
-    @Query('responsavelId') responsavelId?: string,
-    @Query('clienteId') clienteId?: string,
-    @Query('servicoId') servicoId?: string,
-    @Query('skip') skip?: string,
-    @Query('take') take?: string,
-  ) {
-    if (!status) {
-      throw new BadRequestException('O parâmetro "status" (etapa) é obrigatório');
-    }
-    return this.tarefasService.findColuna({
-      status,
-      projetoId,
-      search,
-      prioridade,
-      responsavelId,
-      clienteId,
-      servicoId,
-      skip: skip !== undefined ? parseInt(skip, 10) : undefined,
-      take: take !== undefined ? parseInt(take, 10) : undefined,
-    });
+  findColuna(@Query() query: any, @Req() req: any) {
+    if (!query.status) throw new BadRequestException('O parâmetro status é obrigatório.');
+    const skip = Math.max(0, Number.parseInt(query.skip || '0', 10) || 0);
+    const take = Math.min(200, Math.max(1, Number.parseInt(query.take || '30', 10) || 30));
+    const { status, projetoId, search, prioridade, responsavelId, clienteId, servicoId } = query;
+    return this.tarefasService.findColuna(
+      { status, projetoId, search, prioridade, responsavelId, clienteId, servicoId, skip, take },
+      this.kanban.visibility(syncActor(req)),
+    );
   }
 
   @Get('resumo-etapas')
-  getResumoEtapas(
-    @Query('projetoId') projetoId?: string,
-    @Query('search') search?: string,
-    @Query('prioridade') prioridade?: PrioridadeTarefa,
-    @Query('responsavelId') responsavelId?: string,
-    @Query('clienteId') clienteId?: string,
-    @Query('servicoId') servicoId?: string,
-  ) {
-    return this.tarefasService.getResumoEtapas({
-      projetoId,
-      search,
-      prioridade,
-      responsavelId,
-      clienteId,
-      servicoId,
-    });
+  getResumoEtapas(@Query() query: any, @Req() req: any) {
+    const { projetoId, search, prioridade, responsavelId, clienteId, servicoId } = query;
+    return this.tarefasService.getResumoEtapas(
+      { projetoId, search, prioridade, responsavelId, clienteId, servicoId },
+      this.kanban.visibility(syncActor(req)),
+    );
   }
 
   @Get('exportar')
@@ -118,112 +80,68 @@ export class TarefasController {
   }
 
   @Patch('mover-etapa')
-  moverEtapa(
+  async moverEtapa(
     @Body('projetoId') projetoId: string | undefined,
     @Body('statusOrigem') statusOrigem: string,
     @Body('statusDestino') statusDestino: string,
+    @Req() req: any,
   ) {
     if (!statusOrigem || !statusDestino) {
       throw new BadRequestException('statusOrigem e statusDestino são obrigatórios');
     }
-    return this.tarefasService.moverEtapa({ projetoId, statusOrigem, statusDestino });
+    const actor = syncActor(req);
+    const tarefas = await this.kanban.listTasks(actor, { projetoId, status: statusOrigem });
+    const planos: { id: string; colunaId: string; versao: number }[] = [];
+    // Check every task first so a known permission/approval failure cannot move
+    // an earlier part of the batch. Each command rechecks under its row lock.
+    for (const tarefa of tarefas) {
+      if (!tarefa.quadroId) throw new BadRequestException('A tarefa ainda não está vinculada ao Kanban.');
+      const destino = await this.kanban.legacyDestination(tarefa.id, statusDestino, actor, tarefa.versao);
+      const acao = moveAction(tarefa, destino);
+      if (acao === 'corrigir') {
+        throw new BadRequestException('Use Pedir correção e informe o motivo para retornar à execução.');
+      }
+      const permissao = acao === 'reordenar' || acao === 'organizar' ? 'mover' : acao;
+      if (!tarefa.permissoes[permissao] ||
+          (acao === 'organizar' && tarefa.tempo.sessaoAtiva && !tarefa.permissoes.pausar)) {
+        throw new ForbiddenException('Você não tem permissão para esta movimentação na tarefa.');
+      }
+      planos.push({ id: tarefa.id, colunaId: destino.id, versao: tarefa.versao });
+    }
+    for (const plano of planos) {
+      await this.kanban.command(plano.id, 'mover', { colunaId: plano.colunaId, versao: plano.versao }, actor);
+    }
+    return { movidas: planos.length };
   }
 
   @Post('gerar-checklist-ia')
-  gerarChecklistIa(@Body() dto: GerarChecklistIaDto) {
-    return this.tarefasService.gerarChecklistIa(dto);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tarefasService.findOne(id);
-  }
-
-  @Post()
-  create(@Body() createTarefaDto: CreateTarefaDto, @Req() req: any) {
-    const autorId = req.user?.userId || req.user?.id || req.user?.sub;
-    return this.tarefasService.create(createTarefaDto, autorId);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateTarefaDto: UpdateTarefaDto,
-    @Req() req: any,
-  ) {
-    const usuarioId = req.user?.userId || req.user?.id || req.user?.sub;
-    const role = req.user?.role;
-    return this.tarefasService.update(id, updateTarefaDto, usuarioId, role);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tarefasService.remove(id);
-  }
-
-  @Post(':id/checklist')
-  addChecklistItem(
-    @Param('id') id: string,
-    @Body() dto: AddChecklistItemDto,
-  ) {
-    return this.tarefasService.addChecklistItem(id, dto);
-  }
-
-  @Patch('checklist/:itemId')
-  updateChecklistItem(
-    @Param('itemId') itemId: string,
-    @Body() dto: UpdateChecklistItemDto,
-  ) {
-    return this.tarefasService.updateChecklistItem(itemId, dto);
-  }
-
-  @Delete('checklist/:itemId')
-  removeChecklistItem(@Param('itemId') itemId: string) {
-    return this.tarefasService.removeChecklistItem(itemId);
-  }
-
-  @Post(':id/comentarios')
-  addComentario(
-    @Param('id') id: string,
-    @Body() dto: AddComentarioDto,
-    @Req() req: any,
-  ) {
-    const autorId = req.user?.userId || req.user?.id || req.user?.sub;
-    return this.tarefasService.addComentario(id, autorId, dto);
-  }
-
-  @Patch(':id/observadores')
-  setObservadores(@Param('id') id: string, @Body() dto: SetObservadoresDto) {
-    return this.tarefasService.setObservadores(id, dto.observadorIds);
-  }
-
-  @Post(':id/anexo')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadAnexo(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
-  ) {
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo enviado');
-    }
-    const autorId = req.user?.userId || req.user?.id || req.user?.sub;
-    const fileUrl = await this.storageService.uploadFile(file, 'tarefas');
-    const texto = `📎 Anexo: [${file.originalname}](${fileUrl})`;
-    return this.tarefasService.addComentario(id, autorId, { texto });
-  }
+  gerarChecklistIa(@Body() dto: GerarChecklistIaDto) { return this.tarefasService.gerarChecklistIa(dto); }
 
   @Post('importar-bitrix')
   @UseInterceptors(FileInterceptor('file'))
   async importarBitrix(
     @UploadedFile() file: Express.Multer.File,
-    @Body('projetoId') projetoId?: string,
-    @Body('etapa') etapa?: string,
+    @Body('projetoId') projetoId: string | undefined,
+    @Body('etapa') etapa: string | undefined,
+    @Req() req: any,
   ) {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo enviado');
     }
-    return this.tarefasService.importarBitrix(file.buffer, projetoId, etapa);
+    const actor = syncActor(req);
+    return this.tarefasService.importarBitrix(file.buffer, projetoId, etapa, async (id, status, destinoProjetoId) => {
+      let tarefa = await this.kanban.getTask(id, actor);
+      const mudaProjeto = !!destinoProjetoId && destinoProjetoId !== tarefa.projetoId;
+      if (mudaProjeto && !tarefa.permissoes.editar) {
+        throw new ForbiddenException('Você não tem permissão para alterar o workspace da tarefa.');
+      }
+      if (status !== tarefa.status) {
+        tarefa = await this.kanban.updateTask(id, { status, versao: tarefa.versao }, actor);
+      }
+      if (mudaProjeto) {
+        await this.kanban.updateTask(id, { projetoId: destinoProjetoId, versao: tarefa.versao }, actor);
+      }
+    });
   }
 
   @Post('importar-backup')
@@ -246,4 +164,52 @@ export class TarefasController {
     }
     return this.tarefasService.importarBackup(conteudo?.tarefas, projetoId);
   }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @Req() req: any) { return this.kanban.getTask(id, syncActor(req)); }
+
+  @Post()
+  create(@Body() dto: CreateTarefaDto, @Req() req: any) { return this.kanban.createTask(dto, syncActor(req)); }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateTarefaDto, @Req() req: any) { return this.kanban.updateTask(id, dto, syncActor(req)); }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @Req() req: any) { return this.kanban.removeTask(id, syncActor(req)); }
+
+  @Post(':id/checklist')
+  addChecklistItem(@Param('id') id: string, @Body() dto: AddChecklistItemDto, @Req() req: any) { return this.kanban.checklist(id, undefined, dto, 'add', syncActor(req)); }
+
+  @Patch('checklist/:itemId')
+  updateChecklistItem(@Param('itemId') itemId: string, @Body() dto: UpdateChecklistItemDto, @Req() req: any) { return this.kanban.checklist(undefined, itemId, dto, 'update', syncActor(req)); }
+
+  @Delete('checklist/:itemId')
+  removeChecklistItem(@Param('itemId') itemId: string, @Req() req: any) { return this.kanban.checklist(undefined, itemId, {}, 'delete', syncActor(req)); }
+
+  @Post(':id/comentarios')
+  addComentario(@Param('id') id: string, @Body() dto: AddComentarioDto, @Req() req: any) { return this.kanban.comment(id, dto.texto, syncActor(req)); }
+
+  @Patch(':id/observadores')
+  setObservadores(@Param('id') id: string, @Body() dto: SetObservadoresDto, @Req() req: any) { return this.kanban.observers(id, dto.observadorIds, syncActor(req)); }
+
+  @Post(':id/anexo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAnexo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Body() dto: UploadAnexoDto, @Req() req: any) {
+    if (!file) throw new BadRequestException('Nenhum arquivo enviado.');
+    if (dto.audioDuracao !== undefined) {
+      if (!/^audio\//.test(file.mimetype) && !/\.(mp3|wav|m4a|ogg|oga|aac|webm|opus|amr|3gp)$/i.test(file.originalname)) throw new BadRequestException('Selecione um arquivo de áudio.');
+      if (file.size > 25 * 1024 * 1024) throw new BadRequestException('O áudio passa de 25 MB.');
+    }
+    // Validate access before writing an object to storage.
+    const task = await this.kanban.getTask(id, syncActor(req));
+    if (!task.permissoes.comentar) throw new ForbiddenException('Sem permissão para anexar arquivos.');
+    const fileUrl = await this.storageService.uploadFile(file, 'tarefas');
+    return this.kanban.comment(id, '📎 Anexo: [' + file.originalname + '](' + fileUrl + ')', syncActor(req), { anexoTipo: file.mimetype, anexoTamanho: file.size, ...(dto.audioDuracao !== undefined ? { audioDuracao: dto.audioDuracao } : {}) });
+  }
+
+  @Delete(':id/anexos/:comentarioId')
+  removeAnexo(@Param('id') id: string, @Param('comentarioId') comentarioId: string, @Req() req: any) {
+    return this.kanban.removeAttachment(id, comentarioId, syncActor(req));
+  }
+
 }

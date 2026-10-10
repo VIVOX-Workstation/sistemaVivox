@@ -7,7 +7,7 @@ import type {
   Cliente,
   Projeto 
 } from '../../types';
-import { tarefasApi } from '../../api/tarefas';
+import { tarefasApi, type UpdateTarefaPayload } from '../../api/tarefas';
 import { api } from '../../api/client';
 import { carregarOpcoesTarefa, type UserOption } from '../../api/opcoesTarefa';
 import { useAuth } from '../../context/AuthContext';
@@ -193,40 +193,63 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const handleSalvarCamposPrincipais = async () => {
-    if (!tarefaId) return;
+    if (!tarefaId || !tarefa || saving) return;
     setSaving(true);
-    const statusAnterior = tarefa?.status;
-    const statusMudou = !!statusAnterior && status !== statusAnterior;
+    const statusMudou = status !== tarefa.status;
+    let camposSalvos = false;
     try {
-      await tarefasApi.updateTarefa(tarefaId, {
+      const campos: UpdateTarefaPayload = {
         titulo: titulo.trim(),
         descricao: descricao.trim() || undefined,
-        status,
         prioridade,
         responsavelId: responsavelId || undefined,
         clienteId: clienteId || undefined,
         projetoId: projetoId || undefined,
         servicoId: servicoId || undefined,
-        prazo: prazo ? new Date(prazo).toISOString() : null,
+        ...(isAdmin && prazo !== toDatetimeLocalValue(tarefa.prazo)
+          ? { prazo: prazo ? new Date(prazo).toISOString() : null }
+          : {}),
         horasEstimadas: horasEstimadas ? Number(horasEstimadas) : undefined,
         horasGastas: horasGastas ? Number(horasGastas) : undefined,
         tags,
-      });
+      };
+      const alteracoes = Object.fromEntries(
+        Object.entries(campos).filter(([campo, valor]) =>
+          valor !== undefined && JSON.stringify(valor) !== JSON.stringify(tarefa[campo as keyof Tarefa])
+        )
+      ) as UpdateTarefaPayload;
+      let versao = tarefa.versao;
+
+      if (Object.keys(alteracoes).length > 0) {
+        const atualizada = await tarefasApi.updateTarefa(tarefaId, { ...alteracoes, versao });
+        versao = atualizada.versao;
+        camposSalvos = true;
+      }
 
       if (statusMudou) {
-        const nomeEtapa = getEtapaLabel(status);
-        await tarefasApi.addComentario(tarefaId, `alterou a etapa para "${nomeEtapa}"`, true);
+        // A API aplica as permissões e registra o evento da movimentação.
+        await tarefasApi.updateTarefa(tarefaId, { status, versao });
       }
-
-      await carregarTarefa(tarefaId);
-      onTaskUpdated();
     } catch (err: any) {
       console.error('Erro ao salvar alterações da tarefa:', err);
-      if (err?.response?.status === 403) {
-        window.alert(err.response?.data?.message || 'Apenas administradores podem alterar o prazo da tarefa.');
-        await carregarTarefa(tarefaId);
-      }
+      const message = err?.response?.data?.message;
+      const mensagemApi = Array.isArray(message) ? message.join('\n') : message;
+      const codigo = err?.response?.status;
+      const fallback = codigo === 403
+        ? 'Você não tem permissão para realizar esta alteração.'
+        : codigo === 409
+          ? 'Esta tarefa foi alterada por outra pessoa. Confira os dados atualizados e tente novamente.'
+          : codigo === 400
+            ? 'Não foi possível aplicar esta alteração. Confira os campos e a etapa selecionada.'
+            : 'Não foi possível salvar as alterações. Tente novamente.';
+      const contexto = camposSalvos && statusMudou
+        ? 'Os campos foram salvos, mas a etapa não foi alterada.\n'
+        : '';
+      window.alert(contexto + (mensagemApi || fallback));
     } finally {
+      // Recarrega também após falha parcial ou conflito, incluindo a nova versão.
+      await carregarTarefa(tarefaId);
+      onTaskUpdated();
       setSaving(false);
     }
   };

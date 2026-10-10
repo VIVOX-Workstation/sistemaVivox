@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T17:50:45.025Z",
+  "title": "Design System: VVOX Sync — Kanban",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "bg",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 89.88)",
+          "oklch(26.43% 0.0000 89.88)",
+          "oklch(37.86% 0.0000 89.88)",
+          "oklch(49.29% 0.0000 89.88)",
+          "oklch(60.71% 0.0000 89.88)",
+          "oklch(72.14% 0.0000 89.88)",
+          "oklch(83.57% 0.0000 89.88)",
+          "oklch(95.00% 0.0000 89.88)"
+        ]
+      },
+      "col": {
+        "role": "neutral",
+        "displayName": "col",
+        "tonalRamp": [
+          "oklch(15.00% 0.0013 286.38)",
+          "oklch(26.43% 0.0013 286.38)",
+          "oklch(37.86% 0.0013 286.38)",
+          "oklch(49.29% 0.0013 286.38)",
+          "oklch(60.71% 0.0013 286.38)",
+          "oklch(72.14% 0.0013 286.38)",
+          "oklch(83.57% 0.0013 286.38)",
+          "oklch(95.00% 0.0013 286.38)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "card",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 89.88)",
+          "oklch(26.43% 0.0000 89.88)",
+          "oklch(37.86% 0.0000 89.88)",
+          "oklch(49.29% 0.0000 89.88)",
+          "oklch(60.71% 0.0000 89.88)",
+          "oklch(72.14% 0.0000 89.88)",
+          "oklch(83.57% 0.0000 89.88)",
+          "oklch(95.00% 0.0000 89.88)"
+        ]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "fg",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 89.88)",
+          "oklch(26.43% 0.0000 89.88)",
+          "oklch(37.86% 0.0000 89.88)",
+          "oklch(49.29% 0.0000 89.88)",
+          "oklch(60.71% 0.0000 89.88)",
+          "oklch(72.14% 0.0000 89.88)",
+          "oklch(83.57% 0.0000 89.88)",
+          "oklch(95.00% 0.0000 89.88)"
+        ]
+      },
+      "fg-2": {
+        "role": "neutral",
+        "displayName": "fg-2",
+        "tonalRamp": [
+          "oklch(15.00% 0.0053 286.10)",
+          "oklch(26.43% 0.0053 286.10)",
+          "oklch(37.86% 0.0053 286.10)",
+          "oklch(49.29% 0.0053 286.10)",
+          "oklch(60.71% 0.0053 286.10)",
+          "oklch(72.14% 0.0053 286.10)",
+          "oklch(83.57% 0.0053 286.10)",
+          "oklch(95.00% 0.0053 286.10)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0080 286.08)",
+          "oklch(26.43% 0.0080 286.08)",
+          "oklch(37.86% 0.0080 286.08)",
+          "oklch(49.29% 0.0080 286.08)",
+          "oklch(60.71% 0.0080 286.08)",
+          "oklch(72.14% 0.0080 286.08)",
+          "oklch(83.57% 0.0080 286.08)",
+          "oklch(95.00% 0.0080 286.08)"
+        ]
+      },
+      "subtle": {
+        "role": "neutral",
+        "displayName": "subtle",
+        "tonalRamp": [
+          "oklch(15.00% 0.0077 286.14)",
+          "oklch(26.43% 0.0077 286.14)",
+          "oklch(37.86% 0.0077 286.14)",
+          "oklch(49.29% 0.0077 286.14)",
+          "oklch(60.71% 0.0077 286.14)",
+          "oklch(72.14% 0.0077 286.14)",
+          "oklch(83.57% 0.0077 286.14)",
+          "oklch(95.00% 0.0077 286.14)"
+        ]
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "gold",
+        "tonalRamp": [
+          "oklch(15.00% 0.0921 80.27)",
+          "oklch(26.43% 0.0921 80.27)",
+          "oklch(37.86% 0.0921 80.27)",
+          "oklch(49.29% 0.0921 80.27)",
+          "oklch(60.71% 0.0921 80.27)",
+          "oklch(72.14% 0.0921 80.27)",
+          "oklch(83.57% 0.0921 80.27)",
+          "oklch(95.00% 0.0921 80.27)"
+        ]
+      },
+      "gold-ink": {
+        "role": "primary",
+        "displayName": "gold-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0779 75.99)",
+          "oklch(26.43% 0.0779 75.99)",
+          "oklch(37.86% 0.0779 75.99)",
+          "oklch(49.29% 0.0779 75.99)",
+          "oklch(60.71% 0.0779 75.99)",
+          "oklch(72.14% 0.0779 75.99)",
+          "oklch(83.57% 0.0779 75.99)",
+          "oklch(95.00% 0.0779 75.99)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "line",
+        "tonalRamp": [
+          "oklch(15.00% 0.0040 286.32)",
+          "oklch(26.43% 0.0040 286.32)",
+          "oklch(37.86% 0.0040 286.32)",
+          "oklch(49.29% 0.0040 286.32)",
+          "oklch(60.71% 0.0040 286.32)",
+          "oklch(72.14% 0.0040 286.32)",
+          "oklch(83.57% 0.0040 286.32)",
+          "oklch(95.00% 0.0040 286.32)"
+        ]
+      },
+      "line-2": {
+        "role": "neutral",
+        "displayName": "line-2",
+        "tonalRamp": [
+          "oklch(15.00% 0.0069 286.25)",
+          "oklch(26.43% 0.0069 286.25)",
+          "oklch(37.86% 0.0069 286.25)",
+          "oklch(49.29% 0.0069 286.25)",
+          "oklch(60.71% 0.0069 286.25)",
+          "oklch(72.14% 0.0069 286.25)",
+          "oklch(83.57% 0.0069 286.25)",
+          "oklch(95.00% 0.0069 286.25)"
+        ]
+      },
+      "sw-gray": {
+        "role": "secondary",
+        "displayName": "sw-gray",
+        "tonalRamp": [
+          "oklch(15.00% 0.0091 286.11)",
+          "oklch(26.43% 0.0091 286.11)",
+          "oklch(37.86% 0.0091 286.11)",
+          "oklch(49.29% 0.0091 286.11)",
+          "oklch(60.71% 0.0091 286.11)",
+          "oklch(72.14% 0.0091 286.11)",
+          "oklch(83.57% 0.0091 286.11)",
+          "oklch(95.00% 0.0091 286.11)"
+        ]
+      },
+      "sw-gold": {
+        "role": "secondary",
+        "displayName": "sw-gold",
+        "tonalRamp": [
+          "oklch(15.00% 0.1419 74.98)",
+          "oklch(26.43% 0.1419 74.98)",
+          "oklch(37.86% 0.1419 74.98)",
+          "oklch(49.29% 0.1419 74.98)",
+          "oklch(60.71% 0.1419 74.98)",
+          "oklch(72.14% 0.1419 74.98)",
+          "oklch(83.57% 0.1419 74.98)",
+          "oklch(95.00% 0.1419 74.98)"
+        ]
+      },
+      "sw-blue": {
+        "role": "secondary",
+        "displayName": "sw-blue",
+        "tonalRamp": [
+          "oklch(15.00% 0.1812 255.53)",
+          "oklch(26.43% 0.1812 255.53)",
+          "oklch(37.86% 0.1812 255.53)",
+          "oklch(49.29% 0.1812 255.53)",
+          "oklch(60.71% 0.1812 255.53)",
+          "oklch(72.14% 0.1812 255.53)",
+          "oklch(83.57% 0.1812 255.53)",
+          "oklch(95.00% 0.1812 255.53)"
+        ]
+      },
+      "sw-orange": {
+        "role": "secondary",
+        "displayName": "sw-orange",
+        "tonalRamp": [
+          "oklch(15.00% 0.1815 48.31)",
+          "oklch(26.43% 0.1815 48.31)",
+          "oklch(37.86% 0.1815 48.31)",
+          "oklch(49.29% 0.1815 48.31)",
+          "oklch(60.71% 0.1815 48.31)",
+          "oklch(72.14% 0.1815 48.31)",
+          "oklch(83.57% 0.1815 48.31)",
+          "oklch(95.00% 0.1815 48.31)"
+        ]
+      },
+      "sw-green": {
+        "role": "secondary",
+        "displayName": "sw-green",
+        "tonalRamp": [
+          "oklch(15.00% 0.1617 151.21)",
+          "oklch(26.43% 0.1617 151.21)",
+          "oklch(37.86% 0.1617 151.21)",
+          "oklch(49.29% 0.1617 151.21)",
+          "oklch(60.71% 0.1617 151.21)",
+          "oklch(72.14% 0.1617 151.21)",
+          "oklch(83.57% 0.1617 151.21)",
+          "oklch(95.00% 0.1617 151.21)"
+        ]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "danger",
+        "tonalRamp": [
+          "oklch(15.00% 0.1626 28.01)",
+          "oklch(26.43% 0.1626 28.01)",
+          "oklch(37.86% 0.1626 28.01)",
+          "oklch(49.29% 0.1626 28.01)",
+          "oklch(60.71% 0.1626 28.01)",
+          "oklch(72.14% 0.1626 28.01)",
+          "oklch(83.57% 0.1626 28.01)",
+          "oklch(95.00% 0.1626 28.01)"
+        ]
+      },
+      "ok": {
+        "role": "secondary",
+        "displayName": "ok",
+        "tonalRamp": [
+          "oklch(15.00% 0.1112 154.59)",
+          "oklch(26.43% 0.1112 154.59)",
+          "oklch(37.86% 0.1112 154.59)",
+          "oklch(49.29% 0.1112 154.59)",
+          "oklch(60.71% 0.1112 154.59)",
+          "oklch(72.14% 0.1112 154.59)",
+          "oklch(83.57% 0.1112 154.59)",
+          "oklch(95.00% 0.1112 154.59)"
+        ]
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 2px 5px -1px rgba(70,50,20,.16),0 8px 16px -10px rgba(70,50,20,.3)",
+        "purpose": "Cabeçalhos e criar tarefa no tema branco."
+      },
+      {
+        "name": "shadow-panel",
+        "value": "0 1px 0 rgba(255,255,255,.9) inset",
+        "purpose": "Realce interno dos cartões no tema branco."
+      },
+      {
+        "name": "shadow-float",
+        "value": "0 18px 36px -12px rgba(0,0,0,.28)",
+        "purpose": "Menus, diálogo e arraste no tema branco."
+      },
+      {
+        "name": "ring-h",
+        "value": "0 0 0 1px rgba(184,148,85,.40)",
+        "purpose": "Resposta dos cartões ao hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.23,1,.32,1)",
+        "purpose": "Curva original das transições."
+      },
+      {
+        "name": "control-state",
+        "value": ".18s",
+        "purpose": "Estados dos controles."
+      },
+      {
+        "name": "card-transform",
+        "value": ".25s cubic-bezier(.34,1.56,.64,1)",
+        "purpose": "Resposta do cartão ao ponteiro."
+      },
+      {
+        "name": "reduced-motion",
+        "value": ".01ms",
+        "purpose": "Duração reduzida; as animações destacadas também são desativadas."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "view-labels",
+        "value": "1560px"
+      },
+      {
+        "name": "brand-separator",
+        "value": "1100px"
+      },
+      {
+        "name": "filter-separators",
+        "value": "900px"
+      },
+      {
+        "name": "detail-stack",
+        "value": "860px"
+      },
+      {
+        "name": "compact-mobile",
+        "value": "560px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Ação principal",
+      "kind": "button",
+      "description": "Botão dourado original da barra.",
+      "html": "<button class=\"ds-control ds-btn ds-primary\">+ Nova tarefa</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:11px;border:1px solid var(--line,#E4E4E7);background:var(--card,#FFFFFF);color:var(--muted,#57575C);font-family:-apple-system,BlinkMacSystemFont,\"Inter\",\"Segoe UI\",Roboto,sans-serif;font-size:12px;font-weight:650;cursor:pointer;transition:background-color .18s,border-color .18s,color .18s,transform .18s cubic-bezier(.23,1,.32,1)}.ds-btn:hover:not(:disabled){border-color:rgba(184,148,85,.5);color:var(--fg,#111111)}.ds-btn:active:not(:disabled){transform:scale(.96)}.ds-btn:disabled{opacity:.38;cursor:not-allowed}.ds-control:focus-visible{outline:2px solid var(--gold,#B89455);outline-offset:2px}.ds-primary{min-height:36px;padding:0 16px;background:var(--cta,linear-gradient(180deg,#BE9A58 0%,#97722F 100%));color:var(--on-cta,#FFFAF0);border-color:rgba(70,48,12,.35);box-shadow:0 1px 0 rgba(255,255,255,.28) inset,0 1px 2px rgba(60,40,10,.22)}.ds-primary:hover:not(:disabled){background:var(--cta-h,linear-gradient(180deg,#C9A767 0%,#A67F3C 100%));color:var(--on-cta,#FFFAF0);border-color:rgba(70,48,12,.45)}"
+    },
+    {
+      "name": "Ação secundária",
+      "kind": "button",
+      "description": "Ação secundária do detalhe e formulários.",
+      "html": "<button class=\"ds-control ds-btn\">Cancelar</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:11px;border:1px solid var(--line,#E4E4E7);background:var(--card,#FFFFFF);color:var(--muted,#57575C);font-family:-apple-system,BlinkMacSystemFont,\"Inter\",\"Segoe UI\",Roboto,sans-serif;font-size:12px;font-weight:650;cursor:pointer;transition:background-color .18s,border-color .18s,color .18s,transform .18s cubic-bezier(.23,1,.32,1)}.ds-btn:hover:not(:disabled){border-color:rgba(184,148,85,.5);color:var(--fg,#111111)}.ds-btn:active:not(:disabled){transform:scale(.96)}.ds-btn:disabled{opacity:.38;cursor:not-allowed}.ds-control:focus-visible{outline:2px solid var(--gold,#B89455);outline-offset:2px}"
+    },
+    {
+      "name": "Busca",
+      "kind": "input",
+      "description": "Campo da barra; ícone embutido na composição original.",
+      "html": "<input class=\"ds-search\" type=\"search\" aria-label=\"Buscar tarefas\" placeholder=\"Buscar tarefas\">",
+      "css": ".ds-search{width:170px;height:36px;padding:0 12px;border:1px solid var(--line,#E4E4E7);border-radius:999px;background:var(--card,#FFFFFF);color:var(--fg,#111111);font-family:-apple-system,BlinkMacSystemFont,\"Inter\",\"Segoe UI\",Roboto,sans-serif;font-size:12px;outline:none}.ds-search::placeholder{color:var(--subtle,#6E6E73)}.ds-search:hover{border-color:var(--line-2,#CDCDD2)}.ds-search:focus{border-color:rgba(184,148,85,.55);box-shadow:0 0 0 2px rgba(184,148,85,.14)}"
+    },
+    {
+      "name": "Abas",
+      "kind": "nav",
+      "description": "Seleção de quadro com preenchimento translúcido.",
+      "html": "<div role=\"tablist\" aria-label=\"Quadros\"><button class=\"ds-control ds-tab\" role=\"tab\" aria-selected=\"true\">Quadro Geral</button></div>",
+      "css": ".ds-tab{height:36px;padding:0 12px;border-radius:11px;border:1px solid var(--line,#E4E4E7);background:var(--card,#FFFFFF);color:var(--muted,#57575C);font-family:-apple-system,BlinkMacSystemFont,\"Inter\",\"Segoe UI\",Roboto,sans-serif;font-size:12px;font-weight:650;cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}.ds-tab:hover{border-color:rgba(184,148,85,.5);color:var(--fg,#111111)}.ds-tab:active{transform:scale(.97)}.ds-tab[aria-selected=\"true\"]{background:var(--sel-bg,rgba(184,148,85,.18));border-color:var(--sel-bd,rgba(184,148,85,.55));color:var(--sel-fg,#7E5E2D)}.ds-control:focus-visible{outline:2px solid var(--gold,#B89455);outline-offset:2px}"
+    },
+    {
+      "name": "Filtro",
+      "kind": "chip",
+      "description": "Pílula de filtro original.",
+      "html": "<button class=\"ds-control ds-pill\" aria-pressed=\"false\">Categoria</button>",
+      "css": ".ds-pill{height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--line,#E4E4E7);background:var(--card,#FFFFFF);color:var(--muted,#57575C);font-family:-apple-system,BlinkMacSystemFont,\"Inter\",\"Segoe UI\",Roboto,sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}.ds-pill:hover{border-color:rgba(184,148,85,.5);color:var(--fg,#111111)}.ds-pill:active{transform:scale(.96)}.ds-pill[aria-pressed=\"true\"]{background:var(--sel-bg,rgba(184,148,85,.18));border-color:var(--sel-bd,rgba(184,148,85,.55));color:var(--sel-fg,#7E5E2D)}.ds-control:focus-visible{outline:2px solid var(--gold,#B89455);outline-offset:2px}"
+    },
+    {
+      "name": "Cartão",
+      "kind": "card",
+      "refersTo": "task-card",
+      "description": "Recorte do cartão compacto; conteúdo apenas ilustrativo.",
+      "html": "<article class=\"ds-control ds-card\" tabindex=\"0\"><div class=\"ds-shell\"><h3 class=\"ds-title\">Tarefa</h3><div class=\"ds-dates\"><span>Prazo</span><strong>18 out</strong></div></div></article>",
+      "css": ".ds-card{width:286px;border-radius:11px;cursor:grab;font-family:-apple-system,BlinkMacSystemFont,\"Inter\",\"Segoe UI\",Roboto,sans-serif;color:var(--fg,#111111)}.ds-shell{padding:10px 12px;border-radius:11px;background:var(--card,#FFFFFF);border:1px solid var(--line,#E4E4E7);box-shadow:var(--shadow-panel,0 1px 0 rgba(255,255,255,.9) inset);transition:box-shadow .22s,transform .25s cubic-bezier(.34,1.56,.64,1),border-color .2s}.ds-card:hover .ds-shell{transform:translateY(-2px);box-shadow:var(--ring-h,0 0 0 1px rgba(184,148,85,.40))}.ds-card:active .ds-shell{transform:scale(.985)}.ds-title{margin:0;font-size:13px;font-weight:650;line-height:1.35;letter-spacing:-.003em}.ds-dates{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin-top:7px;font-size:11px;font-variant-numeric:tabular-nums}.ds-dates::before{content:\"\";grid-column:1/-1;height:1px;margin-bottom:5px;background:var(--line,#E4E4E7);opacity:.35}.ds-dates span{color:var(--subtle,#6E6E73)}.ds-dates strong{font-weight:600;color:var(--fg-2,#333336)}@supports(corner-shape:squircle){.ds-card,.ds-shell{corner-shape:squircle}}.ds-control:focus-visible{outline:2px solid var(--gold,#B89455);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Fidelidade ao pacote original enviado pelo usuário",
+    "overview": "Registro exclusivo do Kanban. A autoridade visual é o pacote `kanban-vivox-pacote-codex.zip`, recebido em 10/10/2026, cujo conteúdo corresponde a `C:/Users/pfeihmartins/Codex/bitrix2.0/kanban-front`. O HTML monolítico enviado acompanha a mesma fonte visual. A captura estável desta versão é `.impeccable/references/claude-export-20261010-board.png`. A imagem anterior continua como contexto, sem substituir o novo código fornecido.",
+    "keyCharacteristics": [
+      "Barra compacta com logo, quadros, busca, filtros, visualizações e ações.",
+      "Cabeçalhos sólidos, criar tarefa acima das listas claras e cartões compactos.",
+      "Detalhe com informações e conversa lado a lado, empilhadas no celular.",
+      "Conteúdo, contagens, pessoas e ações disponíveis refletem dados e permissões reais."
+    ],
+    "rules": [],
+    "dos": [
+      "Do preservar o CSS, a composição e os renderizadores visuais do pacote aceito.",
+      "Do manter correções de compatibilidade em integration.css.",
+      "Do usar dados e permissões reais, preservando foco visível e movimento reduzido."
+    ],
+    "donts": [
+      "Don't substituir o pacote atual pela reconstrução da imagem anterior.",
+      "Don't adicionar tarefas, fotos ou contagens fictícias para imitar a captura.",
+      "Don't estender estas regras visuais aos demais módulos do sistema."
+    ]
+  }
+}

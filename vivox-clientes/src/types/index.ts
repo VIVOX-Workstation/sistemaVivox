@@ -458,6 +458,7 @@ export interface Projeto {
 
 export interface Tarefa {
   id: string;
+  versao?: number;
   titulo: string;
   descricao?: string;
   status: StatusTarefa;

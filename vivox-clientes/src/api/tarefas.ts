@@ -29,6 +29,7 @@ export interface CreateTarefaPayload {
 }
 
 export interface UpdateTarefaPayload extends Partial<CreateTarefaPayload> {
+  versao?: number;
   dataConclusao?: string;
   ordem?: number;
 }
