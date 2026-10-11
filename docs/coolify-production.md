@@ -32,13 +32,23 @@ O histórico antigo de migrations não reproduz todo o esquema atual, pois algum
 alterações anteriores foram feitas com `prisma db push`.
 O comando `node scripts/start-production.cjs` permite a instalação inicial quando
 `BOOTSTRAP_EMPTY_DATABASE=true` **e o schema public está completamente vazio**.
-Ele cria o esquema atual em uma transação e registra o histórico como aplicado.
+Ele cria o esquema atual em uma transação, inicializa o quadro Operação diária e
+restaura os triggers, checks e índices parciais do Sync antes de registrar o histórico.
 Um marcador temporário permite retomar o registro em caso de interrupção.
 Em bancos existentes, apenas `prisma migrate deploy` é executado.
 Após a primeira instalação, remova `BOOTSTRAP_EMPTY_DATABASE` no Coolify.
 
 Para novas alterações de banco, versionar migrations Prisma junto ao código.
 Não usar `db push`, `migrate reset` ou `--accept-data-loss` na produção.
+
+A migration `20261011010000_repair_sync_bootstrap` também corrige instalações
+que receberam apenas o schema Prisma. Ela cria o quadro padrão e suas colunas,
+adota tarefas sem quadro e restaura as regras do Sync, preservando quadros,
+numeração e dados existentes. Não é necessário reaplicar migrations antigas.
+
+O teste de integração `node scripts/test-sync-bootstrap.cjs` deve ser executado
+na pasta backend com `SYNC_BOOTSTRAP_TEST_DATABASE_URL` apontando para um
+PostgreSQL de testes. Ele cria e remove apenas seus próprios bancos temporários.
 
 ## Variáveis e dados persistentes
 
@@ -60,4 +70,5 @@ senha e role ADMIN. Esse endpoint só permite setup enquanto não existe usuári
 - Frontend: GET / e rotas da SPA devem responder 200.
 - MinIO: GET /minio/health/live deve responder 200.
 - Quadro: GET /socket.io/?EIO=4&transport=polling deve iniciar uma sessão.
+- Sync: GET /kanban/quadros autenticado deve incluir Operação diária com cinco colunas.
 - Confirmar no Coolify que ambos os deploys têm o commit mais recente da main.

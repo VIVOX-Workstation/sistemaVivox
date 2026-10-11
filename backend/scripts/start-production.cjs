@@ -1,5 +1,5 @@
 const { Client } = require('pg');
-const { readdirSync } = require('node:fs');
+const { readdirSync, readFileSync } = require('node:fs');
 const { spawnSync, spawn } = require('node:child_process');
 const path = require('node:path');
 
@@ -56,6 +56,12 @@ async function bootstrapEmptyDatabase() {
       return;
     }
 
+    // Prisma's schema diff does not include migration seeds, triggers or partial
+    // indexes. Restore these before recording the baseline, including on resume.
+    await db.query(readFileSync(
+      'prisma/migrations/20261011010000_repair_sync_bootstrap/migration.sql', 'utf8',
+    ));
+
     const migrationTable = await db.query("SELECT to_regclass('public._prisma_migrations') AS name");
     const applied = migrationTable.rows[0].name
       ? await db.query('SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')
@@ -81,7 +87,11 @@ async function main() {
   app.on('exit', (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 }
 
-main().catch(error => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { bootstrapEmptyDatabase };
