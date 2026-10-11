@@ -1,10 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { workspaceCompression } from './tarefas/workspace-compression';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Padrão do Express é 100 KB; a importação do backup do acompanhamento envia milhares de publicações
+  app.useBodyParser('json', { limit: '5mb' });
   // As listagens do GP podem conter milhares de tarefas. Comprimir somente
   // estas rotas evita interferir nos endpoints de streaming do assistente.
   app.use(['/tarefas', '/projetos'], workspaceCompression());

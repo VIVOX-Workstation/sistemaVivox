@@ -86,9 +86,23 @@ export interface CriarPublicacaoDTO {
   salvamentos?: number | null;
   reposts?: number | null;
   visualizacoes?: number | null;
+  alcance?: number | null;
 }
 
 export type AtualizarPublicacaoDTO = Partial<CriarPublicacaoDTO>;
+
+export interface ItemImportacao extends CriarPublicacaoDTO {
+  id?: string;
+  origemDado?: string;
+}
+
+export interface BackupAcompanhamento {
+  formato: 'vivox-acompanhamento';
+  versao: number;
+  exportadoEm: string;
+  cliente: { id: string; nomeFantasia: string };
+  publicacoes: Publicacao[];
+}
 
 export const acompanhamentoApi = {
   // Interno (modulo ACOMPANHAMENTO)
@@ -106,6 +120,21 @@ export const acompanhamentoApi = {
 
   criarPublicacao: async (clienteId: string, payload: CriarPublicacaoDTO): Promise<Publicacao> => {
     const { data } = await api.post(`/acompanhamento/clientes/${clienteId}/publicacoes`, payload);
+    return data;
+  },
+
+  // Backup completo (todos os períodos) do cliente
+  exportarPublicacoes: async (clienteId: string): Promise<BackupAcompanhamento> => {
+    const { data } = await api.get(`/acompanhamento/clientes/${clienteId}/publicacoes/exportar`);
+    return data;
+  },
+
+  // id de publicação deste cliente atualiza a existente; sem id ou id desconhecido cria nova. Tudo ou nada.
+  importarPublicacoes: async (
+    clienteId: string,
+    publicacoes: ItemImportacao[],
+  ): Promise<{ criadas: number; atualizadas: number }> => {
+    const { data } = await api.post(`/acompanhamento/clientes/${clienteId}/publicacoes/importar`, { publicacoes });
     return data;
   },
 
