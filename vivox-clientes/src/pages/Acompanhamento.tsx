@@ -11,6 +11,8 @@ import {
   CalendarDays,
   ChevronDown,
   Share2,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { 
   acompanhamentoApi, 
@@ -23,6 +25,7 @@ import {
 import { ResumoAcompanhamentoCards } from '../components/acompanhamento/ResumoAcompanhamentoCards';
 import { FiltrosAcompanhamento } from '../components/acompanhamento/FiltrosAcompanhamento';
 import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompanhamento';
+import { baixarJson, lerBackupJson } from '../components/acompanhamento/backupJson';
 import { CronogramasPainel } from '../components/acompanhamento/CronogramasPainel';
 import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
 import { PopoverAncorado } from '../components/ui/PopoverAncorado';
@@ -46,6 +49,9 @@ const urlPara = (clienteId: string, periodo: Periodo, tipos: TipoPublicacao[], a
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
 import './planning-workspace.css';
+
+// Mesmo limite do backend (IMPORTACAO_MAX_LINHAS)
+const MAX_LINHAS_IMPORTACAO = 5000;
 
 export function Acompanhamento() {
   const { clienteId: urlClienteId } = useParams<{ clienteId?: string }>();
@@ -74,6 +80,9 @@ export function Acompanhamento() {
   const [mesesComDados, setMesesComDados] = useState<MesComDados[]>([]);
 
   const [compartilharAberto, setCompartilharAberto] = useState(false);
+  const [exportando, setExportando] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const inputImportarRef = useRef<HTMLInputElement>(null);
 
   // Status de salvamento por linha da tabela
   const [rowStatus, setRowStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
@@ -260,6 +269,70 @@ export function Acompanhamento() {
   };
 
   const clienteAtual = clientes.find((c) => c.id === clienteSelecionadoId) || dados?.cliente;
+
+  // Exporta todo o histórico do cliente (todos os períodos), não só o filtro atual
+  const handleExportar = async () => {
+    if (!clienteSelecionadoId) return;
+    setExportando(true);
+    try {
+      const backup = await acompanhamentoApi.exportarPublicacoes(clienteSelecionadoId);
+      const nome = backup.cliente.nomeFantasia
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'cliente';
+      baixarJson(backup, `acompanhamento-${nome}-${backup.exportadoEm.slice(0, 10)}.json`);
+    } catch (err: any) {
+      console.error('Erro ao exportar publicações:', err);
+      alert(err.response?.data?.message || 'Não foi possível exportar as publicações.');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const handleImportar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = ''; // permite escolher o mesmo arquivo de novo
+    if (!arquivo || !clienteSelecionadoId) return;
+
+    let backup;
+    try {
+      backup = lerBackupJson(await arquivo.text());
+    } catch (err: any) {
+      alert(err.message);
+      return;
+    }
+    const { publicacoes, clienteOrigem } = backup;
+    if (publicacoes.length === 0) {
+      alert('O arquivo não tem nenhuma publicação para importar.');
+      return;
+    }
+    if (publicacoes.length > MAX_LINHAS_IMPORTACAO) {
+      alert(`O arquivo tem ${publicacoes.length} publicações. Importe no máximo ${MAX_LINHAS_IMPORTACAO} por vez.`);
+      return;
+    }
+
+    const nomeAtual = clienteAtual?.nomeFantasia || 'este cliente';
+    const avisoOrigem = clienteOrigem && clienteOrigem !== clienteAtual?.nomeFantasia
+      ? `\n\nAtenção: este backup é de "${clienteOrigem}". As publicações serão copiadas como novas para ${nomeAtual}.`
+      : '';
+    if (!confirm(
+      `Importar ${publicacoes.length} publicação(ões) para ${nomeAtual}?\n\n` +
+      `As que já existem neste cliente são atualizadas com os dados do arquivo; as demais são criadas.${avisoOrigem}`,
+    )) return;
+
+    setImportando(true);
+    try {
+      const res = await acompanhamentoApi.importarPublicacoes(clienteSelecionadoId, publicacoes);
+      await carregarDados(clienteSelecionadoId);
+      alert(`Importação concluída: ${res.criadas} criada(s), ${res.atualizadas} atualizada(s).\n\nPublicações de outros meses aparecem ao trocar o período no filtro.`);
+    } catch (err: any) {
+      console.error('Erro ao importar publicações:', err);
+      const msg = err.response?.data?.message;
+      alert(`Não foi possível importar. Nada foi gravado.\n\n${Array.isArray(msg) ? msg.slice(0, 10).join('\n') : msg || 'Erro desconhecido.'}`);
+    } finally {
+      setImportando(false);
+    }
+  };
+
   const clientesFiltrados = clientes.filter((c) =>
     c.nomeFantasia.toLowerCase().includes(buscaCliente.toLowerCase())
   );
@@ -480,6 +553,38 @@ export function Acompanhamento() {
                       Publicações do período ({dados.publicacoes.length})
                     </span>
                   </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleExportar}
+                    disabled={exportando}
+                    title="Baixar todas as publicações do cliente (todos os períodos) em JSON"
+                    className="pw-glass-control px-4 py-2 rounded-xl text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4 text-[#C7A15F]" />
+                    <span>Exportar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => inputImportarRef.current?.click()}
+                    disabled={importando}
+                    title="Importar um backup JSON exportado. Publicações que já existem são atualizadas; as demais são criadas."
+                    className="pw-glass-control px-4 py-2 rounded-xl text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    {importando ? (
+                      <RefreshCw className="w-4 h-4 text-[#C7A15F] animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-[#C7A15F]" />
+                    )}
+                    <span>{importando ? 'Importando...' : 'Importar'}</span>
+                  </button>
+                  <input
+                    ref={inputImportarRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleImportar}
+                    className="hidden"
+                  />
                   <button
                     type="button"
                     onClick={handleCriarPublicacao}
@@ -488,6 +593,7 @@ export function Acompanhamento() {
                     <Plus className="w-4 h-4" />
                     <span>Nova publicação</span>
                   </button>
+                  </div>
                 </div>
 
                 {/* 3. Tabela Estilo Planilha com Edição Inline */}
