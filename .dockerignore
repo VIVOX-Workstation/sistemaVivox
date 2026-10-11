@@ -6,3 +6,8 @@ dist
 .agents
 .claude
 .windsurf
+.deployment
+**/.env
+**/.env.*
+**/*credentials*.json
+**/*.pem

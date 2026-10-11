@@ -1,0 +1,55 @@
+services:
+  minio:
+    image: ghcr.io/coollabsio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${SERVICE_USER_MINIO}
+      MINIO_ROOT_PASSWORD: ${SERVICE_PASSWORD_MINIO}
+    volumes:
+      - minio-data:/data
+    expose:
+      - "9000"
+      - "9001"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=jnx7x7kyx0fphqvyubbznej6
+      - traefik.http.routers.vivox-minio-http.entrypoints=http
+      - traefik.http.routers.vivox-minio-http.rule=Host(`minio.vivoxmarketing.com.br`)
+      - traefik.http.routers.vivox-minio-http.middlewares=vivox-minio-redirect
+      - traefik.http.middlewares.vivox-minio-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.vivox-minio-https.entrypoints=https
+      - traefik.http.routers.vivox-minio-https.rule=Host(`minio.vivoxmarketing.com.br`)
+      - traefik.http.routers.vivox-minio-https.tls=true
+      - traefik.http.routers.vivox-minio-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.vivox-minio-https.service=vivox-minio
+      - traefik.http.services.vivox-minio.loadbalancer.server.port=9000
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  minio-init:
+    image: ghcr.io/coollabsio/minio:RELEASE.2025-04-22T22-12-26Z
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${SERVICE_USER_MINIO}
+      MINIO_ROOT_PASSWORD: ${SERVICE_PASSWORD_MINIO}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set production http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing production/vivox-media &&
+        mc anonymous set download production/vivox-media
+  excalidraw-room:
+    image: excalidraw/excalidraw-room:latest
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      CORS_ORIGIN: https://flow.vivoxmarketing.com.br
+volumes:
+  minio-data:

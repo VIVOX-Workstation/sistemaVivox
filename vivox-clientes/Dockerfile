@@ -4,9 +4,13 @@ FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --include=dev
+RUN npm ci --include=dev
 
 COPY . .
+ARG VITE_API_URL=https://api.vivoxmarketing.com.br
+ARG VITE_EXCALIDRAW_WS_URL=https://quadro.vivoxmarketing.com.br
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_EXCALIDRAW_WS_URL=$VITE_EXCALIDRAW_WS_URL
 RUN npm run build
 
 # Stage 2: Serve
