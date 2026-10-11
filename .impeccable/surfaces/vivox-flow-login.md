@@ -26,3 +26,10 @@
 ## Verificação e escopo
 - QA informado: quatro viewports e resposta 401 controlada aprovados; login com credenciais reais não foi testado.
 - Esta documentação cobre somente o login; regras globais do Kanban em `DESIGN.md` e `.impeccable/design.json` permanecem próprias daquela superfície.
+
+## Controles compartilhados da home e login
+- `FlowNavigation` usa Radix Dropdown Menu em um controle compacto à direita, preservando a marca central; destinos reais: **Página inicial** (`/`) e **Acessar conta** (`/login`), com item atual marcado.
+- Foco gerenciado; setas, Home/End e Enter operam o menu, Escape devolve foco ao acionador, clique fora fecha e colisões com o viewport são tratadas.
+- Inspiração visual: menus Kokonut UI encontrados no 21st.dev; código próprio, sem adaptação integral do componente de referência.
+- O CTA compartilhado usa `utils/flowButtonEffects.ts`: luz acompanha o cursor, deslocamento limitado a 3 px por eixo apenas com mouse, brilho no hover e seta dourada.
+- Foco, estado desabilitado e movimento reduzido são preservados; controles restritos à home/login, sem suporte, Google, administrador ou módulos, sem alterar o painel interno.

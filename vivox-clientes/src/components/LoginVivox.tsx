@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Eye, EyeOff, LockKeyhole, Mail, LoaderCircle } from 'lucide-react';
 import FlowingPaths from './FlowingPaths';
+import FlowNavigation from './FlowNavigation';
+import { updateFlowButton, resetFlowButton } from '../utils/flowButtonEffects';
 import '../pages/FlowHome.css';
 import './LoginVivox.css';
 
@@ -37,6 +39,7 @@ export default function LoginVivox({ onSubmit, loading = false, error = null, de
           <img src="/brand/vivox-logo.svg" alt="VIVOX" width="472" height="117" />
           <span>Flow</span>
         </Link>
+        <FlowNavigation />
       </header>
       <main id="login-main" className="flow-main flow-login-main">
         <div className="flow-login-content">
@@ -70,7 +73,7 @@ export default function LoginVivox({ onSubmit, loading = false, error = null, de
               Lembrar de mim
             </label>
             {error && <div role="alert" id="login-error" className="flow-login-error">{error}</div>}
-            <button type="submit" className="flow-enter flow-login-submit" disabled={loading}>
+            <button type="submit" className="flow-enter flow-login-submit" disabled={loading} onPointerMove={updateFlowButton} onPointerLeave={resetFlowButton} onBlur={resetFlowButton}>
               <span>{loading ? 'Entrando…' : 'Entrar'}</span>
               <span className="flow-enter-icon">
                 {loading ? <LoaderCircle className="flow-login-spinner" size={21} aria-hidden="true" /> : <ArrowUpRight size={22} aria-hidden="true" />}

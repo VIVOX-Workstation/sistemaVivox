@@ -27,3 +27,10 @@
 ## Escopo
 - Expansão localizada baseada nos arquivos da home, componente de curvas, `PRODUCT.md` e rotas de `src/App.tsx`.
 - `DESIGN.md` e `.impeccable/design.json` continuam como referências exclusivas do Kanban VVOX Sync.
+
+## Controles compartilhados da home e login
+- `FlowNavigation` usa Radix Dropdown Menu em um controle compacto à direita, preservando a marca central; destinos reais: **Página inicial** (`/`) e **Acessar conta** (`/login`), com item atual marcado.
+- Foco gerenciado; setas, Home/End e Enter operam o menu, Escape devolve foco ao acionador, clique fora fecha e colisões com o viewport são tratadas.
+- Inspiração visual: menus Kokonut UI encontrados no 21st.dev; código próprio, sem adaptação integral do componente de referência.
+- O CTA compartilhado usa `utils/flowButtonEffects.ts`: luz acompanha o cursor, deslocamento limitado a 3 px por eixo apenas com mouse, brilho no hover e seta dourada.
+- Foco, estado desabilitado e movimento reduzido são preservados; controles restritos à home/login, sem suporte, Google, administrador ou módulos, sem alterar o painel interno.
