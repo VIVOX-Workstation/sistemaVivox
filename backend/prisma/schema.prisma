@@ -26,6 +26,7 @@ enum ModuloSistema {
   ANALYTICS
   GP
   EDUCACIONAL
+  ACOMPANHAMENTO
 }
 
 enum StatusInteresse {
@@ -188,7 +189,7 @@ model User {
   role  Role   @default(COLABORADOR)
 
   // Módulos liberados para COLABORADOR (ignorado para ADMIN e CLIENTE)
-  modulos ModuloSistema[] @default([DASHBOARD, CLIENTES, HOSPEDAGENS, ANALYTICS, GP, EDUCACIONAL])
+  modulos ModuloSistema[] @default([DASHBOARD, CLIENTES, HOSPEDAGENS, ANALYTICS, GP, EDUCACIONAL, ACOMPANHAMENTO])
 
   // Portal do cliente: preenchidos só quando role = CLIENTE
   clienteId                String?  @unique
@@ -197,6 +198,7 @@ model User {
 
   // Relações
   clientes              Cliente[]             @relation("ResponsavelInterno")
+  cronogramasEnviados   CronogramaCliente[]   @relation("CronogramasEnviados")
   producoes             Producao[]            @relation("ProdutorResponsavel")
   historicoAcoes        ServicoHistorico[]
   reunioes              Reuniao[]             @relation("ReuniaoParticipantes")
@@ -261,6 +263,7 @@ model Cliente {
   tarefas             Tarefa[]
   chamados            Chamado[]
   usuarioPortal       User?               @relation("UsuarioPortal")
+  cronogramas         CronogramaCliente[]
   interessesServico   InteresseServico[]
 
   // Relações Analytics
@@ -276,6 +279,26 @@ model Cliente {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Cronogramas em PDF enviados pela equipe na aba Acompanhamento; o cliente vê no portal.
+// O arquivo é servido só pelo backend autenticado (o bucket é público, a chave nunca vai ao frontend).
+model CronogramaCliente {
+  id           String  @id @default(uuid())
+  clienteId    String
+  cliente      Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  titulo       String
+  ano          Int? // mês de referência (opcional)
+  mes          Int?
+  arquivoKey   String
+  nomeArquivo  String
+  tamanho      Int
+  enviadoPorId String?
+  enviadoPor   User?   @relation("CronogramasEnviados", fields: [enviadoPorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([clienteId, createdAt])
 }
 
 // "Tenho interesse" clicado pelo cliente no mapa de serviços do portal
@@ -456,13 +479,21 @@ model Publicacao {
   producao          Producao?      @relation(fields: [producaoId], references: [id], onDelete: SetNull)
   tipo              TipoPublicacao
   dataPublicacao    DateTime
+  assunto           String?
+  link              String?
   alcance           Int?
   curtidas          Int?
   comentarios       Int?
-  compartilhamentos Int?
+  compartilhamentos Int? // "envios" na planilha de acompanhamento
+  salvamentos       Int?
+  reposts           Int?
+  visualizacoes     Int? // todos os formatos (Instagram conta views em post, carrossel, Reels e Stories)
   origemDado        OrigemDado
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([clienteId, dataPublicacao])
 }
 
 model AvaliacaoGmb {

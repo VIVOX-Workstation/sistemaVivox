@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { 
   LogOut, 
   Lock, 
@@ -21,7 +21,8 @@ import {
   X, 
   Send,
   Building2,
-  Check
+  Check,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { portalApi, type MapaServicosResponse, type ServicoMapaItem } from '../api/portal';
@@ -192,8 +193,39 @@ export function PortalCliente() {
             </div>
           </div>
 
-          {/* Ações Topo */}
-          <div className="flex items-center gap-3">
+          {/* Ações Topo e Navegação */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <nav className="flex items-center gap-1.5 bg-white/60 p-1 rounded-2xl border border-[#524B40]/10 shadow-2xs">
+              <NavLink
+                to="/portal"
+                end
+                className={({ isActive }) =>
+                  `px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    isActive
+                      ? 'bg-[#181512] text-[#C7A15F] shadow-xs'
+                      : 'text-[#625746] hover:text-[#1E1A16] hover:bg-white/80'
+                  }`
+                }
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Serviços</span>
+              </NavLink>
+
+              <NavLink
+                to="/portal/acompanhamento"
+                className={({ isActive }) =>
+                  `px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    isActive
+                      ? 'bg-[#181512] text-[#C7A15F] shadow-xs'
+                      : 'text-[#625746] hover:text-[#1E1A16] hover:bg-white/80'
+                  }`
+                }
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>Acompanhamento</span>
+              </NavLink>
+            </nav>
+
             <button
               type="button"
               onClick={handleSignOut}

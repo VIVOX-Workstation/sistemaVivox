@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
@@ -19,9 +19,14 @@ export function PortalLogin() {
   const workspaceRef = useRef<HTMLDivElement>(null);
   useLiquidGlass(workspaceRef, true);
 
+  // Link compartilhado pode levar direto a uma página do portal; só aceita caminhos internos do portal
+  const [searchParams] = useSearchParams();
+  const destinoBruto = searchParams.get('destino') || '';
+  const destino = /^\/portal(\/|\?|$)/.test(destinoBruto) && !destinoBruto.startsWith('//') ? destinoBruto : '/portal';
+
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'CLIENTE') navigate('/portal', { replace: true });
-  }, [isAuthenticated, user, navigate]);
+    if (isAuthenticated && user?.role === 'CLIENTE') navigate(destino, { replace: true });
+  }, [isAuthenticated, user, navigate, destino]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +40,7 @@ export function PortalLogin() {
         return;
       }
       signIn(data.access_token, data.user);
-      navigate('/portal', { replace: true });
+      navigate(destino, { replace: true });
     } catch (err: any) {
       setError(
         err.response?.status === 401
