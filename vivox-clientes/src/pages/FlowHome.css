@@ -115,14 +115,11 @@
   position: absolute;
   z-index: 0;
   pointer-events: none;
-  left: -10%;
-  bottom: -180px;
-  width: 120%;
-  height: 600px;
-  overflow: visible;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  mask-image: radial-gradient(ellipse at 50% 46%, transparent 16%, rgba(0,0,0,.2) 38%, #000 76%);
 }
-.flow-trace { animation: flow-forward 2s cubic-bezier(.23, 1, .32, 1) both; }
-@keyframes flow-forward { from { stroke-dashoffset: 65; } to { stroke-dashoffset: 0; } }
 .flow-footer { padding-block: 28px; font-size: 11px; color: var(--flow-muted); }
 .flow-footer > span:last-child { color: var(--flow-text); }
 .flow-skip {
@@ -140,13 +137,12 @@
 @media (min-width: 1800px) { .flow-main { padding-block: 110px 150px; } }
 @media (max-width: 700px) {
   .flow-header { padding-block: 28px; }
-  .flow-header-note { display: none; }
   .flow-main { padding: 64px 24px 100px; }
   .flow-main h1 { font-size: clamp(42px, 8.2vw, 58px); line-height: 1.12; letter-spacing: -.035em; }
   .flow-main > p { font-size: 14px; max-width: 31ch; margin-top: 24px; }
   .flow-copy-break { display: none; }
   .flow-enter { margin-top: 30px; }
-  .flow-art { width: 230%; left: -65%; height: 460px; bottom: -150px; }
+  .flow-art { width: 180%; left: -40%; }
   .flow-footer { font-size: 10px; padding-block: 24px; }
 }
 @media (max-width: 360px) {
@@ -155,5 +151,21 @@
   .flow-brand img { width: 94px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flow-home * { animation: none !important; transition: none !important; }
+  .flow-home *, .flow-home *::before, .flow-home *::after { animation: none !important; transition: none !important; }
+}
+.flow-header { justify-content: center; padding-block: 40px; }
+.flow-brand { gap: 14px; }
+.flow-brand > span { border: 0; padding: 0; font-size: 30px; }
+.flow-brand img { width: 127px; }
+.flow-enter { position: relative; overflow: hidden; }
+.flow-enter::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 25%, rgba(199,161,95,.35) 48%, transparent 70%);
+  transform: translateX(-120%); transition: transform .6s cubic-bezier(.23,1,.32,1);
+}
+.flow-enter:hover::before { transform: translateX(120%); }
+@media (max-width: 700px) {
+  .flow-header { padding-block: 30px; }
+  .flow-brand > span { font-size: 27px; }
+  .flow-brand img { width: 116px; }
 }
