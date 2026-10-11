@@ -6,6 +6,7 @@ import { AcompanhamentoService, intervaloMensal, intervaloPersonalizado, paraDat
 describe('AcompanhamentoService', () => {
   const cliente = { id: 'c1', nomeFantasia: 'Cliente', logoUrl: null };
   const prisma = {
+    $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     cliente: { findUnique: jest.fn() },
     publicacao: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
   };
@@ -118,6 +119,68 @@ describe('AcompanhamentoService', () => {
     prisma.publicacao.update.mockRejectedValue(missing);
     await expect(service.remover('p1')).rejects.toThrow(NotFoundException);
     await expect(service.atualizar('p1', {})).rejects.toThrow(NotFoundException);
+  });
+
+  describe('importar', () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    beforeEach(() => {
+      prisma.$transaction.mockImplementation((ops: unknown[]) => Promise.all(ops));
+      prisma.publicacao.create.mockResolvedValue({ id: 'nova' });
+      prisma.publicacao.update.mockResolvedValue({ id });
+    });
+
+    it('cria linhas sem ID e atualiza as que têm ID do mesmo cliente, numa transação', async () => {
+      prisma.publicacao.findMany.mockResolvedValue([{ id }]);
+      const result = await service.importar('c1', { publicacoes: [
+        { dataPublicacao: '2025-02-01', tipo: TipoPublicacao.REELS, curtidas: 10 },
+        { id, dataPublicacao: '2025-02-02', tipo: TipoPublicacao.POST, visualizacoes: 5 },
+      ] });
+      expect(result).toEqual({ criadas: 1, atualizadas: 1 });
+      expect(prisma.publicacao.findMany).toHaveBeenCalledWith({ where: { id: { in: [id] }, clienteId: 'c1' }, select: { id: true } });
+      expect(prisma.publicacao.create).toHaveBeenCalledWith({
+        data: { dataPublicacao: new Date('2025-02-01T12:00:00-03:00'), tipo: TipoPublicacao.REELS, curtidas: 10, clienteId: 'c1', origemDado: OrigemDado.MANUAL },
+        select: { id: true },
+      });
+      expect(prisma.publicacao.update).toHaveBeenCalledWith({
+        where: { id }, data: { dataPublicacao: new Date('2025-02-02T12:00:00-03:00'), tipo: TipoPublicacao.POST, visualizacoes: 5 }, select: { id: true },
+      });
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('cria como nova a publicação com ID de outro cliente (ou excluída), sem reaproveitar o ID, e preserva a origem', async () => {
+      prisma.publicacao.findMany.mockResolvedValue([]);
+      const result = await service.importar('c1', { publicacoes: [
+        { id, dataPublicacao: '2025-02-02T15:00:00.000Z', tipo: TipoPublicacao.POST, origemDado: OrigemDado.REPORTEI },
+      ] });
+      expect(result).toEqual({ criadas: 1, atualizadas: 0 });
+      expect(prisma.publicacao.update).not.toHaveBeenCalled();
+      expect(prisma.publicacao.create).toHaveBeenCalledWith({
+        data: { dataPublicacao: new Date('2025-02-02T15:00:00.000Z'), tipo: TipoPublicacao.POST, clienteId: 'c1', origemDado: OrigemDado.REPORTEI },
+        select: { id: true },
+      });
+    });
+
+    it('ID repetido no arquivo: atualiza uma vez e cria as demais', async () => {
+      prisma.publicacao.findMany.mockResolvedValue([{ id }]);
+      const item = { id, dataPublicacao: '2025-02-02', tipo: TipoPublicacao.POST };
+      expect(await service.importar('c1', { publicacoes: [item, item] })).toEqual({ criadas: 1, atualizadas: 1 });
+    });
+
+    it('exporta todas as publicações do cliente, sem filtro de período', async () => {
+      prisma.publicacao.findMany.mockResolvedValue([publication('p1', '2024-05-01T15:00:00Z', { curtidas: 4 })]);
+      const result = await service.exportar('c1');
+      expect(prisma.publicacao.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { clienteId: 'c1' } }));
+      expect(result).toMatchObject({
+        formato: 'vivox-acompanhamento', versao: 1, cliente: { id: 'c1', nomeFantasia: 'Cliente' },
+        publicacoes: [{ id: 'p1', dataPublicacao: '2024-05-01T15:00:00.000Z', curtidas: 4 }],
+      });
+    });
+
+    it('recusa cliente inexistente', async () => {
+      prisma.cliente.findUnique.mockResolvedValue(null);
+      await expect(service.importar('x', { publicacoes: [{ dataPublicacao: '2025-02-02', tipo: TipoPublicacao.POST }] }))
+        .rejects.toThrow(NotFoundException);
+    });
   });
 });
 

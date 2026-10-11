@@ -3,6 +3,7 @@ import { OrigemDado, Prisma, TipoPublicacao } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePublicacaoDto } from './dto/create-publicacao.dto';
 import { UpdatePublicacaoDto } from './dto/update-publicacao.dto';
+import { ImportarPublicacoesDto } from './dto/importar-publicacoes.dto';
 
 const PUBLICACAO_SELECT = {
   id: true, dataPublicacao: true, tipo: true, assunto: true, link: true,
@@ -152,6 +153,51 @@ export class AcompanhamentoService {
       select: PUBLICACAO_SELECT,
     });
     return respostaPublicacao(publicacao);
+  }
+
+  // Backup completo: todas as publicações do cliente, de todos os períodos
+  async exportar(clienteId: string) {
+    const cliente = await this.cliente(clienteId);
+    const publicacoes = await this.prisma.publicacao.findMany({
+      where: { clienteId },
+      orderBy: [{ dataPublicacao: 'asc' }, { createdAt: 'asc' }],
+      select: PUBLICACAO_SELECT,
+    });
+    return {
+      formato: 'vivox-acompanhamento',
+      versao: 1,
+      exportadoEm: new Date().toISOString(),
+      cliente: { id: cliente.id, nomeFantasia: cliente.nomeFantasia },
+      publicacoes: publicacoes.map(respostaPublicacao),
+    };
+  }
+
+  // Tudo ou nada: se uma publicação falhar, nenhuma é gravada
+  async importar(clienteId: string, dto: ImportarPublicacoesDto) {
+    await this.cliente(clienteId);
+    const ids = [...new Set(dto.publicacoes.map((p) => p.id).filter((id): id is string => !!id))];
+    // Só atualiza publicações deste cliente; id de outro cliente ou já excluído vira publicação nova
+    const existentes = ids.length
+      ? await this.prisma.publicacao.findMany({ where: { id: { in: ids }, clienteId }, select: { id: true } })
+      : [];
+    const doCliente = new Set(existentes.map((p) => p.id));
+    const atualizados = new Set<string>();
+    let criadas = 0;
+    let atualizadas = 0;
+    await this.prisma.$transaction(dto.publicacoes.map(({ id, origemDado, ...dados }) => {
+      const data = { ...dados, dataPublicacao: paraDataPublicacao(dados.dataPublicacao) };
+      // O mesmo id repetido no arquivo: a primeira ocorrência atualiza, as demais viram novas
+      if (id && doCliente.has(id) && !atualizados.has(id)) {
+        atualizados.add(id);
+        atualizadas++;
+        return this.prisma.publicacao.update({ where: { id }, data, select: { id: true } });
+      }
+      criadas++;
+      return this.prisma.publicacao.create({
+        data: { ...data, clienteId, origemDado: origemDado ?? OrigemDado.MANUAL }, select: { id: true },
+      });
+    }));
+    return { criadas, atualizadas };
   }
 
   async atualizar(id: string, dto: UpdatePublicacaoDto) {

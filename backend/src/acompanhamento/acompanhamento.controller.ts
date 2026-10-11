@@ -9,6 +9,7 @@ import { AcompanhamentoService } from './acompanhamento.service';
 import { FiltroAcompanhamentoDto } from './dto/filtro-acompanhamento.dto';
 import { CreatePublicacaoDto } from './dto/create-publicacao.dto';
 import { UpdatePublicacaoDto } from './dto/update-publicacao.dto';
+import { ImportarPublicacoesDto } from './dto/importar-publicacoes.dto';
 
 @Controller('acompanhamento')
 @UseGuards(JwtAuthGuard)
@@ -60,6 +61,16 @@ export class AcompanhamentoController {
   @Post('clientes/:clienteId/publicacoes')
   criar(@Param('clienteId') clienteId: string, @Body() dto: CreatePublicacaoDto) {
     return this.acompanhamentoService.criar(clienteId, dto);
+  }
+
+  @Get('clientes/:clienteId/publicacoes/exportar')
+  exportar(@Param('clienteId') clienteId: string) {
+    return this.acompanhamentoService.exportar(clienteId);
+  }
+
+  @Post('clientes/:clienteId/publicacoes/importar')
+  importar(@Param('clienteId') clienteId: string, @Body() dto: ImportarPublicacoesDto) {
+    return this.acompanhamentoService.importar(clienteId, dto);
   }
 
   @Patch('publicacoes/:id')
