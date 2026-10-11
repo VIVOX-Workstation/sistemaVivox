@@ -15,9 +15,6 @@ import {
   Kanban, 
   LogOut,
   Settings,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
   Globe,
@@ -51,13 +48,6 @@ export function Layout() {
     location.pathname.startsWith('/gp');
 
   const [showIntro, setShowIntro] = useState(false);
-  const [isGpExpanded, setIsGpExpanded] = useState(() => location.pathname.startsWith('/gp'));
-
-  useEffect(() => {
-    if (location.pathname.startsWith('/gp')) {
-      setIsGpExpanded(true);
-    }
-  }, [location.pathname]);
 
   // Estado de recolhimento da barra lateral com persistência no localStorage
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -247,73 +237,6 @@ export function Layout() {
               </NavLink>
             )}
 
-            {/* Projetos e tarefas existentes */}
-            {podeAcessar('GP') && (
-              <div className="flex flex-col">
-                <button
-                  onClick={() => {
-                    if (isSidebarCollapsed) {
-                      toggleSidebar();
-                      setIsGpExpanded(true);
-                    } else {
-                      setIsGpExpanded(!isGpExpanded);
-                    }
-                  }}
-                  title={isSidebarCollapsed ? 'Projetos • Gestão de Projetos' : undefined}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                    isSidebarCollapsed ? 'justify-center' : ''
-                  } ${
-                    location.pathname.startsWith('/gp/') && !isSyncCanvas
-                      ? 'bg-[#24201A] text-[#C7A15F] border border-[#4A4032] shadow-xs'
-                      : 'text-[#B9AEA0] hover:bg-[#1C1A15] hover:text-[#F6F0E7] border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <Kanban className="w-4 h-4 text-[#C7A15F] shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Projetos</span>}
-                  </div>
-                  {!isSidebarCollapsed && (
-                    isGpExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-[#8F8271] shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-[#8F8271] shrink-0" />
-                    )
-                  )}
-                </button>
-
-                {/* Submenu dos projetos */}
-                {!isSidebarCollapsed && isGpExpanded && (
-                  <div className="flex flex-col gap-1 mt-1 pl-4 ml-3 border-l border-[#2B261F]">
-                    <NavLink
-                      to="/gp/minhas-tarefas"
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
-                          isActive
-                            ? 'text-[#C7A15F] bg-[#1C1A15]'
-                            : 'text-[#8F8271] hover:text-[#F6F0E7] hover:bg-[#1C1A15]'
-                        }`
-                      }
-                    >
-                      Minhas Tarefas
-                    </NavLink>
-                    <NavLink
-                      to="/gp/projetos"
-                      end
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
-                          isActive
-                            ? 'text-[#C7A15F] bg-[#1C1A15]'
-                            : 'text-[#8F8271] hover:text-[#F6F0E7] hover:bg-[#1C1A15]'
-                        }`
-                      }
-                    >
-                      Workspaces
-                    </NavLink>
-                  </div>
-                )}
-              </div>
-            )}
-            
             {podeAcessar('EDUCACIONAL') && (
               <NavLink
                 to="/educacional"
