@@ -28,8 +28,11 @@
 - Esta documentação cobre somente o login; regras globais do Kanban em `DESIGN.md` e `.impeccable/design.json` permanecem próprias daquela superfície.
 
 ## Controles compartilhados da home e login
-- `FlowNavigation` usa Radix Dropdown Menu em um controle compacto à direita, preservando a marca central; destinos reais: **Página inicial** (`/`) e **Acessar conta** (`/login`), com item atual marcado.
+- `FlowNavigation` usa Radix Dropdown Menu à direita, mantendo a marca central: acionador Grid2X2 fechado e X aberto; destinos **Página inicial** (`/`) e **Acessar conta** (`/login`), com item atual marcado.
 - Foco gerenciado; setas, Home/End e Enter operam o menu, Escape devolve foco ao acionador, clique fora fecha e colisões com o viewport são tratadas.
 - Inspiração visual: menus Kokonut UI encontrados no 21st.dev; código próprio, sem adaptação integral do componente de referência.
-- O CTA compartilhado usa `utils/flowButtonEffects.ts`: luz acompanha o cursor, deslocamento limitado a 3 px por eixo apenas com mouse, brilho no hover e seta dourada.
+- O CTA metálico compartilhado tem cantos de 19 px, gradiente direcional, sombras com offset e relevo; `utils/flowButtonEffects.ts` controla reflexo e deslocamento do cursor de até 3 px por eixo, apenas com mouse, com brilho no hover, pressão e seta clara em bloco escuro de cantos de 12 px.
 - Foco, estado desabilitado e movimento reduzido são preservados; controles restritos à home/login, sem suporte, Google, administrador ou módulos, sem alterar o painel interno.
+- Menu em painel quente translúcido com blur local de 18 px, itens de altura mínima de 90 px e ícones em blocos de 46 px (40 px até 360 px).
+- Referência visual do CTA: [Liquid Metal Button no 21st.dev](https://preview.21st.dev/@johuniq/components/liquid-metal-button); implementação CSS própria, sem shader ou componente liquid-metal de terceiros instalado.
+- QA informado desta iteração: quatro viewports e teclado aprovados; build, lint e detector aprovados.
