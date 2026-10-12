@@ -5,8 +5,8 @@ import { ArrowUpRight, House, LogIn, Grid2X2, X } from 'lucide-react';
 import './FlowNavigation.css';
 
 const destinations = [
-  { to: '/', label: 'Página inicial', detail: 'Conheça o VIVOX Flow', icon: House },
-  { to: '/login', label: 'Acessar conta', detail: 'Entre no seu espaço de trabalho', icon: LogIn },
+  { to: '/', label: 'Página inicial', detail: 'Visão e propósito', icon: House },
+  { to: '/login', label: 'Acessar conta', detail: 'Ambiente de trabalho', icon: LogIn },
 ];
 
 export default function FlowNavigation() {

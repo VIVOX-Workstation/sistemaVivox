@@ -9,7 +9,7 @@
 
 ## Composição e identidade
 - Marca **VIVOX Flow** centralizada no topo, com o logo original `/brand/vivox-logo.svg` antes de Flow.
-- Formulário centralizado, sem card envolvente, limitado a 400 px; título **Bem-vindo de volta.** e texto breve.
+- Formulário centralizado, sem card envolvente, limitado a 400 px; título **Acesso corporativo.** e texto breve.
 - Campos de 56 px, borda acessível (`#756856`), cantos de 12 px e fundo (`#181612`).
 - Compartilha Archivo/Manrope locais, preto quente (`#11100e`), creme (`#f6f0e7`) e dourado (`#c7a15f`) com a home.
 - Botão **Entrar** ocupa a largura do formulário; marca e link **Voltar à página inicial** levam a `/`.
@@ -36,3 +36,5 @@
 - Menu em painel quente translúcido com blur local de 18 px, itens de altura mínima de 90 px e ícones em blocos de 46 px (40 px até 360 px).
 - Referência visual do CTA: [Liquid Metal Button no 21st.dev](https://preview.21st.dev/@johuniq/components/liquid-metal-button); implementação CSS própria, sem shader ou componente liquid-metal de terceiros instalado.
 - QA informado desta iteração: quatro viewports e teclado aprovados; build, lint e detector aprovados.
+
+- **Copy de acesso:** **Informe suas credenciais para acessar o VIVOX Flow.**; rótulos funcionais E-mail, Senha e Entrar preservados.

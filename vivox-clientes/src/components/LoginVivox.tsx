@@ -22,7 +22,7 @@ export default function LoginVivox({ onSubmit, loading = false, error = null, de
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Entrar — VIVOX Flow';
+    document.title = 'Acesso corporativo — VIVOX Flow';
     return () => { document.title = previousTitle; };
   }, []);
 
@@ -43,8 +43,8 @@ export default function LoginVivox({ onSubmit, loading = false, error = null, de
       </header>
       <main id="login-main" className="flow-main flow-login-main">
         <div className="flow-login-content">
-          <h1>Bem-vindo de volta.</h1>
-          <p className="flow-login-intro">Entre para continuar seu trabalho.</p>
+          <h1>Acesso corporativo.</h1>
+          <p className="flow-login-intro">Informe suas credenciais para acessar o VIVOX Flow.</p>
           <form onSubmit={handleSubmit} className="flow-login-form" aria-busy={loading}>
             <div className="flow-login-field">
               <label htmlFor="email">E-mail</label>
@@ -84,7 +84,7 @@ export default function LoginVivox({ onSubmit, loading = false, error = null, de
         </div>
       </main>
       <FlowingPaths />
-      <footer className="flow-footer"><span>Ideias em movimento.</span><span>VIVOX Flow</span></footer>
+      <footer className="flow-footer"><span>Uma visão comum.</span><span>VIVOX Flow</span></footer>
     </div>
   );
 }

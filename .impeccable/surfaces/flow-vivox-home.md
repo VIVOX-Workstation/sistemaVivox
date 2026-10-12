@@ -11,7 +11,7 @@
 - Nome **VIVOX Flow**, centralizado no topo, com logo VIVOX original antes do texto Flow.
 - Preservar `vivox-clientes/public/brand/vivox-logo.svg`, exibido por `/brand/vivox-logo.svg`.
 - Fundo preto quente (`#11100e`), texto creme (`#f6f0e7`) e destaque dourado (`#c7a15f`).
-- Título **O próximo passo começa no Flow.** em Archivo local, escala principal de 48–96 px; corpo breve em Manrope local.
+- Título **Visão integrada. Execução alinhada.** em Archivo local, escala principal de 48–96 px; corpo breve em Manrope local.
 - Fontes servidas por `/fonts/archivo.woff2` e `/fonts/manrope.woff2`; rodapé discreto.
 - CTA metálico dourado com cantos de 19 px, gradiente direcional e reflexo conforme o cursor; sombras externas e internas criam profundidade e relevo, com seta clara em bloco escuro de cantos de 12 px.
 - `FlowingPaths.tsx` adapta Background Paths do Kokonut UI, publicado no 21st.dev, com 18 curvas SVG douradas e Motion.
@@ -37,3 +37,5 @@
 - Menu em painel quente translúcido com blur local de 18 px, itens de altura mínima de 90 px e ícones em blocos de 46 px (40 px até 360 px).
 - Referência visual do CTA: [Liquid Metal Button no 21st.dev](https://preview.21st.dev/@johuniq/components/liquid-metal-button); implementação CSS própria, sem shader ou componente liquid-metal de terceiros instalado.
 - QA informado desta iteração: quatro viewports e teclado aprovados; build, lint e detector aprovados.
+
+- **Tom da copy:** conceitual e corporativo, com foco em integração, prioridades e alinhamento. Rodapé: **Uma visão comum.**
