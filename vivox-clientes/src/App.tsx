@@ -18,6 +18,7 @@ import { EducacionalCurso } from './pages/EducacionalCurso';
 import { EducacionalAdmin } from './pages/EducacionalAdmin';
 import { EducacionalCursoEditor } from './pages/EducacionalCursoEditor';
 import Login from './pages/Login';
+import FlowHome from './pages/FlowHome';
 import { PortalCliente } from './pages/PortalCliente';
 import { PortalAcompanhamento } from './pages/PortalAcompanhamento';
 import { PortalCronogramas } from './pages/PortalCronogramas';
@@ -28,7 +29,8 @@ import { MODULOS, type ModuloId } from './config/modulos';
 
 function InternalRoute() {
   const { isAuthenticated, user } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  const location = useLocation();
+  if (!isAuthenticated) return location.pathname === '/' ? <FlowHome /> : <Navigate to="/login" replace />;
   if (user?.role === 'CLIENTE') return <Navigate to="/portal" replace />;
   return <Outlet />;
 }
