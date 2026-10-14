@@ -41,9 +41,15 @@ export default function Login() {
     }
   };
 
+  // "Esqueci minha senha": envia o pedido (e-mail + mensagem) para o suporte.
+  const handleForgotPassword = async (data: { email: string; mensagem: string }) => {
+    await api.post('/auth/esqueci-senha', { email: data.email, mensagem: data.mensagem });
+  };
+
   return (
     <LoginVivox 
       onSubmit={handleLogin}
+      onForgotPassword={handleForgotPassword}
       loading={loading}
       error={error}
     />
