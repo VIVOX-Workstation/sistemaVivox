@@ -48,6 +48,7 @@
   <button class="btn sm" id="newBoardBtn" type="button" hidden></button>
   <button class="btn primary" id="newBtn" type="button"></button>
   <button class="icon-btn bell" id="bellBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Notificações" title="Notificações"></button>
+  <button class="icon-btn" id="settingsBtn" type="button" aria-haspopup="dialog" aria-label="Configurações da conta" title="Configurações da conta"></button>
   <button class="pfbtn" id="viewerBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Meu perfil" title="Meu perfil"></button>
 </header>
 
@@ -111,7 +112,7 @@
     <div class="bhead"><p class="kick">Criar tarefas</p><h2 id="nTitle">Adicione várias tarefas de uma vez</h2><p class="sub">Cada linha vira uma tarefa. Só o tema é obrigatório. Enter pula para o próximo campo.</p></div>
     <form class="nform" id="nform" autocomplete="off">
       <div class="nscroll">
-        <div class="nhead" aria-hidden="true"><span>Tema</span><span>Descrição</span><span>Cliente</span><span>Fonte</span><span>Prazo de entrega</span><span></span></div>
+        <div class="nhead" aria-hidden="true"><span>Tema</span><span>Descrição</span><span>Cliente</span><span>Fonte</span><span>Prazo de entrega</span><span>Responsável</span><span></span></div>
         <div id="nrows"></div>
       </div>
       <div class="nbar">
@@ -122,6 +123,31 @@
         <button class="btn primary" id="nGo" type="submit">Criar tarefas</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="ov" id="sov" hidden>
+  <div class="dlg bdlg sdlg" id="sdlg" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+    <button class="icon-btn close" id="sClose" type="button" aria-label="Fechar"></button>
+    <div class="bhead"><p class="kick">Configurações</p><h2 id="sTitle">Minha conta</h2><p class="sub">Seu perfil, suas preferências e o que você pode fazer no painel.</p></div>
+    <div class="sbody" id="sbody"></div>
+  </div>
+</div>
+<div class="ov" id="dov" hidden>
+  <div class="dlg ddlg" id="ddlg" role="alertdialog" aria-modal="true" aria-labelledby="dTitle" aria-describedby="dDesc">
+    <button class="icon-btn close" id="dClose" type="button" aria-label="Fechar"></button>
+    <div class="bhead"><p class="kick">Excluir quadro</p><h2 id="dTitle"></h2><p class="sub" id="dDesc"></p></div>
+    <form class="dbody" id="dform" autocomplete="off">
+      <label for="dInput" id="dLab"></label>
+      <input id="dInput" type="text" maxlength="60" spellcheck="false" autocapitalize="off">
+      <div class="grp2"><button class="btn danger" id="dGo" type="submit" disabled>Excluir quadro</button><button class="btn" id="dCancel" type="button">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+<div class="ov" id="tov" hidden>
+  <div class="dlg bdlg tdlg" id="tdlg" role="dialog" aria-modal="true" aria-labelledby="tTitle">
+    <button class="icon-btn close" id="tClose" type="button" aria-label="Fechar"></button>
+    <div class="bhead"><p class="kick">Configurações</p><h2 id="tTitle">Colaboradores</h2><p class="sub" id="tSub"></p></div>
+    <div class="tbody" id="tbody"></div>
   </div>
 </div>
 <div class="lbx" id="lbx" role="dialog" aria-modal="true" aria-label="Prévia dos anexos" hidden>

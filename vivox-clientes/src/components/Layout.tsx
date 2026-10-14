@@ -113,10 +113,12 @@ export function Layout() {
   const isLegacySyncView = searchParams.has('clienteId') || searchParams.has('servicoId') ||
     searchParams.get('visao') === 'lista' || searchParams.get('visao') === 'prazos';
   const isSyncEntry = /^\/gp(?:\/tarefa\/[^/]+)?\/?$/.test(location.pathname);
-  const isSyncCanvas = /^\/gp\/kanban\/?$/.test(location.pathname) || (isSyncEntry && !isLegacySyncView);
+  const isVvoxSyncRoute = /^\/vvoxsync(?:\/|$)/.test(location.pathname);
+  const isSyncCanvas = isVvoxSyncRoute || /^\/gp\/kanban\/?$/.test(location.pathname) || (isSyncEntry && !isLegacySyncView);
   const isFullBleed =
     location.pathname === '/' ||
     location.pathname.startsWith('/gp') ||
+    location.pathname.startsWith('/vvoxsync') ||
     location.pathname.startsWith('/cliente') || 
     location.pathname.startsWith('/analytics') ||
     location.pathname.startsWith('/acompanhamento') ||
@@ -128,6 +130,7 @@ export function Layout() {
     location.pathname === '/' ||
     location.pathname.startsWith('/cliente') ||
     location.pathname.startsWith('/analytics') ||
+    location.pathname.startsWith('/vvoxsync') ||
     location.pathname.startsWith('/gp');
 
   const [showIntro, setShowIntro] = useState(false);
@@ -195,7 +198,7 @@ export function Layout() {
               <SideLink to="/acompanhamento" icon={ClipboardList} label="Acompanhamento" collapsed={isSidebarCollapsed} />
             )}
             {podeAcessar('GP') && (
-              <SideLink to="/gp" end icon={Kanban} label="VVOX Sync" collapsed={isSidebarCollapsed} />
+              <SideLink to="/vvoxsync" icon={Kanban} label="VVOX Sync" collapsed={isSidebarCollapsed} />
             )}
             {podeAcessar('EDUCACIONAL') && (
               <SideLink to="/educacional" icon={GraduationCap} label="Vivox Educacional" collapsed={isSidebarCollapsed} />
