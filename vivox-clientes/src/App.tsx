@@ -171,6 +171,9 @@ function App() {
               {/* GP */}
               <Route element={<ModuloRoute modulo="GP" />}>
                 <Route path="gp" element={<VvoxSync />} />
+                <Route path="vvoxsync" element={<KanbanPage />} />
+                <Route path="vvoxsync/:quadro" element={<KanbanPage />} />
+                <Route path="vvoxsync/:quadro/tarefa/:tarefaId" element={<KanbanPage />} />
                 <Route path="gp/kanban" element={<KanbanPage />} />
                 {/* A antiga lista de projetos saiu: links antigos caem no Kanban */}
                 <Route path="gp/projetos" element={<Navigate to="/gp" replace />} />

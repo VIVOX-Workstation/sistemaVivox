@@ -19,9 +19,10 @@ function KanbanFrame({ user, token, ...target }: KanbanLocation & { user: Kanban
 
 export function KanbanPage() {
   const { user } = useAuth();
-  const { workspaceId, tarefaId } = useParams<{ workspaceId?: string; tarefaId?: string }>();
+  const { workspaceId, tarefaId: paramTarefaId, quadro: boardSlug } = useParams<{ workspaceId?: string; tarefaId?: string; quadro?: string }>();
   const [params] = useSearchParams();
   const boardId = params.get('quadro') || undefined;
+  const tarefaId = paramTarefaId || params.get('tarefa') || undefined;
   const token = localStorage.getItem('@Vivox:token');
   if (!user || !token) return null;
 
@@ -31,6 +32,7 @@ export function KanbanPage() {
     token={token}
     workspaceId={workspaceId}
     boardId={boardId === 'diario' ? 'vivox-sync-diario' : boardId}
+    boardSlug={boardSlug ? boardSlug.toLowerCase() : undefined}
     taskId={tarefaId}
   />;
 }

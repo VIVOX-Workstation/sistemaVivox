@@ -9,6 +9,8 @@ export interface KanbanUser {
 export interface KanbanLocation {
   workspaceId?: string;
   boardId?: string;
+  /** Nome do quadro na URL, sem acento nem espaço (ex.: operacaodiaria). */
+  boardSlug?: string;
   taskId?: string;
 }
 
@@ -23,4 +25,5 @@ export type KanbanMessage =
   | { type: 'vvox-sync:ready' }
   | { type: 'vvox-sync:exit' }
   | { type: 'vvox-sync:unauthorized' }
-  | { type: 'vvox-sync:navigate'; boardId: string; taskId?: string };
+  | { type: 'vvox-sync:navigate'; boardId: string; slug?: string; taskId?: string }
+  | { type: 'vvox-sync:goto'; path: string };

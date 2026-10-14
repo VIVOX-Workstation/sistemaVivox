@@ -9,14 +9,14 @@ export function useKanbanFrame(user: KanbanUser, token: string, target: KanbanLo
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const location = useLocation();
-  const { workspaceId, boardId, taskId } = target;
+  const { workspaceId, boardId, boardSlug, taskId } = target;
   const origin = window.location.origin;
 
   const sendSession = useCallback(() => {
     frame.current?.contentWindow?.postMessage(
-      createKanbanSession(user, token, { workspaceId, boardId, taskId }), origin,
+      createKanbanSession(user, token, { workspaceId, boardId, boardSlug, taskId }), origin,
     );
-  }, [user, token, workspaceId, boardId, taskId, origin]);
+  }, [user, token, workspaceId, boardId, boardSlug, taskId, origin]);
 
   useEffect(() => {
     function receive(event: MessageEvent<unknown>) {
@@ -26,12 +26,19 @@ export function useKanbanFrame(user: KanbanUser, token: string, target: KanbanLo
       if (message.type === 'vvox-sync:ready') { sendSession(); return; }
       if (message.type === 'vvox-sync:unauthorized') { signOut(); navigate('/login', { replace: true }); return; }
       if (message.type === 'vvox-sync:exit') { navigate('/'); return; }
-      const base = workspaceId ? '/gp/workspace/' + encodeURIComponent(workspaceId) : '/gp';
-      const pathname = base + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '');
-      const query = new URLSearchParams(location.search);
-      query.set('quadro', message.boardId);
-      query.delete('visao');
-      const next = pathname + '?' + query.toString();
+      if (message.type === 'vvox-sync:goto') { navigate(message.path); return; }
+      // Endereço do Kanban: /vvoxsync/nome-do-quadro (e /tarefa/ID quando há uma tarefa aberta).
+      // Dentro de um workspace antigo continua /gp/workspace/ID com o quadro na query.
+      let next: string;
+      if (workspaceId) {
+        const query = new URLSearchParams(location.search);
+        query.set('quadro', message.boardId);
+        query.delete('visao');
+        next = '/gp/workspace/' + encodeURIComponent(workspaceId) + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '') + '?' + query.toString();
+      } else {
+        const slug = message.slug || 'quadro';
+        next = '/vvoxsync/' + encodeURIComponent(slug) + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '');
+      }
       if (next !== location.pathname + location.search) navigate(next, { replace: true });
     }
     window.addEventListener('message', receive);

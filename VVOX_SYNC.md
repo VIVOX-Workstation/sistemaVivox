@@ -77,3 +77,10 @@ A atualização foi integrada sobre `57ca2b4` de `origin/main`, preservando o po
 A regra existente que restringe alterações de prazo ao administrador permanece. Reimportações Bitrix e movimentações em lote usam transições autorizadas e versionadas. Colunas personalizadas do GP legado são persistidas quando utilizadas, e seu modal salva campos e mudança de etapa separadamente, exibindo erros e recarregando a tarefa.
 
 Validação da integração: schema Prisma válido, builds de backend e frontend aprovados, lint sem erros e 103 testes em 13 suítes aprovados. Os lockfiles e a infraestrutura remotos foram preservados. A verificação visual documentada acima corresponde ao mesmo CSS e renderizadores do painel.
+
+## Endereço do Kanban e pessoas
+
+- O Kanban abre em `/vvoxsync` e cada quadro tem o seu endereço: `/vvoxsync/operacaodiaria`, `/vvoxsync/kanbandecampanhas`. O nome do quadro vira o endereço sem acento, espaço ou símbolo; se dois quadros tiverem o mesmo nome o segundo recebe `-2`. Tarefa aberta: `/vvoxsync/operacaodiaria/tarefa/ID`.
+- Endereços antigos continuam funcionando e são levados para o novo: `/gp`, `/gp/tarefa/ID` e `/gp/projetos`.
+- As pessoas, os e-mails e o acesso (ADMIN ou COLABORADOR) vêm das contas do Sistema VIVOX. No Kanban, o painel de colaboradores é somente leitura e leva para as Configurações do sistema.
+- Permissões do Kanban: o servidor continua mandando. A matriz por função (criar, mover, aprovar, quadros, dias de postagem, exportar) só restringe mais.
