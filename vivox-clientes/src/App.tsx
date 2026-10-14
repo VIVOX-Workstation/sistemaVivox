@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { MainDashboard } from './pages/MainDashboard';
 import { ClientList } from './pages/ClientList';
@@ -25,6 +25,12 @@ import { Acompanhamento } from './pages/Acompanhamento';
 import { PortalLogin } from './pages/PortalLogin';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MODULOS, type ModuloId } from './config/modulos';
+
+/** Link antigo de /gp/projetos/tarefa/:id: abre a mesma tarefa no Kanban. */
+function ProjetosTarefaRedirect() {
+  const { tarefaId } = useParams<{ tarefaId: string }>();
+  return <Navigate to={tarefaId ? `/gp/tarefa/${encodeURIComponent(tarefaId)}` : '/gp'} replace />;
+}
 
 function InternalRoute() {
   const { isAuthenticated, user } = useAuth();
@@ -166,8 +172,9 @@ function App() {
               <Route element={<ModuloRoute modulo="GP" />}>
                 <Route path="gp" element={<VvoxSync />} />
                 <Route path="gp/kanban" element={<KanbanPage />} />
-                <Route path="gp/projetos" element={<VivoxGP />} />
-                <Route path="gp/projetos/tarefa/:tarefaId" element={<VivoxGP />} />
+                {/* A antiga lista de projetos saiu: links antigos caem no Kanban */}
+                <Route path="gp/projetos" element={<Navigate to="/gp" replace />} />
+                <Route path="gp/projetos/tarefa/:tarefaId" element={<ProjetosTarefaRedirect />} />
                 <Route path="gp/tarefa/:tarefaId" element={<VvoxSync />} />
                 <Route path="gp/minhas-tarefas" element={<VivoxGP />} />
                 <Route path="gp/minhas-tarefas/tarefa/:tarefaId" element={<VivoxGP />} />

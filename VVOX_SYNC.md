@@ -40,7 +40,7 @@ A fonte visual desta versão é o pacote `kanban-vivox-pacote-codex.zip`, recebi
 
 O HTML e o JavaScript foram adaptados para sessão, dados e permissões reais; quatorze funções de renderização visual permanecem idênticas. `integration.css` acrescenta a correção de `[hidden]`, evita sobreposição no detalhe mobile e preserva a aparência do logo transformado em link. A folha `reference.css` da reconstrução anterior foi removida.
 
-A rota `/gp` usa o renderizador em iframe com host React. O logo retorna a `/gp/projetos`. A migração integral para componentes JSX/TypeScript não foi feita.
+A rota `/gp` usa o renderizador em iframe com host React. O logo retorna ao menu principal do sistema (`/`). A migração integral para componentes JSX/TypeScript não foi feita.
 
 ### Dados e fluxos
 
@@ -72,7 +72,7 @@ A implantação em produção usa o fluxo de deploy existente do repositório; o
 
 ## Integração com a versão atual do GitHub
 
-A atualização foi integrada sobre `57ca2b4` de `origin/main`, preservando o portal do cliente, permissões por módulo, callbacks de autenticação, páginas e melhorias existentes. `/gp` abre VVOX Sync; `/gp/projetos` mantém o hub de projetos; workspaces e Minhas Tarefas conservam suas rotas.
+A atualização foi integrada sobre `57ca2b4` de `origin/main`, preservando o portal do cliente, permissões por módulo, callbacks de autenticação, páginas e melhorias existentes. `/gp` abre VVOX Sync; `/gp/projetos` (hub de projetos) foi removido e redireciona para `/gp`; workspaces e Minhas Tarefas conservam suas rotas.
 
 A regra existente que restringe alterações de prazo ao administrador permanece. Reimportações Bitrix e movimentações em lote usam transições autorizadas e versionadas. Colunas personalizadas do GP legado são persistidas quando utilizadas, e seu modal salva campos e mudança de etapa separadamente, exibindo erros e recarregando a tarefa.
 

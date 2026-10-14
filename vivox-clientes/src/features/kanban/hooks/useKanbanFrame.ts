@@ -25,7 +25,7 @@ export function useKanbanFrame(user: KanbanUser, token: string, target: KanbanLo
       if (!message) return;
       if (message.type === 'vvox-sync:ready') { sendSession(); return; }
       if (message.type === 'vvox-sync:unauthorized') { signOut(); navigate('/login', { replace: true }); return; }
-      if (message.type === 'vvox-sync:exit') { navigate('/gp/projetos'); return; }
+      if (message.type === 'vvox-sync:exit') { navigate('/'); return; }
       const base = workspaceId ? '/gp/workspace/' + encodeURIComponent(workspaceId) : '/gp';
       const pathname = base + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '');
       const query = new URLSearchParams(location.search);
