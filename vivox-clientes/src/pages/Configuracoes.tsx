@@ -12,11 +12,14 @@ import {
   RefreshCw,
   AlertTriangle,
   SlidersHorizontal,
+  Palette,
+  PanelLeftClose,
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import { MODULOS, TODOS_MODULOS } from '../config/modulos';
 import { usersApi } from '../api/users';
+import { useSidebarPrefs } from '../utils/sidebarPrefs';
 import './planning-workspace.css';
 
 interface User {
@@ -29,12 +32,13 @@ interface User {
 }
 
 type Role = 'ADMIN' | 'COLABORADOR';
-type Secao = 'equipe' | 'novo' | 'conta';
+type Secao = 'equipe' | 'novo' | 'conta' | 'aparencia';
 
 const SECOES: { id: Secao; label: string; icon: React.ReactNode }[] = [
   { id: 'equipe', label: 'Equipe', icon: <Users className="w-4 h-4" /> },
   { id: 'novo', label: 'Novo usuário', icon: <UserPlus className="w-4 h-4" /> },
   { id: 'conta', label: 'Minha conta', icon: <UserCircle className="w-4 h-4" /> },
+  { id: 'aparencia', label: 'Aparência', icon: <Palette className="w-4 h-4" /> },
 ];
 
 const INPUT_CLASS = 'pw-glass-control w-full h-10 px-3 text-sm text-[#1E1A16] outline-none rounded-xl';
@@ -77,7 +81,45 @@ function ConfigSkeleton() {
   );
 }
 
+/* Configurações: mesma estrutura da tela de entrada, na estética clara (bege, branco e dourado) */
+const CFG_CSS = `
+.cfg-head{padding:4px 2px 2px;display:grid;gap:4px}
+.cfg-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;color:#1E1A16}
+.cfg-head p{margin:0;font-size:13px;color:#5E574C}
+.cfg-grid{display:grid;grid-template-columns:216px minmax(0,1fr);gap:24px;align-items:start}
+.cfg-nav{display:grid;gap:6px;position:sticky;top:0}
+.cfg-tab{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:14px;border:1px solid transparent;background:transparent;color:#5E574C;font:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer;transition:background .2s,color .2s,border-color .2s,box-shadow .2s}
+.cfg-tab svg{color:#8A6D3B;flex:none}
+.cfg-tab:hover{background:rgba(255,255,255,.75);color:#1E1A16;border-color:#E8DCC8}
+.cfg-tab.is-active{background:#fff;color:#1E1A16;border-color:#D9C29A;box-shadow:0 10px 26px -16px rgba(138,109,59,.55),inset 0 1px 0 #fff}
+.cfg-tab:focus-visible,.cfg-seg button:focus-visible{outline:2px solid #B8945A;outline-offset:2px}
+.cfg-pane{min-width:0;display:grid;gap:24px;align-content:start}
+.cfg-opts{display:grid;gap:12px}
+.cfg-opt{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 18px;border-radius:16px;border:1px solid #EADFCB;background:#FFFDF8}
+.cfg-opt-t{display:grid;gap:3px;min-width:0}
+.cfg-opt-t b{font-size:14px;color:#1E1A16}
+.cfg-opt-t small{font-size:12px;color:#6B6254;max-width:46ch}
+.cfg-seg{display:inline-flex;padding:4px;gap:4px;border-radius:12px;background:#F1EADC;border:1px solid #E8DCC8;flex:none}
+.cfg-seg button{height:34px;padding:0 14px;border:0;border-radius:9px;background:transparent;color:#5E574C;font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
+.cfg-seg button[aria-pressed="true"]{background:#fff;color:#1E1A16;box-shadow:0 2px 8px -3px rgba(60,45,20,.35)}
+.cfg-switch{position:relative;display:inline-flex;flex:none;cursor:pointer}
+.cfg-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.cfg-track{width:46px;height:26px;border-radius:999px;background:#E3D9C6;border:1px solid #D6C8AE;position:relative;transition:background .2s,border-color .2s}
+.cfg-track::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.cfg-switch input:checked+.cfg-track{background:#C7A15F;border-color:#B8945A}
+.cfg-switch input:checked+.cfg-track::after{transform:translateX(20px)}
+.cfg-switch input:focus-visible+.cfg-track{outline:2px solid #B8945A;outline-offset:2px}
+.cfg-prev{display:grid;grid-template-columns:96px minmax(0,1fr);height:150px;margin-top:18px;border-radius:16px;overflow:hidden;border:1px solid #E1D4BC}
+.cfg-prev-side{position:relative;display:grid;align-content:start;gap:8px;padding:12px;background:#080706;color:#8f8677;overflow:hidden}
+.cfg-prev-side.has-glow::before{content:"";position:absolute;left:50%;top:-60px;width:150px;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(204,182,145,.55),transparent 72%);filter:blur(10px)}
+.cfg-prev-side i{display:block;height:14px;border-radius:7px;background:rgba(204,182,145,.12);position:relative}
+.cfg-prev-side i.on{background:rgba(204,182,145,.28);box-shadow:0 0 14px -4px rgba(204,182,145,.7)}
+.cfg-prev-main{display:grid;place-items:center;background:#FAF7F2;color:#8A7F6A;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+@media (max-width:760px){.cfg-grid{grid-template-columns:minmax(0,1fr)}.cfg-nav{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;position:static}.cfg-opt{flex-direction:column;align-items:flex-start}}
+`;
+
 export function Configuracoes() {
+  const { prefs: sidebarPrefs, update: updateSidebar } = useSidebarPrefs();
   const { user: currentUser, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawSecao = searchParams.get('secao') || searchParams.get('tab');
@@ -280,31 +322,34 @@ export function Configuracoes() {
     <div className="planning-workspace w-full space-y-6">
       <div className="pw-lg-scene" aria-hidden="true" />
 
+      <style>{CFG_CSS}</style>
+
       {/* CABEÇALHO */}
-      <div className="pw-glass-panel p-6 space-y-1">
+      <header className="cfg-head">
         <span className="pw-section-label">Configurações</span>
-        <h1 className="text-2xl font-bold text-[#1E1A16] tracking-tight">Usuários e permissões</h1>
-        <p className="text-xs text-[#5E574C]">Gerencie a equipe, os papéis de acesso e os dados da sua conta.</p>
-      </div>
+        <h1>Configurações do sistema</h1>
+        <p>Equipe, permissões, a sua conta e a aparência do painel.</p>
+      </header>
 
-      {/* SEÇÕES */}
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seções de configurações">
-        {SECOES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-selected={secao === s.id}
-            onClick={() => setSecao(s.id)}
-            className={`pw-glass-tab rounded-xl px-4 py-2 text-xs font-semibold text-[#1E1A16] flex items-center gap-2 cursor-pointer ${
-              secao === s.id ? 'is-active' : ''
-            }`}
-          >
-            {s.icon} {s.label}
-          </button>
-        ))}
-      </div>
+      <div className="cfg-grid">
+        {/* SEÇÕES (menu lateral claro) */}
+        <nav className="cfg-nav" role="tablist" aria-label="Seções de configurações">
+          {SECOES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={secao === s.id}
+              onClick={() => setSecao(s.id)}
+              className={`cfg-tab ${secao === s.id ? 'is-active' : ''}`}
+            >
+              {s.icon}
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </nav>
 
+        <div className="cfg-pane">
       {/* EQUIPE */}
       {secao === 'equipe' && (
         <section className="pw-glass-panel p-6">
@@ -516,6 +561,73 @@ export function Configuracoes() {
           )}
         </section>
       )}
+
+      {/* APARÊNCIA */}
+      {secao === 'aparencia' && (
+        <section className="pw-glass-panel p-6 max-w-2xl">
+          <SectionHeader
+            title="Aparência"
+            subtitle="Como a barra lateral aparece para você. Fica salvo neste navegador."
+          />
+
+          <div className="cfg-opts">
+            <div className="cfg-opt">
+              <div className="cfg-opt-t">
+                <b>Barra lateral</b>
+                <small>Aberta mostra o nome dos módulos. Recolhida deixa só os ícones.</small>
+              </div>
+              <div className="cfg-seg" role="group" aria-label="Barra lateral">
+                <button
+                  type="button"
+                  aria-pressed={!sidebarPrefs.collapsed}
+                  onClick={() => updateSidebar({ collapsed: false })}
+                >
+                  Aberta
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={sidebarPrefs.collapsed}
+                  onClick={() => updateSidebar({ collapsed: true })}
+                >
+                  Recolhida
+                </button>
+              </div>
+            </div>
+
+            <div className="cfg-opt">
+              <div className="cfg-opt-t">
+                <b>Luz dourada do menu</b>
+                <small>Uma luz suave que pulsa no topo da barra lateral. Desligue se preferir o menu fixo.</small>
+              </div>
+              <label className="cfg-switch">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={sidebarPrefs.glow}
+                  onChange={(e) => updateSidebar({ glow: e.target.checked })}
+                />
+                <span className="cfg-track" aria-hidden="true" />
+                <span className="sr-only">Luz dourada do menu</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="cfg-prev" aria-hidden="true">
+            <div className={`cfg-prev-side ${sidebarPrefs.glow ? 'has-glow' : ''}`}>
+              <PanelLeftClose className="w-4 h-4" />
+              <i className="on" />
+              <i />
+              <i />
+            </div>
+            <div className="cfg-prev-main">
+              <span>Prévia</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+        </div>
+      </div>
 
       {/* TOAST */}
       {toast && (
