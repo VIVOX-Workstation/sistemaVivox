@@ -16,8 +16,8 @@
 
 Resumo: das 24 telas do protótipo, **19 são troca de visual sobre dados que já
 existem**. As diferenças estão concentradas no Dashboard, Hospedagens, Analytics
-do cliente e Portal. Há **3 defeitos** que valem corrigir antes do redesign
-(D1 login, D2 GA4, D3 senha).
+do cliente e Portal. Há **2 defeitos** que valem corrigir antes do redesign
+(D1 esqueci a senha, D3 senha gravada sem criptografia).
 
 ---
 
@@ -88,7 +88,7 @@ do cliente e Portal. Há **3 defeitos** que valem corrigir antes do redesign
 | Nome fantasia, razão social, CNPJ/CPF, segmento, e-mail, telefone | Existe | `CreateClienteDto` |
 | Status, início do contrato | Existe | |
 | Responsável interno | Ajustar | Existe no DTO (`responsavelId`), mas o formulário atual não pede |
-| GA4 | **Defeito D2** | Não está no DTO; salvar por `PATCH /analytics/google/:id` |
+| GA4 | Existe | `ga4PropertyId` no `CreateClienteDto` |
 | Search Console, OpenPanel | Existe | `gscSiteUrl`, `openpanelProjectId` |
 | Acessos e observações | Existe | `loginsSenhas`, `observacoes` |
 | Depois de salvar vai para o perfil | Ajustar | Hoje volta para `/` |
@@ -100,7 +100,7 @@ do cliente e Portal. Há **3 defeitos** que valem corrigir antes do redesign
 | Logo e capa | Existe | `upload-logo`, `upload-banner` ou URL |
 | Status editável | Existe | `PATCH /clientes/:id` |
 | Botão Analytics, Acesso ao portal, Editar cadastro, Criar chamado | Existe | |
-| Editar cadastro: campo GA4 | **Defeito D2** | Descartado pelo backend |
+| Editar cadastro: campo GA4 | Existe | Salvo por `PATCH /clientes/:id` |
 | Indicadores: serviços, hospedagens, tarefas, chamados | Existe | `OverviewTab` |
 | Próximas entregas | Existe | Tarefas do cliente (`GET /tarefas`) |
 | Contatos | Existe | `Cliente.contatos` (JSON) |
@@ -262,7 +262,7 @@ Fora deste redesign por decisão de 2026-10-16. Regras em `DESIGN.md` e `VVOX_SY
 
 ## O que fazer primeiro (sugestão)
 
-1. Corrigir D3 (senha), D1 (esqueci a senha) e D2 (GA4): são pequenos e afetam o uso hoje.
+1. Corrigir D3 (senha) e D1 (esqueci a senha): são pequenos e afetam o uso hoje. Em andamento na branch `fix/senha-esqueci-ga4`.
 2. Ajustar o protótipo nos itens **Ajustar** desta lista, para o desenho bater com o dado real.
 3. Decidir os itens **Falta backend** (meta de entregas, conversões, vencimento de SSL, progresso no portal): cada um vira tarefa de backend antes do front.
 4. Migrar o visual tela a tela, começando por Dashboard, Clientes e Perfil.

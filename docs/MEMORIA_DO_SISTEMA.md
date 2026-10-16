@@ -192,7 +192,7 @@ Migrações: `backend/prisma/migrations/` (31 até hoje). Sempre gere migration
 | # | Onde | O que acontece | Correção sugerida |
 |---|---|---|---|
 | D1 | `Login.tsx` → `POST /auth/esqueci-senha` | A rota não existe no `AuthController`. O pedido de nova senha falha (404) | Criar a rota (gravar pedido/notificar) ou trocar a tela por instrução de contato |
-| D2 | Perfil › Editar cadastro → `PATCH /clientes/:id` com `ga4PropertyId` | `CreateClienteDto` não tem `ga4PropertyId`; o campo é descartado e o GA4 não é salvo | Usar `PATCH /analytics/google/:id` (já existe) ou incluir o campo no DTO |
+| D2 | Perfil › Editar cadastro → `PATCH /clientes/:id` com `ga4PropertyId` | **Descartado em 2026-10-16: não é defeito.** O campo está no `CreateClienteDto` e é salvo. Ganhou teste de regressão na branch `fix/senha-esqueci-ga4` | — |
 | D3 | Configurações › Redefinir senha e Minha conta → `PATCH /users/:id` com `senha` | `UsersService.update` grava a senha **sem bcrypt**; o login seguinte falha porque `bcrypt.compare` não reconhece | Criptografar no `update` (ou rota própria de senha) e nunca devolver `senha` na resposta |
 | D4 | `POST /users` | Devolve o usuário criado com o hash da senha | `select`/`omit` de `senha` |
 | D5 | `GET /clientes/:id` | Devolve `metaAccessToken` e `loginsSenhas` para qualquer interno com leitura | Omitir o token; decidir quem vê `loginsSenhas` |
@@ -282,4 +282,4 @@ antes de editar.
 Uma linha por PR, mais recente no topo. Formato:
 `AAAA-MM-DD · branch/PR · o que mudou para quem usa · arquivos ou módulos principais · pendências`.
 
-- 2026-10-16 · `docs/memoria-e-design-system` · Criados `AGENTS.md`, `CLAUDE.md`, `docs/MEMORIA_DO_SISTEMA.md`, `docs/DESIGN_SYSTEM.md` e `docs/CRUZAMENTO_TELAS_DADOS.md`; `docs/CONTEXT.md` e `docs/ARCHITECTURE.md` marcados como desatualizados; agent `frontend-ui` aponta para os novos docs · só documentação · defeitos D1–D6 abertos, sem correção ainda.
+- 2026-10-16 · `docs/memoria-e-design-system` · Criados `AGENTS.md`, `CLAUDE.md`, `docs/MEMORIA_DO_SISTEMA.md`, `docs/DESIGN_SYSTEM.md` e `docs/CRUZAMENTO_TELAS_DADOS.md`; `docs/CONTEXT.md` e `docs/ARCHITECTURE.md` marcados como desatualizados; agent `frontend-ui` aponta para os novos docs · só documentação · defeitos D1 e D3–D6 abertos (D1 e D3 em correção na branch `fix/senha-esqueci-ga4`); D2 descartado após revisão.
