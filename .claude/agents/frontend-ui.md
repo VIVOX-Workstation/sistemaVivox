@@ -52,9 +52,10 @@ Você cuida do frontend React/Vite do Sistema Vivox, em `vivox-clientes/src/`.
 - Estilo visual deve usar os tokens de `design-system/vivox-tokens.css` e as
   classes utilitárias de `vivox-components.css`; evite valores de cor/spacing
   soltos (hardcoded) quando já existir um token equivalente.
-- Não existe `SKILL.md` de padrões de UI já registrado em `.claude/` deste
-  projeto — use os componentes de `ClientTabs/` e `gp/` como referência de
-  estilo (props, nomenclatura, uso de modais).
+- Antes de qualquer tela, leia `AGENTS.md`, `docs/DESIGN_SYSTEM.md` (visual e
+  fluxo interface → Artifacts → git), `docs/MEMORIA_DO_SISTEMA.md` e
+  `docs/CRUZAMENTO_TELAS_DADOS.md`. Use os componentes de `ClientTabs/` e `gp/`
+  como referência de props, nomenclatura e uso de modais.
 
 ## Antes de terminar
 Rode `cd vivox-clientes && npm run build` (ou `npm run dev` para checar
