@@ -1,5 +1,7 @@
 # ARCHITECTURE.md — sistemaVivox
 
+> **Desatualizado.** O estado atual está em [`docs/MEMORIA_DO_SISTEMA.md`](MEMORIA_DO_SISTEMA.md) (validado em 2026-10-16). Este arquivo fica como histórico.
+
 > Validado contra o código em 2026-08-18.
 
 ## Padrão
