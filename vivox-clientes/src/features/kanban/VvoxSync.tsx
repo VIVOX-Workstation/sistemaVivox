@@ -9,14 +9,14 @@ export function VvoxSync() {
   const view = params.get('visao');
   const serviceView = workspaceId?.toLowerCase() === 'all' || params.has('clienteId') || params.has('servicoId');
   if (serviceView || view === 'lista' || view === 'prazos') return <VivoxGP />;
-  // Endereço novo do Kanban: /vvoxsync/nome-do-quadro. Links antigos de /gp chegam aqui e são levados para ele.
+  // Endereço do Kanban: /demandasgerais/nome-do-quadro. Links antigos de /gp chegam aqui e são levados para ele.
   if (!workspaceId && /^\/gp\/?$|^\/gp\/tarefa\//.test(location.pathname)) {
     const query = new URLSearchParams();
     const quadro = params.get('quadro');
     if (quadro) query.set('quadro', quadro === 'diario' ? 'vivox-sync-diario' : quadro);
     if (tarefaId) query.set('tarefa', tarefaId);
     const qs = query.toString();
-    return <Navigate to={'/vvoxsync' + (qs ? '?' + qs : '')} replace />;
+    return <Navigate to={'/demandasgerais' + (qs ? '?' + qs : '')} replace />;
   }
   return <KanbanPage />;
 }

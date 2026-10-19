@@ -138,7 +138,7 @@ Rotas reais do front e o que cada uma consome. O detalhe campo a campo está em
 
 ## 4. Modelo de dados: onde cada coisa mora
 
-Schema: `backend/prisma/schema.prisma` (39 models). Os que mais aparecem na interface:
+Schema: `backend/prisma/schema.prisma` (40 models). Os que mais aparecem na interface:
 
 | Assunto | Model | Observação |
 |---|---|---|
@@ -161,7 +161,7 @@ Schema: `backend/prisma/schema.prisma` (39 models). Os que mais aparecem na inte
 | Segundo cérebro | `FonteContexto`, `DocumentoVetorial`, `InteligenciaMercado` | RAG por cliente; telas ligadas estão órfãs (ver 5.3) |
 | Quadro branco | `QuadroSala` | Excalidraw colaborativo |
 
-Migrações: `backend/prisma/migrations/` (32 até hoje). Sempre gere migration
+Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 (`prisma migrate dev`); produção usa `prisma migrate deploy` no boot.
 
 ---
@@ -370,5 +370,7 @@ Uma linha por PR, mais recente no topo. Formato:
 
 - 2026-10-19 · `feat/propostas-clientes` · Propostas por cliente para ADMIN e colaboradores com CLIENTES, edição completa por seções, modelo de ensino sem Kemax e visualização por link exclusivo revogável · `backend/src/propostas`, model/migration `Proposta`, `features/propostas`, lista/perfil de clientes · migration validada em banco isolado; aplicar via deploy no ambiente alvo. Builds e lint do front passaram (avisos anteriores); 18 testes novos e integração HTTP/PostgreSQL passaram; suíte geral: 214 passaram e 2 testes antigos de Planejamento falharam por providers ausentes. Implementação autorizada pelo usuário após referência e prévia nesta conversa; sem push/PR.
 
+- 2026-10-19 · `feat/demandas-gerais` · VVOX Sync passa a se chamar Demandas gerais no menu, no título e nas mensagens; endereço novo `/demandasgerais/(nome-do-quadro)`; `/vvoxsync/...` e `/gp` redirecionam para ele · `App.tsx`, `Layout.tsx`, `features/kanban/*`, `public/kanban/index.html`, mensagens em `backend/src/kanban` · nomes internos (código, `VVOX_SYNC.md`, mensagens `vvox-sync:*`) mantidos.
+- 2026-10-19 · `feat/kanban-equipe-backend` · VVOX Sync sincronizado com o Quadro de Demandas (Artifact): o administrador muda cargo, função (Proprietário(a)/Supervisor(a)/Responsável/Visualizador(a)) e a matriz de permissões no painel de colaboradores, e isso fica salvo na conta da pessoa; o servidor passa a aplicar a matriz (criar, editar, mover, excluir, aprovar, comentar, quadros e colunas, dias de postagem); foto e nome do perfil, logo do cliente e dias de postagem por cliente saem do navegador e vão para a API · migração `20261019120000_kanban_equipe` (User.cargo/funcaoKanban/fotoUrl + KanbanConfig), `backend/src/kanban/kanban-equipe.*`, `kanban.service.ts`, `public/kanban/js/app.js`, `backend.js` · adicionar e remover pessoas continua em Configurações; "Ver como" segue desligado no sistema.
 - 2026-10-16 · `style/layout-clean` · Estrutura base no visual clean: menu lateral branco (recolhe sozinho em tela estreita), atalhos Minhas tarefas e Chamados no menu, barra superior com o nome da tela e o botão "Assistente", assistente IA em painel lateral claro, sem marca d'água e sem a seção "Em breve"; fonte Geist e tokens `--vx-*`; opção "Luz dourada do menu" saiu de Configurações › Aparência · `components/Layout.tsx`, `components/FloatingAssistant.tsx`, `components/brand/VivoxLogo.tsx`, `components/ia/QuickPromptChips.tsx`, `pages/Configuracoes.tsx`, `design-system/vivox-tokens.css` (+ cópia na raiz), `index.html`, `index.css` · o conteúdo das telas continua no visual liquid glass até cada uma ser migrada; `glow` segue em `utils/sidebarPrefs.ts` sem uso.
 - 2026-10-16 · `docs/memoria-e-design-system` · Criados `AGENTS.md`, `CLAUDE.md`, `docs/MEMORIA_DO_SISTEMA.md`, `docs/DESIGN_SYSTEM.md` e `docs/CRUZAMENTO_TELAS_DADOS.md`; `docs/CONTEXT.md` e `docs/ARCHITECTURE.md` marcados como desatualizados; agent `frontend-ui` aponta para os novos docs · só documentação · defeitos D1 e D3–D6 abertos (D1 e D3 em correção na branch `fix/senha-esqueci-ga4`); D2 descartado após revisão.

@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { IsString, IsOptional, IsInt, Min, IsIn, MaxLength, Matches, IsBoolean, IsArray, ArrayMinSize, ArrayMaxSize, ValidateNested } from 'class-validator';
+import { Controller, Get, Post, Patch, Put, Delete, Body, Param, Query, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { IsString, IsOptional, IsInt, Min, Max, IsIn, MaxLength, Matches, IsBoolean, IsArray, ArrayMinSize, ArrayMaxSize, ValidateNested, IsObject, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ModuloSistema } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequerModulo } from '../auth/modulos.decorator';
 import { KanbanService } from './kanban.service';
 import { SyncActor } from './kanban.policy';
+import { KanbanEquipeService } from './kanban-equipe.service';
 
 export function syncActor(req: any): SyncActor {
   return { id: req.user?.userId || req.user?.id || req.user?.sub, role: req.user?.role };
@@ -50,11 +52,32 @@ class MoveDto extends CommandDto {
   @IsOptional() @IsString() depoisDeId?: string;
 }
 
+class PessoaEquipeDto {
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsString() @MaxLength(28) cargo?: string | null;
+  @IsOptional() @IsIn(['owner', 'lead', 'maker', 'viewer']) funcao?: string;
+}
+class PermissoesDto { @IsObject() permissoes: Record<string, Record<string, boolean>>; }
+class CargosDto { @IsArray() @ArrayMaxSize(24) @IsString({ each: true }) @MaxLength(28, { each: true }) cargos: string[]; }
+class DiasClienteDto {
+  @IsString() @MaxLength(120) cliente: string;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsArray() @ArrayMaxSize(7) @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) dias?: number[] | null;
+}
+const imagem = FileInterceptor('file', { limits: { fileSize: 2 * 1048576 } });
+
 @Controller('kanban')
 @UseGuards(JwtAuthGuard)
 @RequerModulo({ todos: [ModuloSistema.GP] })
 export class KanbanController {
-  constructor(private readonly kanban: KanbanService) {}
+  constructor(private readonly kanban: KanbanService, private readonly equipe: KanbanEquipeService) {}
+
+  @Get('equipe') team(@Req() req: any) { return this.equipe.equipe(syncActor(req)); }
+  @Patch('equipe/pessoas/:id') teamPerson(@Param('id') id: string, @Body() dto: PessoaEquipeDto, @Req() req: any) { return this.equipe.atualizarPessoa(id, dto, syncActor(req)); }
+  @Put('equipe/permissoes') teamPerms(@Body() dto: PermissoesDto, @Req() req: any) { return this.equipe.salvarPermissoes(dto.permissoes, syncActor(req)); }
+  @Put('equipe/cargos') teamCargos(@Body() dto: CargosDto, @Req() req: any) { return this.equipe.salvarCargos(dto.cargos, syncActor(req)); }
+  @Put('equipe/dias-clientes') clientDays(@Body() dto: DiasClienteDto, @Req() req: any) { return this.equipe.salvarDiasCliente(dto.cliente, dto.dias ?? null, syncActor(req)); }
+  @Post('equipe/eu/foto') @UseInterceptors(imagem) myPhoto(@UploadedFile() file: Express.Multer.File, @Req() req: any) { return this.equipe.salvarFoto(file, syncActor(req)); }
+  @Delete('equipe/eu/foto') removeMyPhoto(@Req() req: any) { return this.equipe.removerFoto(syncActor(req)); }
+  @Post('clientes/:id/logo') @UseInterceptors(imagem) clientLogo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Req() req: any) { return this.equipe.salvarLogoCliente(id, file, syncActor(req)); }
 
   @Get('quadros') list(@Req() req: any) { return this.kanban.listBoards(syncActor(req)); }
   @Post('quadros') create(@Body() dto: CreateBoardDto, @Req() req: any) { return this.kanban.createBoard(dto.nome, syncActor(req), dto); }

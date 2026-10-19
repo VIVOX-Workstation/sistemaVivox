@@ -188,6 +188,11 @@ model User {
   senha String
   role  Role   @default(COLABORADOR)
 
+  // VVOX Sync: cargo na equipe, função padrão no Kanban (owner|lead|maker|viewer) e foto do perfil
+  cargo        String?
+  funcaoKanban String?
+  fotoUrl      String?
+
   // Módulos liberados para COLABORADOR (ignorado para ADMIN e CLIENTE)
   modulos ModuloSistema[] @default([DASHBOARD, CLIENTES, HOSPEDAGENS, ANALYTICS, GP, EDUCACIONAL, ACOMPANHAMENTO])
 
@@ -795,6 +800,15 @@ model KanbanQuadro {
   tarefas             Tarefa[]
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+// Configuração da equipe no VVOX Sync (registro único "global")
+model KanbanConfig {
+  id           String   @id @default("global")
+  permissoes   Json     @default("{}")
+  cargos       String[] @default([])
+  diasClientes Json     @default("{}")
+  updatedAt    DateTime @updatedAt
 }
 
 model KanbanColuna {

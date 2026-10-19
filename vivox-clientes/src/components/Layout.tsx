@@ -64,6 +64,7 @@ function tituloDaRota(pathname: string): string {
   if (/^\/analytics\/[^/]+/.test(pathname)) return 'Painel de métricas';
   if (pathname.startsWith('/analytics')) return 'Analytics';
   if (pathname.startsWith('/acompanhamento')) return 'Acompanhamento';
+  if (pathname.startsWith('/demandasgerais')) return 'Demandas gerais';
   if (pathname.startsWith('/gp/minhas-tarefas')) return 'Minhas tarefas';
   if (pathname.startsWith('/gp/workspace/all')) return 'Chamados';
   if (pathname.startsWith('/gp')) return 'Tarefas';
@@ -140,11 +141,12 @@ export function Layout() {
   const isLegacySyncView = searchParams.has('clienteId') || searchParams.has('servicoId') ||
     searchParams.get('visao') === 'lista' || searchParams.get('visao') === 'prazos';
   const isSyncEntry = /^\/gp(?:\/tarefa\/[^/]+)?\/?$/.test(location.pathname);
-  const isVvoxSyncRoute = /^\/vvoxsync(?:\/|$)/.test(location.pathname);
+  const isVvoxSyncRoute = /^\/(?:demandasgerais|vvoxsync)(?:\/|$)/.test(location.pathname);
   const isSyncCanvas = isVvoxSyncRoute || /^\/gp\/kanban\/?$/.test(location.pathname) || (isSyncEntry && !isLegacySyncView);
   const isFullBleed =
     location.pathname === '/' ||
     location.pathname.startsWith('/gp') ||
+    location.pathname.startsWith('/demandasgerais') ||
     location.pathname.startsWith('/vvoxsync') ||
     location.pathname.startsWith('/cliente') ||
     location.pathname.startsWith('/analytics') ||
@@ -213,7 +215,7 @@ export function Layout() {
             {podeAcessar('HOSPEDAGENS') && <SideLink to="/hospedagens" icon={Globe} label="Hospedagens" collapsed={recolhida} />}
             {podeAcessar('ANALYTICS') && <SideLink to="/analytics" icon={BarChart2} label="Analytics" collapsed={recolhida} />}
             {podeAcessar('ACOMPANHAMENTO') && <SideLink to="/acompanhamento" icon={ClipboardList} label="Acompanhamento" collapsed={recolhida} />}
-            {podeAcessar('GP') && <SideLink to="/vvoxsync" icon={Kanban} label="VVOX Sync" collapsed={recolhida} />}
+            {podeAcessar('GP') && <SideLink to="/demandasgerais" icon={Kanban} label="Demandas gerais" collapsed={recolhida} />}
             {podeAcessar('GP') && <SideLink to="/gp/minhas-tarefas" icon={ListChecks} label="Minhas tarefas" collapsed={recolhida} />}
             {podeAcessar('GP') && <SideLink to="/gp/workspace/all" icon={LifeBuoy} label="Chamados" collapsed={recolhida} />}
             {podeAcessar('EDUCACIONAL') && <SideLink to="/educacional" icon={GraduationCap} label="Educacional" collapsed={recolhida} />}

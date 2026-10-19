@@ -27,7 +27,7 @@ export function useKanbanFrame(user: KanbanUser, token: string, target: KanbanLo
       if (message.type === 'vvox-sync:unauthorized') { signOut(); navigate('/login', { replace: true }); return; }
       if (message.type === 'vvox-sync:exit') { navigate('/'); return; }
       if (message.type === 'vvox-sync:goto') { navigate(message.path); return; }
-      // Endereço do Kanban: /vvoxsync/nome-do-quadro (e /tarefa/ID quando há uma tarefa aberta).
+      // Endereço do Kanban: /demandasgerais/nome-do-quadro (e /tarefa/ID quando há uma tarefa aberta).
       // Dentro de um workspace antigo continua /gp/workspace/ID com o quadro na query.
       let next: string;
       if (workspaceId) {
@@ -37,7 +37,7 @@ export function useKanbanFrame(user: KanbanUser, token: string, target: KanbanLo
         next = '/gp/workspace/' + encodeURIComponent(workspaceId) + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '') + '?' + query.toString();
       } else {
         const slug = message.slug || 'quadro';
-        next = '/vvoxsync/' + encodeURIComponent(slug) + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '');
+        next = '/demandasgerais/' + encodeURIComponent(slug) + (message.taskId ? '/tarefa/' + encodeURIComponent(message.taskId) : '');
       }
       if (next !== location.pathname + location.search) navigate(next, { replace: true });
     }

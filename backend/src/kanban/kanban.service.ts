@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Optional, BadRequestException, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncActor, SyncAction, assertPermission, moveAction, syncPermissions } from './kanban.policy';
+import { KanbanEquipeService } from './kanban-equipe.service';
+import { PermKey } from './kanban-equipe.policy';
 
 const userSelect = { id: true, nome: true, email: true };
 const include = {
@@ -19,7 +21,12 @@ type Tx = Prisma.TransactionClient;
 
 @Injectable()
 export class KanbanService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly equipe?: KanbanEquipeService) {}
+
+  /* Matriz de permissões da equipe (função no VVOX Sync); o administrador passa sempre. */
+  private async perm(actor: SyncActor, key: PermKey) {
+    if (this.equipe) await this.equipe.exigir(actor, key);
+  }
 
   visibility(actor: SyncActor): any {
     return actor.role === 'ADMIN' ? {} : { OR: [
@@ -79,6 +86,7 @@ export class KanbanService {
   }
 
   async createBoard(nome: string, actor: SyncActor, appearance: any = {}) {
+    await this.perm(actor, 'board_manage');
     const defaults = [
       ['Recebimento de demanda', 'queue', '#94a3b8', 'BACKLOG'],
       ['Estruturação e a fazer', 'queue', '#c7a15f', 'A_FAZER'],
@@ -119,12 +127,14 @@ export class KanbanService {
   }
 
   async updateBoard(id: string, dto: any, actor: SyncActor) {
+    await this.perm(actor, 'board_manage');
     await this.configurable(id, actor);
     await this.prisma.kanbanQuadro.update({ where: { id }, data: { nome: this.name(dto.nome), descricao: dto.descricao, icone: dto.icone, cor: dto.cor } });
     return this.getBoard(id, actor);
   }
 
   async removeBoard(id: string, actor: SyncActor) {
+    await this.perm(actor, 'board_manage');
     return this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT "id" FROM "KanbanQuadro" WHERE "id"=${id} FOR UPDATE`;
       await this.configurable(id, actor, tx);
@@ -134,6 +144,7 @@ export class KanbanService {
   }
 
   async addColumn(id: string, dto: any, actor: SyncActor) {
+    await this.perm(actor, 'board_manage');
     return this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT "id" FROM "KanbanQuadro" WHERE "id"=${id} FOR UPDATE`;
       await this.configurable(id, actor, tx);
@@ -145,6 +156,7 @@ export class KanbanService {
   }
 
   async updateColumn(id: string, dto: any, actor: SyncActor) {
+    await this.perm(actor, 'board_manage');
     return this.prisma.$transaction(async tx => {
       const col = await tx.kanbanColuna.findUnique({ where: { id } });
       if (!col) throw new NotFoundException('Coluna não encontrada.');
@@ -175,6 +187,7 @@ export class KanbanService {
   }
 
   async removeColumn(id: string, actor: SyncActor) {
+    await this.perm(actor, 'board_manage');
     return this.prisma.$transaction(async tx => {
       const col = await tx.kanbanColuna.findUnique({ where: { id } });
       if (!col) throw new NotFoundException('Coluna não encontrada.');
@@ -262,6 +275,7 @@ export class KanbanService {
   }
 
   async createTask(dto: any, actor: SyncActor) {
+    await this.perm(actor, 'task_create');
     if ((dto.horasGastas || 0) > 0 && actor.role !== 'ADMIN') throw new ForbiddenException('Somente administradores podem informar tempo acumulado anterior.');
     const task = await this.prisma.$transaction(async tx => {
       const quadroId = dto.quadroId || 'vivox-sync-diario';
@@ -343,11 +357,12 @@ export class KanbanService {
     const statusChamado = status === 'CONCLUIDA' || status === 'CANCELADA' ? 'RESOLVIDO' : ['A_FAZER', 'BACKLOG'].includes(status) ? 'ABERTO' : 'EM_ANDAMENTO';
     await tx.chamado.updateMany({ where: { tarefaId: task.id }, data: { status: statusChamado, resolvidoEm: statusChamado === 'RESOLVIDO' ? now : null } });
     if (status === 'CONCLUIDA' && task.servicoId) {
-      await tx.servicoHistorico.create({ data: { servicoId: task.servicoId, usuarioId: actor.id, acao: 'Demanda "' + task.titulo + '" aprovada e concluída no VVOX Sync.' } });
+      await tx.servicoHistorico.create({ data: { servicoId: task.servicoId, usuarioId: actor.id, acao: 'Demanda "' + task.titulo + '" aprovada e concluída em Demandas gerais.' } });
     }
   }
 
   async command(id: string, requested: SyncAction, dto: any, actor: SyncActor) {
+    await this.perm(actor, requested === 'mover' ? 'task_move' : requested === 'aprovar' || requested === 'corrigir' ? 'approve' : 'task_edit');
     await this.prisma.$transaction(async tx => {
       const task = await this.lockedTask(tx, id);
       assertPermission(task, actor, 'visualizar');
@@ -429,6 +444,7 @@ export class KanbanService {
       const changedFields = Object.keys(dto).filter(key => key !== 'versao' && dto[key] !== undefined);
       const linksOnly = changedFields.length === 1 && changedFields[0] === 'linksReferencia';
       assertPermission(task, actor, linksOnly ? 'comentar' : 'editar');
+      await this.perm(actor, linksOnly ? 'comment' : 'task_edit');
       const prazoAtual = task.prazo?.getTime() ?? null;
       const novoPrazo = dto.prazo ? new Date(dto.prazo).getTime() : null;
       const prazoAlterado = dto.prazo !== undefined && novoPrazo !== prazoAtual;
@@ -457,6 +473,7 @@ export class KanbanService {
   }
 
   async removeTask(id: string, actor: SyncActor) {
+    await this.perm(actor, 'task_delete');
     return this.prisma.$transaction(async tx => {
       const task = await this.lockedTask(tx, id);
       assertPermission(task, actor, 'excluir');
@@ -465,6 +482,7 @@ export class KanbanService {
   }
 
   async checklist(tarefaId: string | undefined, itemId: string | undefined, dto: any, action: 'add' | 'update' | 'delete', actor: SyncActor) {
+    await this.perm(actor, 'task_edit');
     return this.prisma.$transaction(async tx => {
       const item = itemId ? await tx.tarefaChecklist.findUnique({ where: { id: itemId } }) : null;
       if (itemId && !item) throw new NotFoundException('Item de checklist não encontrado.');
@@ -482,6 +500,7 @@ export class KanbanService {
     const task = await this.prisma.tarefa.findUnique({ where: { id }, include });
     if (!task) throw new NotFoundException('Tarefa não encontrada.');
     assertPermission(task, actor, 'comentar');
+    await this.perm(actor, 'comment');
     return this.prisma.tarefaComentario.create({ data: { tarefaId: id, autorId: actor.id, texto: this.name(texto), sistema: false, ...attachment }, include: { autor: { select: userSelect } } });
   }
 
@@ -511,6 +530,7 @@ export class KanbanService {
     await this.prisma.$transaction(async tx => {
       const task = await this.lockedTask(tx, id);
       assertPermission(task, actor, 'editar');
+      await this.perm(actor, 'task_edit');
       await this.validatePeople(tx, ids);
       await tx.tarefa.update({ where: { id }, data: { observadores: { set: ids.map(id => ({ id })) }, versao: { increment: 1 } } });
     });

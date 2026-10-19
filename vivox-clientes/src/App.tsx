@@ -28,6 +28,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { MODULOS, type ModuloId } from './config/modulos';
 
 /** Link antigo de /gp/projetos/tarefa/:id: abre a mesma tarefa no Kanban. */
+// Endereço antigo /vvoxsync/... vai para /demandasgerais/... com o mesmo quadro e tarefa.
+function VvoxSyncRedirect() {
+  const { quadro, tarefaId } = useParams<{ quadro?: string; tarefaId?: string }>();
+  const location = useLocation();
+  const path = '/demandasgerais' + (quadro ? '/' + encodeURIComponent(quadro) : '') + (quadro && tarefaId ? '/tarefa/' + encodeURIComponent(tarefaId) : '');
+  return <Navigate to={path + location.search} replace />;
+}
+
 function ProjetosTarefaRedirect() {
   const { tarefaId } = useParams<{ tarefaId: string }>();
   return <Navigate to={tarefaId ? `/gp/tarefa/${encodeURIComponent(tarefaId)}` : '/gp'} replace />;
@@ -176,9 +184,12 @@ function App() {
               {/* GP */}
               <Route element={<ModuloRoute modulo="GP" />}>
                 <Route path="gp" element={<VvoxSync />} />
-                <Route path="vvoxsync" element={<KanbanPage />} />
-                <Route path="vvoxsync/:quadro" element={<KanbanPage />} />
-                <Route path="vvoxsync/:quadro/tarefa/:tarefaId" element={<KanbanPage />} />
+                <Route path="demandasgerais" element={<KanbanPage />} />
+                <Route path="demandasgerais/:quadro" element={<KanbanPage />} />
+                <Route path="demandasgerais/:quadro/tarefa/:tarefaId" element={<KanbanPage />} />
+                <Route path="vvoxsync" element={<VvoxSyncRedirect />} />
+                <Route path="vvoxsync/:quadro" element={<VvoxSyncRedirect />} />
+                <Route path="vvoxsync/:quadro/tarefa/:tarefaId" element={<VvoxSyncRedirect />} />
                 <Route path="gp/kanban" element={<KanbanPage />} />
                 {/* A antiga lista de projetos saiu: links antigos caem no Kanban */}
                 <Route path="gp/projetos" element={<Navigate to="/gp" replace />} />

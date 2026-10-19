@@ -80,7 +80,11 @@ Validação da integração: schema Prisma válido, builds de backend e frontend
 
 ## Endereço do Kanban e pessoas
 
-- O Kanban abre em `/vvoxsync` e cada quadro tem o seu endereço: `/vvoxsync/operacaodiaria`, `/vvoxsync/kanbandecampanhas`. O nome do quadro vira o endereço sem acento, espaço ou símbolo; se dois quadros tiverem o mesmo nome o segundo recebe `-2`. Tarefa aberta: `/vvoxsync/operacaodiaria/tarefa/ID`.
-- Endereços antigos continuam funcionando e são levados para o novo: `/gp`, `/gp/tarefa/ID` e `/gp/projetos`.
-- As pessoas, os e-mails e o acesso (ADMIN ou COLABORADOR) vêm das contas do Sistema VIVOX. No Kanban, o painel de colaboradores é somente leitura e leva para as Configurações do sistema.
-- Permissões do Kanban: o servidor continua mandando. A matriz por função (criar, mover, aprovar, quadros, dias de postagem, exportar) só restringe mais.
+- No menu o Kanban se chama **Demandas gerais** e abre em `/demandasgerais`; cada quadro tem o seu endereço: `/demandasgerais/operacaodiaria`, `/demandasgerais/kanbandecampanhas`. O nome do quadro vira o endereço sem acento, espaço ou símbolo; se dois quadros tiverem o mesmo nome o segundo recebe `-2`. Tarefa aberta: `/demandasgerais/operacaodiaria/tarefa/ID`.
+- Endereços antigos continuam funcionando e são levados para o novo: `/vvoxsync/...` (mesmo quadro e tarefa), `/gp`, `/gp/tarefa/ID` e `/gp/projetos`.
+- As pessoas, os e-mails e o acesso (ADMIN ou COLABORADOR) vêm das contas do Sistema VIVOX. Adicionar ou remover pessoas continua em Configurações do sistema.
+- Cargo, função no Kanban (Proprietário(a), Supervisor(a), Responsável, Visualizador(a)) e foto ficam na conta (`User.cargo`, `User.funcaoKanban`, `User.fotoUrl`). Sem função salva, ADMIN conta como Proprietário(a) e COLABORADOR como Responsável.
+- A matriz de permissões por função, os cargos extras e os dias de postagem por cliente ficam em `KanbanConfig` (registro `global`).
+- Rotas: `GET /kanban/equipe`; só ADMIN: `PATCH /kanban/equipe/pessoas/:id` (`cargo`, `funcao`), `PUT /kanban/equipe/permissoes`, `PUT /kanban/equipe/cargos`; com permissão de dias de postagem: `PUT /kanban/equipe/dias-clientes`; a própria conta: `POST`/`DELETE /kanban/equipe/eu/foto`; com permissão de editar tarefas: `POST /kanban/clientes/:id/logo` (troca a logo do cadastro do cliente). O nome é salvo por `PATCH /users/:id`.
+- Permissões do Kanban: o servidor aplica as regras da tarefa (autor, revisor, responsável) e também a matriz da função de quem age. Administrador passa sempre.
+- Continuam só no navegador, por serem preferências visuais: tema, opções de cartão, filtros salvos, recolhimento e opacidade de colunas, ordem dos quadros.
