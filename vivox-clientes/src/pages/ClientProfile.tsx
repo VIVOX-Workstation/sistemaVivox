@@ -1,201 +1,109 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { BarChart2, Share2, Pencil, Plus, Globe, Mail, MessageCircle, Upload, Camera } from 'lucide-react';
 import { resolveMediaUrl } from '../utils/mediaUrl';
-import { 
-  ArrowLeft, 
-  Building2, 
-  BarChart2, 
-  Mail, 
-  Phone, 
-  MessageCircle, 
-  Share2, 
-  Edit2, 
-  Globe, 
-  CheckCircle2, 
-  UserCheck,
-  Calendar as CalendarIcon,
-  Camera,
-  Image as ImageIcon,
-  UploadCloud,
-  Ticket,
-  ChevronRight,
-  ChevronDown,
-  LayoutDashboard,
-  FolderKanban,
-  StickyNote,
-  ExternalLink,
-  Plus
-} from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente, Contato, StatusCliente } from '../types';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { Select } from '../components/Select';
-import { Modal } from '../components/Modal';
-
 import { OverviewTab } from '../components/ClientTabs/OverviewTab';
 import { NotesTab } from '../components/ClientTabs/NotesTab';
 import { ServicesTab } from '../components/ClientTabs/ServicesTab';
 import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
 import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
-import { chamadosApi } from '../api/chamados';
-import { formatarDataBR } from '../utils/hospedagemCalculo';
-import { useLiquidGlass } from '../hooks/useLiquidGlass';
-import './planning-workspace.css';
+import { VxDialog } from '../components/clean/VxDialog';
+import { ClienteMono } from '../components/ClienteMono';
+import { STATUS_CLIENTE } from '../utils/clean';
+
+// Perfil do cliente no layout clean (canvas › Perfil).
+// GET/PATCH /clientes/:id, uploads de logo e capa; abas em components/ClientTabs.
 
 type Tab = 'overview' | 'services' | 'notes';
 const VALID_TABS: Tab[] = ['overview', 'services', 'notes'];
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'overview', label: 'Visão geral' },
+  { id: 'services', label: 'Serviços' },
+  { id: 'notes', label: 'Anotações' },
+];
 
-function ClientProfileSkeleton() {
-  return (
-    <div className="planning-workspace w-full space-y-6 animate-pulse" aria-busy="true" aria-label="Carregando perfil do cliente">
-      <div className="pw-lg-scene" aria-hidden="true" />
-      <div className="w-full space-y-6">
-        {/* Breadcrumb skeleton */}
-        <div className="h-6 w-48 rounded-lg bg-white/40" />
+const mesAno = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' });
 
-        {/* Header Hero skeleton */}
-        <div className="pw-glass-panel p-6 h-56 rounded-3xl" />
-
-        {/* Tabs skeleton */}
-        <div className="flex gap-2">
-          <div className="h-10 w-32 rounded-xl bg-white/40" />
-          <div className="h-10 w-36 rounded-xl bg-white/40" />
-          <div className="h-10 w-28 rounded-xl bg-white/40" />
-        </div>
-
-        {/* Content skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="pw-glass-card h-28 rounded-2xl" />
-          ))}
-        </div>
-        <div className="pw-glass-panel h-64 rounded-3xl" />
-      </div>
-    </div>
-  );
-}
+const FORM_VAZIO = {
+  nomeFantasia: '',
+  razaoSocial: '',
+  cnpjCpf: '',
+  segmento: '',
+  status: 'ATIVO' as StatusCliente,
+  dataInicioContrato: '',
+  email: '',
+  telefone: '',
+  localizacao: '',
+  loginsSenhas: '',
+  ga4PropertyId: '',
+  gscSiteUrl: '',
+  openpanelProjectId: '',
+};
 
 export function ClientProfile() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    const raw = searchParams.get('tab') as Tab;
-    return raw && VALID_TABS.includes(raw) ? raw : 'overview';
-  });
+  const [erroCarga, setErroCarga] = useState(false);
+  const [erro, setErro] = useState('');
+  const raw = searchParams.get('tab') as Tab;
+  const activeTab: Tab = raw && VALID_TABS.includes(raw) ? raw : 'overview';
 
-  // Chamados em aberto deste cliente
-  const [chamadosAbertos, setChamadosAbertos] = useState(0);
-  const [isNovoChamadoModalOpen, setNovoChamadoModalOpen] = useState(false);
-
-  // Modal para adicionar/editar contato
-  const [isContatoModalOpen, setContatoModalOpen] = useState(false);
-  const [currentContato, setCurrentContato] = useState<Partial<Contato>>({});
-
-  // Modal de Personalização Visual (Logo & Banner)
-  const [isVisualModalOpen, setVisualModalOpen] = useState(false);
+  const [novoChamado, setNovoChamado] = useState(false);
+  const [recarga, setRecarga] = useState(0);
+  const [portal, setPortal] = useState(false);
+  const [editar, setEditar] = useState(false);
+  const [visual, setVisual] = useState(false);
+  const [contatoAberto, setContatoAberto] = useState(false);
+  const [contato, setContato] = useState<Partial<Contato>>({});
+  const [form, setForm] = useState(FORM_VAZIO);
   const [logoUrlInput, setLogoUrlInput] = useState('');
   const [bannerUrlInput, setBannerUrlInput] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
 
-  // Modal de Acesso do Cliente ao Portal
-  const [isAcessoPortalModalOpen, setAcessoPortalModalOpen] = useState(false);
+  const fileLogo = useRef<HTMLInputElement>(null);
+  const fileBanner = useRef<HTMLInputElement>(null);
 
-  // Modal de Edição dos Dados Cadastrais
-  const [isEditClientModalOpen, setEditClientModalOpen] = useState(false);
-  const [editClientForm, setEditClientForm] = useState({
-    nomeFantasia: '',
-    razaoSocial: '',
-    cnpjCpf: '',
-    segmento: '',
-    status: 'ATIVO' as StatusCliente,
-    dataInicioContrato: '',
-    email: '',
-    telefone: '',
-    localizacao: '',
-    loginsSenhas: '',
-    ga4PropertyId: '',
-    gscSiteUrl: '',
-    openpanelProjectId: '',
-  });
+  const selectTab = (tab: string) => setSearchParams({ tab: VALID_TABS.includes(tab as Tab) ? tab : 'overview' });
 
-  const fileInputLogoRef = useRef<HTMLInputElement>(null);
-  const fileInputBannerRef = useRef<HTMLInputElement>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null);
-
-  // Ativar efeitos Liquid Glass nos nós de vidro do container
-  useLiquidGlass(workspaceRef, !!cliente);
-
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam) {
-      if (VALID_TABS.includes(tabParam as Tab)) {
-        if (tabParam !== activeTab) {
-          setActiveTab(tabParam as Tab);
-        }
-      } else {
-        // Query antiga (?tab=ai-studio|hosting|market) cai para overview
-        setActiveTab('overview');
-        setSearchParams({ tab: 'overview' });
-      }
-    }
-  }, [searchParams]);
-
-  const handleTabSelect = (tab: Tab) => {
-    const target = VALID_TABS.includes(tab) ? tab : 'overview';
-    setActiveTab(target);
-    setSearchParams({ tab: target });
-  };
-
-  useEffect(() => {
-    if (id) {
-      loadCliente(id);
-      loadChamadosAbertos(id);
-    }
-  }, [id]);
-
-  const loadCliente = async (clienteId: string) => {
+  const loadCliente = useCallback(async (clienteId: string) => {
     try {
       const response = await api.get(`/clientes/${clienteId}`);
       setCliente(response.data);
       setLogoUrlInput(response.data.logoUrl || '');
       setBannerUrlInput(response.data.bannerUrl || '');
+      setErroCarga(false);
     } catch (error) {
-      console.error("Erro ao carregar cliente", error);
+      console.error('Erro ao carregar cliente', error);
+      setErroCarga(true);
     }
-  };
+  }, []);
 
-  const loadChamadosAbertos = async (clienteId: string) => {
+  useEffect(() => {
+    if (id) loadCliente(id);
+  }, [id, loadCliente]);
+
+  const patch = async (dados: Record<string, unknown>, msg: string) => {
+    if (!cliente) return false;
+    setErro('');
     try {
-      const [abertos, emAndamento] = await Promise.all([
-        chamadosApi.getChamados({ clienteId, status: 'ABERTO' }),
-        chamadosApi.getChamados({ clienteId, status: 'EM_ANDAMENTO' }),
-      ]);
-      setChamadosAbertos(abertos.length + emAndamento.length);
-    } catch (error) {
-      console.error("Erro ao carregar chamados do cliente", error);
-    }
-  };
-
-
-  // Alteração rápida de status do cliente direto no cabeçalho
-  const handleQuickStatusChange = async (novoStatus: StatusCliente) => {
-    if (!cliente || cliente.status === novoStatus) return;
-    try {
-      const res = await api.patch(`/clientes/${cliente.id}`, { status: novoStatus });
+      const res = await api.patch(`/clientes/${cliente.id}`, dados);
       setCliente(res.data);
+      return true;
     } catch (err) {
-      console.error('Erro ao atualizar status:', err);
-      alert('Erro ao atualizar status do cliente.');
+      console.error(err);
+      setErro(msg);
+      return false;
     }
   };
 
-  const openEditClientModal = () => {
+  const abrirEditar = () => {
     if (!cliente) return;
-    setEditClientForm({
+    setErro('');
+    setForm({
       nomeFantasia: cliente.nomeFantasia || '',
       razaoSocial: cliente.razaoSocial || '',
       cnpjCpf: cliente.cnpjCpf || '',
@@ -210,781 +118,312 @@ export function ClientProfile() {
       gscSiteUrl: cliente.gscSiteUrl || '',
       openpanelProjectId: cliente.openpanelProjectId || '',
     });
-    setEditClientModalOpen(true);
+    setEditar(true);
   };
 
-  const handleSaveClientData = async (e: React.FormEvent) => {
+  const salvarCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cliente) return;
-
-    try {
-      const payload: any = {
-        nomeFantasia: editClientForm.nomeFantasia.trim(),
-        razaoSocial: editClientForm.razaoSocial.trim() || null,
-        cnpjCpf: editClientForm.cnpjCpf.trim(),
-        segmento: editClientForm.segmento.trim(),
-        status: editClientForm.status,
-        dataInicioContrato: editClientForm.dataInicioContrato ? new Date(editClientForm.dataInicioContrato).toISOString() : null,
-        email: editClientForm.email.trim() || null,
-        telefone: editClientForm.telefone.trim() || null,
-        localizacao: editClientForm.localizacao.trim() || null,
-        loginsSenhas: editClientForm.loginsSenhas.trim() || null,
-        ga4PropertyId: editClientForm.ga4PropertyId.trim() || null,
-        gscSiteUrl: editClientForm.gscSiteUrl.trim() || null,
-        openpanelProjectId: editClientForm.openpanelProjectId.trim() || null,
-      };
-
-      const res = await api.patch(`/clientes/${cliente.id}`, payload);
-      setCliente(res.data);
-      setEditClientModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar dados do cliente.');
-    }
+    const t = (v: string) => v.trim() || null;
+    const ok = await patch(
+      {
+        nomeFantasia: form.nomeFantasia.trim(),
+        razaoSocial: t(form.razaoSocial),
+        cnpjCpf: form.cnpjCpf.trim(),
+        segmento: form.segmento.trim(),
+        status: form.status,
+        dataInicioContrato: form.dataInicioContrato ? new Date(form.dataInicioContrato).toISOString() : null,
+        email: t(form.email),
+        telefone: t(form.telefone),
+        localizacao: t(form.localizacao),
+        loginsSenhas: t(form.loginsSenhas),
+        ga4PropertyId: t(form.ga4PropertyId),
+        gscSiteUrl: t(form.gscSiteUrl),
+        openpanelProjectId: t(form.openpanelProjectId),
+      },
+      'Não foi possível salvar o cadastro.',
+    );
+    if (ok) setEditar(false);
   };
 
-  // Upload Direto de Arquivo Logo
-  const handleUploadLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const upload = async (tipo: 'logo' | 'banner', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file || !cliente) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setUploadingLogo(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    const set = tipo === 'logo' ? setUploadingLogo : setUploadingBanner;
+    set(true);
+    setErro('');
     try {
-      const res = await api.post(`/clientes/${cliente.id}/upload-logo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await api.post(`/clientes/${cliente.id}/upload-${tipo}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setCliente(res.data);
       setLogoUrlInput(res.data.logoUrl || '');
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao enviar imagem do logo.');
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
-
-  // Upload Direto de Arquivo Banner
-  const handleUploadBannerFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !cliente) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setUploadingBanner(true);
-    try {
-      const res = await api.post(`/clientes/${cliente.id}/upload-banner`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setCliente(res.data);
       setBannerUrlInput(res.data.bannerUrl || '');
     } catch (err) {
       console.error(err);
-      alert('Erro ao enviar imagem do banner.');
+      setErro(tipo === 'logo' ? 'Não foi possível enviar o logo.' : 'Não foi possível enviar a capa.');
     } finally {
-      setUploadingBanner(false);
+      set(false);
     }
   };
 
-  // Salvar URLs digitadas no Modal Visual
-  const handleSaveVisualUrls = async (e: React.FormEvent) => {
+  const salvarVisual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await patch(
+      { logoUrl: logoUrlInput.trim() || null, bannerUrl: bannerUrlInput.trim() || null },
+      'Não foi possível salvar as imagens.',
+    );
+    if (ok) setVisual(false);
+  };
+
+  const salvarContato = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cliente) return;
-
-    try {
-      const res = await api.patch(`/clientes/${cliente.id}`, {
-        logoUrl: logoUrlInput.trim() || null,
-        bannerUrl: bannerUrlInput.trim() || null,
-      });
-      setCliente(res.data);
-      setVisualModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar imagens da marca.');
+    const novo = { ...contato, id: contato.id || crypto.randomUUID() } as Contato;
+    const lista = contato.id
+      ? (cliente.contatos || []).map((c) => (c.id === contato.id ? novo : c))
+      : [...(cliente.contatos || []), novo];
+    if (await patch({ contatos: lista }, 'Não foi possível salvar o contato.')) {
+      setContatoAberto(false);
+      setContato({});
     }
   };
 
-  const handleSaveContato = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cliente) return;
-
-    const newContato = {
-      ...currentContato,
-      id: currentContato.id || crypto.randomUUID(),
-    } as Contato;
-
-    let novosContatos = [...(cliente.contatos || [])];
-    if (currentContato.id) {
-      novosContatos = novosContatos.map(c => c.id === currentContato.id ? newContato : c);
-    } else {
-      novosContatos.push(newContato);
-    }
-
-    try {
-      await api.patch(`/clientes/${cliente.id}`, { contatos: novosContatos });
-      loadCliente(cliente.id);
-      setContatoModalOpen(false);
-      setCurrentContato({});
-    } catch (err) {
-      alert("Erro ao salvar contato.");
-    }
-  };
-
-  const handleDeleteContato = async (contatoId: string) => {
-    if (!cliente) return;
-    if (confirm('Remover este contato?')) {
-      const novosContatos = cliente.contatos.filter(c => c.id !== contatoId);
-      try {
-        await api.patch(`/clientes/${cliente.id}`, { contatos: novosContatos });
-        loadCliente(cliente.id);
-      } catch (err) {
-        alert("Erro ao remover contato.");
-      }
-    }
+  const removerContato = async (contatoId: string) => {
+    if (!cliente || !confirm('Remover este contato?')) return;
+    await patch({ contatos: cliente.contatos.filter((c) => c.id !== contatoId) }, 'Não foi possível remover o contato.');
   };
 
   if (!cliente) {
-    return <ClientProfileSkeleton />;
-  }
-
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: 'Visão Geral', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'services', label: 'Mapa de Serviços', icon: <FolderKanban className="w-4 h-4" /> },
-    { id: 'notes', label: 'Anotações', icon: <StickyNote className="w-4 h-4" /> },
-  ];
-
-  const primeiroContato = cliente.contatos?.[0];
-  const telefoneContato = cliente.telefone || primeiroContato?.telefone;
-  const emailContato = cliente.email || primeiroContato?.email;
-  const siteUrl = cliente.gscSiteUrl;
-
-  return (
-    <div ref={workspaceRef} className="planning-workspace w-full space-y-6 select-none">
-      <div className="pw-lg-scene" aria-hidden="true" />
-
-      {/* Hidden File Inputs para Upload Direto */}
-      <input
-        type="file"
-        ref={fileInputLogoRef}
-        onChange={handleUploadLogoFile}
-        accept="image/*"
-        className="hidden"
-      />
-      <input
-        type="file"
-        ref={fileInputBannerRef}
-        onChange={handleUploadBannerFile}
-        accept="image/*"
-        className="hidden"
-      />
-
-      <div className="w-full space-y-6">
-        {/* ========================================================================= */}
-        {/* 1. BREADCRUMB & VOLTAR                                                    */}
-        {/* ========================================================================= */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <nav aria-label="Navegação estrutural" className="flex items-center gap-2 text-xs">
-            <button
-              onClick={() => navigate('/clientes')}
-              title="Voltar para a lista de clientes"
-              className="pw-glass-control px-3 py-1.5 rounded-full font-bold text-[#625746] hover:text-[#1E1A16] flex items-center gap-1.5 cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Clientes</span>
-            </button>
-            <ChevronRight className="w-3.5 h-3.5 text-[#C7A15F]" />
-            <span className="font-bold text-[#1E1A16] truncate max-w-[240px] sm:max-w-md">
-              {cliente.nomeFantasia}
-            </span>
-          </nav>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 2. CABEÇALHO DO CLIENTE COMPACTO (HERO CARD COM LIQUID GLASS)             */}
-        {/* ========================================================================= */}
-        <div className="pw-glass-panel p-5 md:p-6 rounded-[28px] overflow-hidden relative space-y-5">
-          {/* Se houver banner, exibir faixa sutil de topo integrada */}
-          {cliente.bannerUrl && (
-            <div className="w-full aspect-[820/312] min-h-[140px] max-h-[340px] rounded-2xl overflow-hidden relative group -mt-1 -mx-1 mb-2">
-              <img
-                src={resolveMediaUrl(cliente.bannerUrl)}
-                alt={`Banner de ${cliente.nomeFantasia}`}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#14120E]/70 via-black/20 to-transparent" />
-              <button
-                type="button"
-                onClick={() => fileInputBannerRef.current?.click()}
-                title="Trocar capa superior"
-                className="absolute top-2.5 right-2.5 px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-[#FFFDF8] text-[11.5px] font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-sm"
-              >
-                <Camera className="w-3 h-3 text-[#C7A15F]" />
-                <span>{uploadingBanner ? 'Enviando...' : 'Trocar Capa'}</span>
-              </button>
+    return (
+      <div className="vxp">
+        <div className="pg">
+          {erroCarga ? (
+            <div className="card empty">
+              <b>Não foi possível carregar o cliente.</b>
+              <button className="btn pri sm" type="button" onClick={() => id && loadCliente(id)}>Tentar de novo</button>
+            </div>
+          ) : (
+            <div className="animate-pulse" aria-busy="true" aria-label="Carregando perfil do cliente" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="card" style={{ height: 80 }} />
+              <div className="grid g4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="card" style={{ height: 96 }} />)}</div>
+              <div className="card" style={{ height: 260 }} />
             </div>
           )}
-
-          {/* Linha Principal de Identidade + Ações Rápidas */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            {/* Lado Esquerdo: Avatar + Dados de Identificação */}
-            <div className="flex items-center gap-4 min-w-0">
-              {/* Avatar do Cliente com Hover para Troca */}
-              <div
-                onClick={() => fileInputLogoRef.current?.click()}
-                title="Clique para alterar a logo da marca"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#FAF2E4] border-2 border-white/90 shadow-md flex items-center justify-center overflow-hidden shrink-0 relative group cursor-pointer transition-transform hover:scale-105"
-              >
-                {cliente.logoUrl ? (
-                  <img
-                    src={resolveMediaUrl(cliente.logoUrl)}
-                    alt={cliente.nomeFantasia}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-2xl sm:text-3xl font-black text-[#8A6828]">
-                    {cliente.nomeFantasia.charAt(0).toUpperCase()}
-                  </span>
-                )}
-
-                {/* Hover overlay de câmera */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10.5px] font-bold gap-0.5">
-                  <Camera className="w-4 h-4 text-[#C7A15F]" />
-                  <span>{uploadingLogo ? '...' : 'Trocar'}</span>
-                </div>
-              </div>
-
-              {/* Textos de Identificação */}
-              <div className="min-w-0 space-y-1">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-black text-[#1E1A16] tracking-tight truncate">
-                    {cliente.nomeFantasia}
-                  </h1>
-
-                  {/* Seletor / Dropdown Rápido de Status */}
-                  <div className="relative inline-block">
-                    <select
-                      value={cliente.status}
-                      onChange={(e) => handleQuickStatusChange(e.target.value as StatusCliente)}
-                      aria-label="Alterar status do cliente"
-                      title="Clique para alterar o status da conta"
-                      className={`text-[11.5px] font-black tracking-wider uppercase px-3 py-1 rounded-full cursor-pointer outline-none border transition-all appearance-none pr-6 shadow-2xs ${
-                        cliente.status === 'ATIVO'
-                          ? 'text-[#247A4A] bg-[#247A4A]/10 border-[#247A4A]/30 hover:bg-[#247A4A]/20'
-                          : cliente.status === 'PROSPECT'
-                          ? 'text-[#B45309] bg-[#FFA800]/15 border-[#FFA800]/40 hover:bg-[#FFA800]/25'
-                          : cliente.status === 'PAUSADO'
-                          ? 'text-[#625746] bg-[#8F8271]/15 border-[#8F8271]/30 hover:bg-[#8F8271]/25'
-                          : 'text-[#B83B32] bg-[#B83B32]/10 border-[#B83B32]/30 hover:bg-[#B83B32]/20'
-                      }`}
-                    >
-                      <option value="ATIVO">🟢 ATIVO</option>
-                      <option value="PROSPECT">⚡ PROSPECT</option>
-                      <option value="PAUSADO">⏸️ PAUSADO</option>
-                      <option value="ENCERRADO">🔴 ENCERRADO</option>
-                    </select>
-                    <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-                  </div>
-                </div>
-
-                {cliente.razaoSocial && cliente.razaoSocial !== cliente.nomeFantasia && (
-                  <p className="text-xs text-[#8F8271] truncate font-medium">
-                    {cliente.razaoSocial}
-                  </p>
-                )}
-
-                {/* Badges de Meta-informação */}
-                <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#625746] bg-white/70 px-2.5 py-0.5 rounded-full border border-[#E8D4B4]/50">
-                    <Building2 className="w-3 h-3 text-[#C7A15F]" />
-                    <span>{cliente.segmento || 'Segmento não informado'}</span>
-                  </span>
-
-                  {cliente.responsavel?.nome && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#625746] bg-white/70 px-2.5 py-0.5 rounded-full border border-[#E8D4B4]/50">
-                      <UserCheck className="w-3 h-3 text-[#C7A15F]" />
-                      <span>Resp: {cliente.responsavel.nome}</span>
-                    </span>
-                  )}
-
-                  {cliente.dataInicioContrato && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#625746] bg-white/70 px-2.5 py-0.5 rounded-full border border-[#E8D4B4]/50">
-                      <CalendarIcon className="w-3 h-3 text-[#C7A15F]" />
-                      <span>Desde {formatarDataBR(cliente.dataInicioContrato)}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Lado Direito: Ações Principais Agrupadas & Links Úteis */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              {/* Links de Contato Rápido (Ícones em Vidro) */}
-              <div className="flex items-center gap-1.5">
-                {siteUrl && (
-                  <a
-                    href={siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={`Abrir site (${siteUrl})`}
-                    className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#1E1A16] hover:bg-white transition-all shadow-2xs"
-                  >
-                    <Globe className="w-4 h-4 text-[#7A6440]" />
-                  </a>
-                )}
-
-                {telefoneContato && (
-                  <a
-                    href={`https://wa.me/55${telefoneContato.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={`Conversar no WhatsApp (${telefoneContato})`}
-                    className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#247A4A] bg-[#247A4A]/10 border-[#247A4A]/30 hover:bg-[#247A4A]/20 transition-all shadow-2xs"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                  </a>
-                )}
-
-                {emailContato && (
-                  <a
-                    href={`mailto:${emailContato}`}
-                    title={`Enviar e-mail (${emailContato})`}
-                    className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#1E1A16] hover:bg-white transition-all shadow-2xs"
-                  >
-                    <Mail className="w-4 h-4 text-[#7A6440]" />
-                  </a>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => navigate(`/analytics/${cliente.id}`)}
-                  title="Acessar painel de Analytics da conta"
-                  className="pw-glass-control w-9 h-9 rounded-xl flex items-center justify-center text-[#1E1A16] hover:bg-white transition-all cursor-pointer shadow-2xs"
-                >
-                  <BarChart2 className="w-4 h-4 text-[#7A6440]" />
-                </button>
-              </div>
-
-              {/* Botões de Ação Agrupados */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Criar Chamado */}
-                <button
-                  type="button"
-                  onClick={() => setNovoChamadoModalOpen(true)}
-                  className="pw-glass-control pw-glass-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs hover:scale-[1.02]"
-                >
-                  <Ticket className="w-4 h-4 text-[#C7A15F]" />
-                  <span>Criar Chamado</span>
-                </button>
-
-                {/* Editar Cadastro */}
-                <button
-                  type="button"
-                  onClick={openEditClientModal}
-                  className="pw-glass-control px-3.5 py-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Edit2 className="w-3.5 h-3.5 text-[#8A6828]" />
-                  <span>Editar Cadastro</span>
-                </button>
-
-                {/* Personalizar Logo & Capa */}
-                <button
-                  type="button"
-                  onClick={() => setVisualModalOpen(true)}
-                  title="Alterar Logo e Capa do cliente"
-                  className="pw-glass-control px-3 py-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Camera className="w-3.5 h-3.5 text-[#8A6828]" />
-                  <span className="hidden sm:inline">Capa / Logo</span>
-                </button>
-
-                {/* Acesso ao Portal do Cliente / Compartilhar */}
-                <button
-                  type="button"
-                  onClick={() => setAcessoPortalModalOpen(true)}
-                  title="Acesso do cliente ao portal"
-                  className="pw-glass-control p-2 text-xs font-bold text-[#1E1A16] hover:bg-white flex items-center justify-center cursor-pointer shadow-2xs"
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 3. NAVEGAÇÃO DE ABAS EM PILLS GLASS                                       */}
-        {/* ========================================================================= */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleTabSelect(tab.id)}
-                className={`pw-glass-tab px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
-                  isActive ? 'is-active text-[#7A6440]' : 'text-[#625746]'
-                }`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 4. CONTEÚDO DA ABA ATIVA (LARGURA TOTAL SEM ESTOURO DE FUNDO)             */}
-        {/* ========================================================================= */}
-        <div className="w-full min-w-0">
-          {activeTab === 'overview' && (
-            <OverviewTab
-              cliente={cliente}
-              onChange={loadCliente}
-              onNavigateTab={(t) => handleTabSelect(t as Tab)}
-              onEditClient={openEditClientModal}
-              onOpenChamado={() => setNovoChamadoModalOpen(true)}
-              onManageContatos={() => {
-                setCurrentContato({});
-                setContatoModalOpen(true);
-              }}
-            />
-          )}
-
-          {activeTab === 'services' && <ServicesTab cliente={cliente} />}
-
-          {activeTab === 'notes' && <NotesTab cliente={cliente} onChange={loadCliente} />}
         </div>
       </div>
+    );
+  }
 
-      {/* ========================================================================= */}
-      {/* MODAIS PRESERVADOS COM TODA A LÓGICA DE DADOS                             */}
-      {/* ========================================================================= */}
+  const [stLabel, stBd] = STATUS_CLIENTE[cliente.status] ?? [cliente.status, 'bd'];
+  const tel = cliente.telefone || cliente.contatos?.[0]?.telefone;
+  const mail = cliente.email || cliente.contatos?.[0]?.email;
+  const site = cliente.gscSiteUrl;
+  const desde = cliente.dataInicioContrato ? mesAno.format(new Date(cliente.dataInicioContrato)).replace('.', '').replace(' de ', ' ') : null;
+  const fld = (k: keyof typeof form, label: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+    <div className="fld">
+      <label htmlFor={`e-${k}`}>{label}</label>
+      <input id={`e-${k}`} className="inp" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} {...extra} />
+    </div>
+  );
 
-      {/* Modal: Editar Dados Cadastrais */}
-      <Modal
-        isOpen={isEditClientModalOpen}
-        onClose={() => setEditClientModalOpen(false)}
-        title="Editar Cadastro do Cliente"
-      >
-        <form onSubmit={handleSaveClientData} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Nome Fantasia *</label>
-              <Input
-                required
-                value={editClientForm.nomeFantasia}
-                onChange={(e) => setEditClientForm({ ...editClientForm, nomeFantasia: e.target.value })}
-                placeholder="Ex: Supermercado Modelo"
-              />
+  return (
+    <div className="vxp">
+      <input type="file" ref={fileLogo} onChange={(e) => upload('logo', e)} accept="image/*" hidden />
+      <input type="file" ref={fileBanner} onChange={(e) => upload('banner', e)} accept="image/*" hidden />
+
+      <div className="pg">
+        {cliente.bannerUrl && (
+          <div className="cover">
+            <img src={resolveMediaUrl(cliente.bannerUrl)} alt={`Capa de ${cliente.nomeFantasia}`} />
+          </div>
+        )}
+
+        <section style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => setVisual(true)} aria-label="Trocar logo e capa" title="Trocar logo e capa" style={{ border: 0, padding: 0, background: 'none', cursor: 'pointer' }}>
+            <ClienteMono cliente={cliente} lg />
+          </button>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: 24, fontWeight: 650, letterSpacing: '-.02em' }}>{cliente.nomeFantasia}</h1>
+              <span className={stBd}>{stLabel}</span>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Razão Social</label>
-              <Input
-                value={editClientForm.razaoSocial}
-                onChange={(e) => setEditClientForm({ ...editClientForm, razaoSocial: e.target.value })}
-                placeholder="Ex: Modelo Comércio de Alimentos LTDA"
-              />
+            <div className="meta" style={{ marginTop: 6, gap: 14, flexWrap: 'wrap' }}>
+              <span>{cliente.segmento || 'Segmento não informado'}</span>
+              {desde && <span>Cliente desde {desde}</span>}
+              {cliente.responsavel?.nome && <span>Responsável: {cliente.responsavel.nome}</span>}
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">CNPJ / CPF *</label>
-              <Input
-                required
-                value={editClientForm.cnpjCpf}
-                onChange={(e) => setEditClientForm({ ...editClientForm, cnpjCpf: e.target.value })}
-                placeholder="00.000.000/0000-00"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Segmento *</label>
-              <Input
-                required
-                value={editClientForm.segmento}
-                onChange={(e) => setEditClientForm({ ...editClientForm, segmento: e.target.value })}
-                placeholder="Ex: Varejo Alimentício"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Status da Conta</label>
-              <Select
-                value={editClientForm.status}
-                onChange={(e) => setEditClientForm({ ...editClientForm, status: e.target.value as StatusCliente })}
-              >
-                <option value="ATIVO">🟢 Ativo</option>
-                <option value="PROSPECT">⚡ Prospect</option>
-                <option value="PAUSADO">⏸️ Pausado</option>
-                <option value="ENCERRADO">🔴 Encerrado</option>
-              </Select>
-            </div>
+          <div className="acts">
+            {site && (
+              <a className="ib" href={site.startsWith('http') ? site : `https://${site}`} target="_blank" rel="noreferrer" aria-label="Abrir site" title="Site">
+                <Globe className="i" aria-hidden="true" />
+              </a>
+            )}
+            {tel && (
+              <a className="ib" href={`https://wa.me/55${tel.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" aria-label="Conversar no WhatsApp" title="WhatsApp">
+                <MessageCircle className="i" aria-hidden="true" />
+              </a>
+            )}
+            {mail && (
+              <a className="ib" href={`mailto:${mail}`} aria-label="Enviar e-mail" title="E-mail">
+                <Mail className="i" aria-hidden="true" />
+              </a>
+            )}
+            <Link className="ib" to={`/analytics/${cliente.id}`} aria-label="Abrir Analytics do cliente" title="Analytics">
+              <BarChart2 className="i" aria-hidden="true" />
+            </Link>
+            <button className="ib" type="button" aria-label="Acesso do cliente ao portal" title="Acesso ao portal" onClick={() => setPortal(true)}>
+              <Share2 className="i" aria-hidden="true" />
+            </button>
+            <button className="btn sec" type="button" onClick={abrirEditar}><Pencil className="i" aria-hidden="true" />Editar cadastro</button>
+            <button className="btn pri" type="button" onClick={() => setNovoChamado(true)}><Plus className="i" aria-hidden="true" />Criar chamado</button>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-[#FAF2E4]">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Início do Contrato</label>
-              <Input
-                type="date"
-                value={editClientForm.dataInicioContrato}
-                onChange={(e) => setEditClientForm({ ...editClientForm, dataInicioContrato: e.target.value })}
-              />
-            </div>
+        {erro && !editar && !visual && !contatoAberto && <p role="alert" style={{ color: 'var(--bad)', fontSize: 12.5 }}>{erro}</p>}
 
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">OpenPanel Project ID</label>
-              <Input
-                value={editClientForm.openpanelProjectId}
-                onChange={(e) => setEditClientForm({ ...editClientForm, openpanelProjectId: e.target.value })}
-                placeholder="ID de monitoramento"
-              />
+        <div className="tabs" role="tablist" aria-label="Seções do perfil">
+          {TABS.map((t) => (
+            <button key={t.id} className={t.id === activeTab ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={t.id === activeTab} onClick={() => selectTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'overview' && (
+          <OverviewTab
+            key={recarga}
+            cliente={cliente}
+            onChange={loadCliente}
+            onNavigateTab={selectTab}
+            onEditClient={abrirEditar}
+            onOpenChamado={() => setNovoChamado(true)}
+            onManageContatos={() => {
+              setErro('');
+              setContato({});
+              setContatoAberto(true);
+            }}
+            onEditContato={(c) => {
+              setErro('');
+              setContato(c);
+              setContatoAberto(true);
+            }}
+            onRemoveContato={removerContato}
+          />
+        )}
+        {activeTab === 'services' && <ServicesTab cliente={cliente} />}
+        {activeTab === 'notes' && <NotesTab cliente={cliente} onChange={loadCliente} />}
+      </div>
+
+      <VxDialog open={editar} onClose={() => setEditar(false)} title="Editar cadastro" subtitle={cliente.nomeFantasia} lg>
+        <form onSubmit={salvarCadastro} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="grid g2">
+            {fld('nomeFantasia', 'Nome fantasia *', { required: true })}
+            {fld('razaoSocial', 'Razão social')}
+            {fld('cnpjCpf', 'CNPJ ou CPF *', { required: true })}
+            {fld('segmento', 'Segmento *', { required: true })}
+            <div className="fld">
+              <label htmlFor="e-status">Status</label>
+              <select id="e-status" className="inp" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as StatusCliente })}>
+                <option value="ATIVO">Ativo</option>
+                <option value="PROSPECT">Prospect</option>
+                <option value="PAUSADO">Pausado</option>
+                <option value="ENCERRADO">Encerrado</option>
+              </select>
             </div>
+            {fld('dataInicioContrato', 'Início do contrato', { type: 'date' })}
+            {fld('email', 'E-mail', { type: 'email' })}
+            {fld('telefone', 'Telefone')}
+            {fld('localizacao', 'Localização')}
+            {fld('openpanelProjectId', 'OpenPanel')}
+            {fld('ga4PropertyId', 'Google Analytics 4')}
+            {fld('gscSiteUrl', 'Search Console', { placeholder: 'https://site.com.br/' })}
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">E-mail Corporativo</label>
-              <Input
-                type="email"
-                value={editClientForm.email}
-                onChange={(e) => setEditClientForm({ ...editClientForm, email: e.target.value })}
-                placeholder="Ex: contato@cliente.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Telefone Principal</label>
-              <Input
-                value={editClientForm.telefone}
-                onChange={(e) => setEditClientForm({ ...editClientForm, telefone: e.target.value })}
-                placeholder="Ex: (00) 00000-0000"
-              />
-            </div>
+          <div className="fld">
+            <label htmlFor="e-acc">Logins, senhas ou link do cofre</label>
+            <textarea id="e-acc" className="inp" rows={2} value={form.loginsSenhas} onChange={(e) => setForm({ ...form, loginsSenhas: e.target.value })} />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Localização</label>
-              <Input
-                value={editClientForm.localizacao}
-                onChange={(e) => setEditClientForm({ ...editClientForm, localizacao: e.target.value })}
-                placeholder="Ex: São Paulo, SP"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Logins e Senhas / Vault</label>
-              <Input
-                value={editClientForm.loginsSenhas}
-                onChange={(e) => setEditClientForm({ ...editClientForm, loginsSenhas: e.target.value })}
-                placeholder="Cole aqui acessos ou link de vault"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Google Analytics 4 Property ID</label>
-              <Input
-                value={editClientForm.ga4PropertyId}
-                onChange={(e) => setEditClientForm({ ...editClientForm, ga4PropertyId: e.target.value })}
-                placeholder="Ex: 123456789"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Google Search Console URL</label>
-              <Input
-                value={editClientForm.gscSiteUrl}
-                onChange={(e) => setEditClientForm({ ...editClientForm, gscSiteUrl: e.target.value })}
-                placeholder="https://exemplo.com.br/"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-[#FAF2E4]">
-            <Button type="button" variant="ghost" onClick={() => setEditClientModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              Salvar Alterações
-            </Button>
+          {erro && <p role="alert" style={{ color: 'var(--bad)', fontSize: 12.5 }}>{erro}</p>}
+          <div className="acts" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn sec" type="button" onClick={() => setEditar(false)}>Cancelar</button>
+            <button className="btn pri" type="submit">Salvar alterações</button>
           </div>
         </form>
-      </Modal>
+      </VxDialog>
 
-      {/* Modal: Identidade Visual (Logo & Capa) */}
-      <Modal
-        isOpen={isVisualModalOpen}
-        onClose={() => setVisualModalOpen(false)}
-        title="Identidade Visual do Cliente (Logo & Capa)"
-      >
-        <form onSubmit={handleSaveVisualUrls} className="space-y-5">
-          {/* Seção Logo */}
-          <div className="p-4 rounded-2xl bg-[#FAF7F2] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#1E1A16] flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-[#C7A15F]" />
-                Logo / Foto do Cliente
-              </span>
-              <button
-                type="button"
-                onClick={() => fileInputLogoRef.current?.click()}
-                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>{uploadingLogo ? 'Enviando...' : 'Fazer Upload'}</span>
+      <VxDialog open={visual} onClose={() => setVisual(false)} title="Logo e capa" subtitle="Aparecem no perfil e no portal do cliente.">
+        <form onSubmit={salvarVisual} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <ClienteMono cliente={{ nomeFantasia: cliente.nomeFantasia, logoUrl: logoUrlInput || undefined }} lg />
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn sec sm" type="button" onClick={() => fileLogo.current?.click()} disabled={uploadingLogo}>
+                <Upload className="i" aria-hidden="true" />{uploadingLogo ? 'Enviando...' : 'Enviar logo'}
               </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-[#FAF2E4] border border-[#E8D4B4] flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-                {logoUrlInput ? (
-                  <img src={resolveMediaUrl(logoUrlInput)} alt="Preview Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xl font-bold text-[#8A6828]">
-                    {cliente.nomeFantasia.charAt(0)}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1">
-                <label className="block text-[12px] font-bold text-[#8F8271] mb-1">
-                  Ou cole a URL direta da imagem:
-                </label>
-                <Input
-                  value={logoUrlInput}
-                  onChange={(e) => setLogoUrlInput(e.target.value)}
-                  placeholder="https://exemplo.com/logo.png"
-                />
-              </div>
+              {logoUrlInput && <button className="btn gh sm" type="button" onClick={() => setLogoUrlInput('')}>Remover</button>}
             </div>
           </div>
-
-          {/* Seção Banner */}
-          <div className="p-4 rounded-2xl bg-[#FAF7F2] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#1E1A16] flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-[#C7A15F]" />
-                Banner / Capa Superior
-              </span>
-              <button
-                type="button"
-                onClick={() => fileInputBannerRef.current?.click()}
-                className="px-3 py-1 rounded-full bg-[#181512] text-[#C7A15F] text-[12px] font-bold flex items-center gap-1 hover:bg-[#2A241E] transition-all cursor-pointer shadow-2xs"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>{uploadingBanner ? 'Enviando...' : 'Fazer Upload'}</span>
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-full h-24 rounded-xl bg-gradient-to-r from-[#181512] via-[#2B2319] to-[#1E1A16] overflow-hidden flex items-center justify-center shadow-2xs">
-                {bannerUrlInput ? (
-                  <img src={resolveMediaUrl(bannerUrlInput)} alt="Banner Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xs font-bold text-[#C7A15F]/60">
-                    Nenhum banner personalizado configurado
-                  </span>
-                )}
-              </div>
-              <div>
-                <label className="block text-[12px] font-bold text-[#8F8271] mb-1">
-                  Ou cole a URL direta do banner:
-                </label>
-                <Input
-                  value={bannerUrlInput}
-                  onChange={(e) => setBannerUrlInput(e.target.value)}
-                  placeholder="https://exemplo.com/banner.jpg"
-                />
-              </div>
-            </div>
+          <div className="fld">
+            <label htmlFor="v-logo">Ou cole o endereço do logo</label>
+            <input id="v-logo" className="inp" value={logoUrlInput} onChange={(e) => setLogoUrlInput(e.target.value)} placeholder="https://" />
           </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={() => setVisualModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              Salvar Imagens
-            </Button>
+          <button
+            type="button"
+            className="cover"
+            onClick={() => fileBanner.current?.click()}
+            style={{ border: '1px dashed var(--ln2)', display: 'grid', placeItems: 'center', color: 'var(--ink3)', fontSize: 12.5, cursor: 'pointer', maxHeight: 140, font: 'inherit' }}
+          >
+            {bannerUrlInput ? (
+              <img src={resolveMediaUrl(bannerUrlInput)} alt="Prévia da capa" style={{ gridArea: '1/1' }} />
+            ) : null}
+            <span style={{ gridArea: '1/1', display: 'inline-flex', alignItems: 'center', gap: 6, background: bannerUrlInput ? 'rgba(255,255,255,.88)' : undefined, padding: '4px 10px', borderRadius: 8 }}>
+              <Camera className="i" aria-hidden="true" />{uploadingBanner ? 'Enviando...' : 'Clique para enviar a capa'}
+            </span>
+          </button>
+          <div className="fld">
+            <label htmlFor="v-cap">Ou cole o endereço da capa</label>
+            <input id="v-cap" className="inp" value={bannerUrlInput} onChange={(e) => setBannerUrlInput(e.target.value)} placeholder="https://" />
+          </div>
+          {erro && <p role="alert" style={{ color: 'var(--bad)', fontSize: 12.5 }}>{erro}</p>}
+          <div className="acts" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn sec" type="button" onClick={() => setVisual(false)}>Cancelar</button>
+            <button className="btn pri" type="submit">Salvar</button>
           </div>
         </form>
-      </Modal>
+      </VxDialog>
 
-      {/* Modal: Adicionar / Editar Contato */}
-      <Modal
-        isOpen={isContatoModalOpen}
-        onClose={() => setContatoModalOpen(false)}
-        title={currentContato.id ? 'Editar Contato' : 'Adicionar Novo Contato'}
-      >
-        <form onSubmit={handleSaveContato} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#1E1A16] mb-1">Nome Completo</label>
-            <Input
-              required
-              value={currentContato.nome || ''}
-              onChange={(e) => setCurrentContato({ ...currentContato, nome: e.target.value })}
-              placeholder="Ex: Carlos Mendes"
-            />
+      <VxDialog open={contatoAberto} onClose={() => setContatoAberto(false)} title={contato.id ? 'Editar contato' : 'Novo contato'}>
+        <form onSubmit={salvarContato} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="fld">
+            <label htmlFor="ct-n">Nome</label>
+            <input id="ct-n" className="inp" required value={contato.nome || ''} onChange={(e) => setContato({ ...contato, nome: e.target.value })} />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-[#1E1A16] mb-1">Cargo / Função</label>
-            <Input
-              value={currentContato.cargo || ''}
-              onChange={(e) => setCurrentContato({ ...currentContato, cargo: e.target.value })}
-              placeholder="Ex: Diretor Comercial"
-            />
+          <div className="fld">
+            <label htmlFor="ct-c">Cargo ou função</label>
+            <input id="ct-c" className="inp" value={contato.cargo || ''} onChange={(e) => setContato({ ...contato, cargo: e.target.value })} placeholder="Ex.: Diretora de marketing" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">E-mail</label>
-              <Input
-                type="email"
-                value={currentContato.email || ''}
-                onChange={(e) => setCurrentContato({ ...currentContato, email: e.target.value })}
-                placeholder="carlos@empresa.com"
-              />
+          <div className="grid g2">
+            <div className="fld">
+              <label htmlFor="ct-e">E-mail</label>
+              <input id="ct-e" className="inp" type="email" value={contato.email || ''} onChange={(e) => setContato({ ...contato, email: e.target.value })} />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#1E1A16] mb-1">Telefone / WhatsApp</label>
-              <Input
-                value={currentContato.telefone || ''}
-                onChange={(e) => setCurrentContato({ ...currentContato, telefone: e.target.value })}
-                placeholder="(11) 99999-9999"
-              />
+            <div className="fld">
+              <label htmlFor="ct-t">Telefone ou WhatsApp</label>
+              <input id="ct-t" className="inp" value={contato.telefone || ''} onChange={(e) => setContato({ ...contato, telefone: e.target.value })} />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={() => setContatoModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              Salvar Contato
-            </Button>
+          {erro && <p role="alert" style={{ color: 'var(--bad)', fontSize: 12.5 }}>{erro}</p>}
+          <div className="acts" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn sec" type="button" onClick={() => setContatoAberto(false)}>Cancelar</button>
+            <button className="btn pri" type="submit">Salvar contato</button>
           </div>
         </form>
-      </Modal>
+      </VxDialog>
 
-      {/* Modal: Novo Chamado */}
-      {isNovoChamadoModalOpen && (
-        <NovoChamadoModal
-          initialClienteId={cliente.id}
-          onClose={() => setNovoChamadoModalOpen(false)}
-          onChamadoCreated={() => loadChamadosAbertos(cliente.id)}
-        />
+      {novoChamado && (
+        <NovoChamadoModal initialClienteId={cliente.id} onClose={() => setNovoChamado(false)} onChamadoCreated={() => setRecarga((r) => r + 1)} />
       )}
-
-      {/* Modal: Acesso do Cliente ao Portal */}
-      <AcessoPortalModal
-        isOpen={isAcessoPortalModalOpen}
-        onClose={() => setAcessoPortalModalOpen(false)}
-        clienteId={cliente.id}
-        clienteNome={cliente.nomeFantasia}
-      />
+      <AcessoPortalModal isOpen={portal} onClose={() => setPortal(false)} clienteId={cliente.id} clienteNome={cliente.nomeFantasia} />
     </div>
   );
 }

@@ -180,3 +180,18 @@
 .vxp .pips{display:flex;gap:3px;flex-wrap:wrap}
 .vxp .pips i{width:8px;height:8px;border-radius:2px;background:var(--accent)}
 @media(max-width:760px){.vxp .months{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Perfil do cliente */
+.vxp .av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--sk);color:var(--ink2);font-size:12px;font-weight:650}
+.vxp .dl{display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px 16px;font-size:13px}
+.vxp .dl dt{color:var(--ink3)}
+.vxp .dl dd{margin:0;font-weight:520;min-width:0;overflow-wrap:anywhere}
+.vxp .svc{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+.vxp .svc-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.vxp .svc-h b{font-size:14.5px;font-weight:620}
+.vxp .svc-h small{display:block;font-size:12px;color:var(--ink3);margin-top:2px}
+.vxp .svc.disp{background:var(--soft);border-style:dashed}
+.vxp .cred{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--soft);border:1px solid var(--ln)}
+.vxp .cover{width:100%;aspect-ratio:820/312;max-height:260px;border-radius:14px;overflow:hidden;background:var(--sk);position:relative}
+.vxp .cover img{width:100%;height:100%;object-fit:cover;display:block}
+.vxp .vxp-14-1{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+@media (max-width:1024px){.vxp .vxp-14-1{grid-template-columns:minmax(0,1fr)}}

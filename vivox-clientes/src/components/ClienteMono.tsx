@@ -1,13 +1,8 @@
 import type { Cliente } from '../types';
 import { resolveMediaUrl } from '../utils/mediaUrl';
+import { sigla } from '../utils/clean';
 
 // Monograma do cliente no layout clean (.vxp .mono): logo quando houver, senão as iniciais.
-
-export function sigla(nome: string) {
-  const p = nome.trim().split(/\s+/).filter((w) => w.length > 2);
-  const base = p.length ? p : [nome];
-  return ((base[0]?.[0] ?? '?') + (base[1]?.[0] ?? '')).toUpperCase();
-}
 
 export function ClienteMono({ cliente, lg }: { cliente: Pick<Cliente, 'nomeFantasia' | 'logoUrl'>; lg?: boolean }) {
   return (

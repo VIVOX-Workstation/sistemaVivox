@@ -4,17 +4,11 @@ import { Search, Plus, ChevronRight, AlertTriangle } from 'lucide-react';
 import { api } from '../api/client';
 import type { Cliente } from '../types';
 import { ClienteMono } from '../components/ClienteMono';
+import { STATUS_CLIENTE } from '../utils/clean';
 
 // Lista de clientes no layout clean (canvas › Clientes). Dados de GET /clientes.
 
 type Filtro = 'all' | 'ATIVO' | 'PROSPECT' | 'PAUSADO' | 'ENCERRADO';
-
-export const STATUS_CLIENTE: Record<string, [string, string]> = {
-  ATIVO: ['Ativo', 'bd ok'],
-  PROSPECT: ['Prospect', 'bd info'],
-  PAUSADO: ['Pausado', 'bd warn'],
-  ENCERRADO: ['Encerrado', 'bd'],
-};
 
 const STATUS_RANK: Record<string, number> = { ATIVO: 0, PROSPECT: 1, PAUSADO: 2, ENCERRADO: 3 };
 
