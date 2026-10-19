@@ -80,6 +80,7 @@ do cliente e Portal. Há **2 defeitos** que valem corrigir antes do redesign
 | Coluna "Serviços" com nomes | Ajustar | A lista traz só `_count.servicosContratados` (número) |
 | Responsável | Existe | `responsavel.nome` |
 | Cliente desde | Existe | `dataInicioContrato` (ou `createdAt`) |
+| Acesso às propostas por cliente | Existe (2026-10-19) | Link na lista para `/cliente/:id?tab=propostas` |
 
 ### Novo cliente (`/cliente/novo`) — `POST /clientes`
 
@@ -108,6 +109,11 @@ do cliente e Portal. Há **2 defeitos** que valem corrigir antes do redesign
 | Botão do serviço abre Planejamento ou DevBoard | Existe | Tipo `APP` → DevBoard |
 | "Ver tarefas" do serviço | Existe | `/gp?clienteId=…&servicoId=…` (abre a visão de lista do GP) |
 | Aba Anotações com "Salvo agora" | Ajustar | Salva com botão (`observacoes`), não automaticamente |
+| Aba Propostas: criar, editar tudo, excluir | Existe (2026-10-19) | `GET/POST /clientes/:id/propostas`, `PATCH/DELETE /clientes/:id/propostas/:pid`; model `Proposta`, `SalvarPropostaDto` + `SecaoPropostaDto` |
+| Modelo de plataforma de ensino | Existe (2026-10-19) | Referência fornecida pelo usuário, sem Kemax; HTML e CSS originais preservados, seis seções, modalidades, comparativo e condições, todos editáveis visualmente ou pelo código HTML; `Proposta.secoes[].html` + `SecaoPropostaDto.html` |
+| Capa, subcapa e encerramento da proposta | Existe (2026-10-19) | Assets locais `capaProposta.webp`, `subCapa.webp` e `propostaFinal.webp`, nessa ordem, na prévia e no documento público; não exige campo no backend |
+| Compartilhar e revogar | Existe (2026-10-19) | `POST/DELETE /clientes/:id/propostas/:pid/compartilhar`; `Proposta.linkHash`, token aleatório de uso como link |
+| Ícone de compartilhar na lista de propostas | Existe (2026-10-19) | Usa `POST /clientes/:id/propostas/:pid/compartilhar` e abre diálogo com copiar/visualizar; link `/proposta/:token` é somente leitura |
 | Acesso ao portal: URL, login, senha, gerar nova, copiar para WhatsApp, interesses | Existe | `/clientes/:id/acesso-portal`, `/redefinir-senha`, `/interesses` |
 
 ---
@@ -248,6 +254,18 @@ Fora deste redesign por decisão de 2026-10-16. Regras em `DESIGN.md` e `VVOX_SY
 ---
 
 ## Portal do cliente
+
+### Proposta compartilhada (`/proposta/:token`, sem login)
+
+`GET /propostas-publicas/:token` valida o segredo do link e retorna apenas
+`id`, `titulo`, `destinatario`, `apresentacao`, `validade`, `corDestaque`,
+`secoes`, `createdAt` e `updatedAt`. Não há acesso ao cadastro interno. Seções aceitam Markdown
+ou HTML comercial sanitizado com DOMPurify, renderizado em iframe com sandbox
+sem scripts e CSP sem recursos externos. O CSS da referência não afeta a tela
+do sistema. A validade é informativa. A leitura usa uma única rolagem contínua;
+a barra à direita mostra criação, validade e download da proposta completa em PDF.
+Link revogado, substituído ou proposta excluída resulta em indisponível.
+O documento público não requer sessão do portal nem oferece aceite/assinatura.
 
 | Elemento | Situação | Real |
 |---|---|---|
