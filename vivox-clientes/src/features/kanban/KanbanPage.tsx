@@ -9,7 +9,7 @@ function KanbanFrame({ user, token, ...target }: KanbanLocation & { user: Kanban
     <iframe
       ref={frame}
       src="/kanban/index.html"
-      title="VVOX Sync — Quadro de demandas"
+      title="Demandas gerais"
       allow="clipboard-write; microphone"
       onLoad={sendSession}
       className="block min-h-0 w-full flex-1 border-0"

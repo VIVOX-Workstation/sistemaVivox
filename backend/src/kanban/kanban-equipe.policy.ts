@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 
-/* Matriz de permissões do VVOX Sync, igual à do Quadro de Demandas.
+/* Matriz de permissões de Demandas gerais, igual à do Quadro de Demandas.
    Administrador faz tudo; Proprietário(a) também. As demais funções seguem a matriz,
    que o administrador ajusta e fica em KanbanConfig.permissoes. */
 export const FUNCOES = ['owner', 'lead', 'maker', 'viewer'] as const;
@@ -64,7 +64,7 @@ export function pode(user: { role?: string; funcaoKanban?: string | null } | nul
 
 export function exigir(user: { role?: string; funcaoKanban?: string | null } | null | undefined, permissoes: Permissoes, key: PermKey) {
   if (!pode(user, permissoes, key)) {
-    throw new ForbiddenException('Sua função no VVOX Sync não permite ' + PERM_TEXT[key] + '. Peça a um administrador.');
+    throw new ForbiddenException('Sua função em Demandas gerais não permite ' + PERM_TEXT[key] + '. Peça a um administrador.');
   }
 }
 
