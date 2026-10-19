@@ -151,7 +151,9 @@ export function Layout() {
     location.pathname.startsWith('/acompanhamento') ||
     location.pathname === '/hospedagens' ||
     location.pathname === '/renovacoes' ||
-    location.pathname === '/configuracoes';
+    location.pathname === '/configuracoes' ||
+    location.pathname.startsWith('/educacional') ||
+    location.pathname === '/sem-acesso';
 
   const [showIntro, setShowIntro] = useState(false);
   const [iaAberta, setIaAberta] = useState(false);

@@ -273,3 +273,15 @@
 .vxp .ck2{width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(80,58,30,.3);flex:none;display:grid;place-items:center;color:var(--acc-ink)}
 .vxp .ck2.ok{background:var(--ok);border-color:var(--ok);color:#fff}
 .vxp .ck2 svg.i{width:12px;height:12px;stroke-width:3}
+/* Configurações */
+.vxp .pm{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln)}
+.vxp .pm:last-child{border-bottom:0}
+.vxp .pm div{flex:1;min-width:0}
+.vxp .pm b{display:block;font-weight:580}
+.vxp .pm small{display:block;font-size:12px;color:var(--ink3)}
+.vxp .opt{display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--ln)}
+.vxp .opt:last-child{border-bottom:0}
+.vxp .opt div{flex:1}
+.vxp .opt b{display:block;font-weight:580}
+.vxp .opt small{display:block;font-size:12.5px;color:var(--ink3)}
+.vxp .toast{position:fixed;right:24px;bottom:24px;z-index:70;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:var(--ink);color:#fff;font-size:13px;font-weight:560;box-shadow:0 12px 30px -14px rgba(40,25,5,.5)}

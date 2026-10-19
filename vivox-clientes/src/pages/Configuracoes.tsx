@@ -1,26 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
-import {
-  Users,
-  UserPlus,
-  CheckCircle2,
-  ShieldAlert,
-  Edit2,
-  KeyRound,
-  UserCircle,
-  RefreshCw,
-  AlertTriangle,
-  SlidersHorizontal,
-  Palette,
-  PanelLeftClose,
-} from 'lucide-react';
-import { Modal } from '../components/Modal';
+import { CheckCircle2, Pencil, KeyRound, RefreshCw, AlertTriangle } from 'lucide-react';
+import { VxDialog } from '../components/clean/VxDialog';
 import { useAuth } from '../context/AuthContext';
 import { MODULOS, TODOS_MODULOS } from '../config/modulos';
 import { usersApi } from '../api/users';
 import { useSidebarPrefs } from '../utils/sidebarPrefs';
-import './planning-workspace.css';
 
 interface User {
   id: string;
@@ -34,81 +20,21 @@ interface User {
 type Role = 'ADMIN' | 'COLABORADOR';
 type Secao = 'equipe' | 'novo' | 'conta' | 'aparencia';
 
-const SECOES: { id: Secao; label: string; icon: React.ReactNode }[] = [
-  { id: 'equipe', label: 'Equipe', icon: <Users className="w-4 h-4" /> },
-  { id: 'novo', label: 'Novo usuário', icon: <UserPlus className="w-4 h-4" /> },
-  { id: 'conta', label: 'Minha conta', icon: <UserCircle className="w-4 h-4" /> },
-  { id: 'aparencia', label: 'Aparência', icon: <Palette className="w-4 h-4" /> },
+const SECOES: { id: Secao; label: string }[] = [
+  { id: 'equipe', label: 'Equipe' },
+  { id: 'novo', label: 'Novo usuário' },
+  { id: 'conta', label: 'Minha conta' },
+  { id: 'aparencia', label: 'Aparência' },
 ];
 
-const INPUT_CLASS = 'pw-glass-control w-full h-10 px-3 text-sm text-[#1E1A16] outline-none rounded-xl';
-const LABEL_CLASS = 'block text-xs font-semibold text-[#5E574C] mb-1.5';
+const PAPEL: Record<Role, string> = { ADMIN: 'Administrador', COLABORADOR: 'Colaborador' };
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="space-y-1 mb-5">
-      <h2 className="text-base font-bold text-[#1E1A16] tracking-tight">{title}</h2>
-      <p className="text-xs text-[#5E574C]">{subtitle}</p>
-    </div>
-  );
+const iniciais = (nome?: string) =>
+  (nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+
+function Erro({ message }: { message: string }) {
+  return <p role="alert" style={{ color: 'var(--bad)', fontSize: 12.5 }}>{message}</p>;
 }
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-2 bg-[#FDF2F2] border border-[#FCDAD7] text-[#B83B32] p-2.5 rounded-xl text-xs font-medium">
-      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-      <p>{message}</p>
-    </div>
-  );
-}
-
-function RoleBadge({ role }: { role?: Role }) {
-  const r = role || 'COLABORADOR';
-  return (
-    <span className={`pw-glass-pill px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${r === 'ADMIN' ? 'pw-glass-success' : ''}`}>
-      {r}
-    </span>
-  );
-}
-
-function ConfigSkeleton() {
-  return (
-    <div className="space-y-3 animate-pulse" aria-busy="true" aria-label="Carregando usuários">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="pw-glass-card h-16" />
-      ))}
-    </div>
-  );
-}
-
-/* Configurações: mesma estrutura da tela de entrada, na estética clara (bege, branco e dourado) */
-const CFG_CSS = `
-.cfg-head{padding:4px 2px 2px;display:grid;gap:4px}
-.cfg-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;color:#1E1A16}
-.cfg-head p{margin:0;font-size:13px;color:#5E574C}
-.cfg-grid{display:grid;grid-template-columns:216px minmax(0,1fr);gap:24px;align-items:start}
-.cfg-nav{display:grid;gap:6px;position:sticky;top:0}
-.cfg-tab{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:14px;border:1px solid transparent;background:transparent;color:#5E574C;font:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer;transition:background .2s,color .2s,border-color .2s,box-shadow .2s}
-.cfg-tab svg{color:#8A6D3B;flex:none}
-.cfg-tab:hover{background:rgba(255,255,255,.75);color:#1E1A16;border-color:#E8DCC8}
-.cfg-tab.is-active{background:#fff;color:#1E1A16;border-color:#D9C29A;box-shadow:0 10px 26px -16px rgba(138,109,59,.55),inset 0 1px 0 #fff}
-.cfg-tab:focus-visible,.cfg-seg button:focus-visible{outline:2px solid #B8945A;outline-offset:2px}
-.cfg-pane{min-width:0;display:grid;gap:24px;align-content:start}
-.cfg-opts{display:grid;gap:12px}
-.cfg-opt{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 18px;border-radius:16px;border:1px solid #EADFCB;background:#FFFDF8}
-.cfg-opt-t{display:grid;gap:3px;min-width:0}
-.cfg-opt-t b{font-size:14px;color:#1E1A16}
-.cfg-opt-t small{font-size:12px;color:#6B6254;max-width:46ch}
-.cfg-seg{display:inline-flex;padding:4px;gap:4px;border-radius:12px;background:#F1EADC;border:1px solid #E8DCC8;flex:none}
-.cfg-seg button{height:34px;padding:0 14px;border:0;border-radius:9px;background:transparent;color:#5E574C;font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
-.cfg-seg button[aria-pressed="true"]{background:#fff;color:#1E1A16;box-shadow:0 2px 8px -3px rgba(60,45,20,.35)}
-.cfg-prev{display:grid;grid-template-columns:96px minmax(0,1fr);height:150px;margin-top:18px;border-radius:16px;overflow:hidden;border:1px solid #E1D4BC}
-.cfg-prev-side{position:relative;display:grid;align-content:start;gap:8px;padding:12px;background:#fff;border-right:1px solid rgba(80,58,30,.1);color:#6B5F52;overflow:hidden}
-.cfg-prev-side i{display:block;height:14px;border-radius:7px;background:#F1EBE2;position:relative}
-.cfg-prev-side i.on{background:#F4EDE3;box-shadow:inset 0 0 0 1px rgba(145,103,43,.35)}
-.cfg-prev-main{display:grid;place-items:center;background:#FAF7F2;color:#8A7F6A;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
-@media (max-width:760px){.cfg-grid{grid-template-columns:minmax(0,1fr)}.cfg-nav{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;position:static}.cfg-opt{flex-direction:column;align-items:flex-start}}
-`;
 
 export function Configuracoes() {
   const { prefs: sidebarPrefs, update: updateSidebar } = useSidebarPrefs();
@@ -311,520 +237,254 @@ export function Configuracoes() {
   const me = users.find((u) => u.id === currentUser?.id);
 
   return (
-    <div className="planning-workspace w-full space-y-6">
-      <div className="pw-lg-scene" aria-hidden="true" />
+    <div className="vxp">
+      <div className="pg" style={{ maxWidth: 1100 }}>
+        <div className="ph">
+          <div>
+            <h1>Configurações do sistema</h1>
+            <p>Equipe, permissões, a sua conta e a aparência do painel.</p>
+          </div>
+        </div>
 
-      <style>{CFG_CSS}</style>
-
-      {/* CABEÇALHO */}
-      <header className="cfg-head">
-        <span className="pw-section-label">Configurações</span>
-        <h1>Configurações do sistema</h1>
-        <p>Equipe, permissões, a sua conta e a aparência do painel.</p>
-      </header>
-
-      <div className="cfg-grid">
-        {/* SEÇÕES (menu lateral claro) */}
-        <nav className="cfg-nav" role="tablist" aria-label="Seções de configurações">
+        <div className="tabs" role="tablist" aria-label="Seções">
           {SECOES.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              role="tab"
-              aria-selected={secao === s.id}
-              onClick={() => setSecao(s.id)}
-              className={`cfg-tab ${secao === s.id ? 'is-active' : ''}`}
-            >
-              {s.icon}
-              <span>{s.label}</span>
+            <button key={s.id} className={secao === s.id ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={secao === s.id} onClick={() => setSecao(s.id)}>
+              {s.label}
             </button>
           ))}
-        </nav>
+        </div>
 
-        <div className="cfg-pane">
-      {/* EQUIPE */}
-      {secao === 'equipe' && (
-        <section className="pw-glass-panel p-6">
-          <SectionHeader
-            title="Equipe"
-            subtitle={
-              isAdmin
-                ? 'Veja todos os usuários do sistema, altere papéis, edite dados e redefina senhas.'
-                : 'Veja os usuários do sistema. Apenas administradores podem alterar papéis.'
-            }
-          />
-
-          {loading && users.length === 0 ? (
-            <ConfigSkeleton />
-          ) : loadError && users.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 text-center py-8">
-              <AlertTriangle className="w-6 h-6 text-[#B83B32]" />
-              <p className="text-sm font-semibold text-[#1E1A16]">Não foi possível carregar os usuários.</p>
-              <button
-                type="button"
-                onClick={loadUsers}
-                className="pw-glass-control pw-glass-primary rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Tentar de novo
-              </button>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 text-center py-8">
-              <Users className="w-6 h-6 text-[#7A6440]" />
-              <p className="text-sm font-semibold text-[#1E1A16]">Nenhum usuário encontrado.</p>
-              <button
-                type="button"
-                onClick={() => setSecao('novo')}
-                className="pw-glass-control pw-glass-primary rounded-xl px-4 py-2 text-xs font-bold cursor-pointer"
-              >
-                Criar primeiro usuário
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {loadError && <p className="text-xs text-[#B83B32]">Falha ao atualizar; exibindo os últimos dados carregados.</p>}
-              {users.map((user) => (
-                <div key={user.id} className="pw-glass-card rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-                  <div className="flex items-center gap-3 min-w-0 md:flex-1">
-                    <div className="w-10 h-10 shrink-0 bg-[#FAF2E4] border border-[#E8D4B4] rounded-xl flex items-center justify-center text-[#8A6828] font-bold text-sm">
-                      {user.nome?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#1E1A16] truncate">
-                        {user.nome}
-                        {user.id === currentUser?.id && <span className="ml-2 text-[11px] font-bold text-[#7A6440]">(você)</span>}
-                      </p>
-                      <p className="text-xs text-[#5E574C] truncate">{user.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 flex-wrap md:justify-end">
-                    {isAdmin && currentUser?.id !== user.id ? (
-                      <select
-                        value={user.role || 'COLABORADOR'}
-                        onChange={(e) => setPendingRole({ user, role: e.target.value as Role })}
-                        aria-label={`Papel de ${user.nome}`}
-                        className="pw-glass-control rounded-xl h-9 px-2 text-xs font-semibold text-[#1E1A16] outline-none cursor-pointer"
-                      >
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="COLABORADOR">COLABORADOR</option>
-                      </select>
-                    ) : (
-                      <RoleBadge role={user.role} />
-                    )}
-
-                    {/* Resumo de Acesso e Botão Módulos */}
-                    {user.role === 'ADMIN' ? (
-                      <span className="pw-glass-pill px-2.5 py-1 text-[11px] font-bold text-[#7A6440] bg-[#FAF2E4] border border-[#E8D4B4] rounded-lg">
-                        Acesso total
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[#5E574C] bg-white/60 border border-[#524B40]/10 px-2.5 py-1 rounded-xl">
-                          {(user.modulos || []).length} de {MODULOS.length} módulos
-                        </span>
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => openModulosModal(user)}
-                            className="pw-glass-control rounded-xl px-3 py-1.5 text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                            title="Configurar permissões de módulos"
-                          >
-                            <SlidersHorizontal className="w-3.5 h-3.5 text-[#C7A15F]" /> Módulos
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <span className="text-xs text-[#5E574C] whitespace-nowrap">Desde {formatarDataBR(user.createdAt)}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(user)}
-                        className="pw-glass-control rounded-xl px-3 py-2 text-xs font-semibold text-[#1E1A16] flex items-center gap-1.5 cursor-pointer"
-                        title="Editar usuário"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-[#7A6440]" /> Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openResetModal(user)}
-                        className="pw-glass-control rounded-xl px-3 py-2 text-xs font-semibold text-[#B83B32] flex items-center gap-1.5 cursor-pointer"
-                        title="Redefinir senha"
-                      >
-                        <KeyRound className="w-3.5 h-3.5" /> Redefinir senha
-                      </button>
-                    </div>
-                  </div>
+        {secao === 'equipe' && (
+          <section className="card">
+            {loading && users.length === 0 ? (
+              <div className="cp animate-pulse" aria-busy="true" aria-label="Carregando usuários" style={{ display: 'grid', gap: 10 }}>
+                {[1, 2, 3, 4].map((n) => <div key={n} style={{ height: 44, borderRadius: 8, background: 'var(--sk)' }} />)}
+              </div>
+            ) : loadError && users.length === 0 ? (
+              <div className="empty">
+                <AlertTriangle className="i" aria-hidden="true" style={{ color: 'var(--bad)' }} />
+                <b>Não foi possível carregar os usuários.</b>
+                <button type="button" className="btn pri sm" onClick={loadUsers}><RefreshCw className="i" aria-hidden="true" />Tentar de novo</button>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="empty">
+                <b>Nenhum usuário encontrado.</b>
+                <button type="button" className="btn pri sm" onClick={() => setSecao('novo')}>Criar primeiro usuário</button>
+              </div>
+            ) : (
+              <>
+                {loadError && <p className="cp" style={{ color: 'var(--bad)', fontSize: 12.5, paddingBottom: 0 }}>Falha ao atualizar; exibindo os últimos dados carregados.</p>}
+                <div className="tw">
+                  <table className="tbl">
+                    <thead>
+                      <tr><th>Pessoa</th><th>Papel</th><th>Módulos liberados</th><th>Desde</th><th><span className="sr">Ações</span></th></tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => {
+                        const papel = (user.role || 'COLABORADOR') as Role;
+                        const eu = user.id === currentUser?.id;
+                        return (
+                          <tr key={user.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span className="av">{iniciais(user.nome)}</span>
+                                <div style={{ minWidth: 0 }}>
+                                  <b style={{ display: 'block', fontWeight: 600 }}>{user.nome}{eu && <span className="mut" style={{ fontWeight: 500 }}> (você)</span>}</b>
+                                  <small className="mut" style={{ fontSize: 12 }}>{user.email}</small>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              {isAdmin && !eu ? (
+                                <select
+                                  className="inp"
+                                  style={{ width: 160, height: 34 }}
+                                  value={papel}
+                                  aria-label={`Papel de ${user.nome}`}
+                                  onChange={(e) => setPendingRole({ user, role: e.target.value as Role })}
+                                >
+                                  <option value="ADMIN">Administrador</option>
+                                  <option value="COLABORADOR">Colaborador</option>
+                                </select>
+                              ) : (
+                                <span className={papel === 'ADMIN' ? 'bd acc' : 'bd plain'}>{PAPEL[papel]}</span>
+                              )}
+                            </td>
+                            <td className="mut">
+                              {papel === 'ADMIN'
+                                ? 'Acesso total'
+                                : (user.modulos || []).length === 0
+                                ? 'Nenhum'
+                                : `${(user.modulos || []).length} de ${MODULOS.length}`}
+                            </td>
+                            <td className="mut" style={{ whiteSpace: 'nowrap' }}>{formatarDataBR(user.createdAt)}</td>
+                            <td className="r">
+                              <div className="acts" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                                {isAdmin && papel !== 'ADMIN' && (
+                                  <button className="btn sec sm" type="button" onClick={() => openModulosModal(user)}>Permissões</button>
+                                )}
+                                <button className="ib sm" type="button" aria-label={`Editar ${user.nome}`} title="Editar usuário" onClick={() => openEditModal(user)}>
+                                  <Pencil className="i" aria-hidden="true" />
+                                </button>
+                                <button className="ib sm" type="button" aria-label={`Redefinir senha de ${user.nome}`} title="Redefinir senha" onClick={() => openResetModal(user)}>
+                                  <KeyRound className="i" aria-hidden="true" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+              </>
+            )}
+          </section>
+        )}
 
-      {/* NOVO USUÁRIO */}
-      {secao === 'novo' && (
-        <section className="pw-glass-panel p-6 max-w-xl">
-          <SectionHeader
-            title="Novo usuário"
-            subtitle="Crie o acesso de uma pessoa da equipe. Ela entra com o e-mail e a senha definidos aqui."
-          />
-          <form onSubmit={handleCreateUser} className="space-y-4">
+        {secao === 'novo' && (
+          <form className="card cp" onSubmit={handleCreateUser} style={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label className={LABEL_CLASS}>Nome completo</label>
-              <input
-                type="text"
-                required
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="Ex: João Silva"
-              />
+              <h2 style={{ fontSize: 15, fontWeight: 630 }}>Novo usuário</h2>
+              <p className="mut" style={{ fontSize: 12.5, marginTop: 2 }}>A pessoa entra com o e-mail e a senha definidos aqui. Depois, libere os módulos em Equipe.</p>
             </div>
-            <div>
-              <label className={LABEL_CLASS}>E-mail</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="exemplo@vivox.com.br"
-              />
+            <div className="fld">
+              <label htmlFor="nu1">Nome completo</label>
+              <input id="nu1" className="inp" required value={nome} onChange={(e) => setNome(e.target.value)} />
             </div>
-            <div>
-              <label className={LABEL_CLASS}>Senha</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="Mínimo 6 caracteres"
-              />
+            <div className="fld">
+              <label htmlFor="nu2">E-mail</label>
+              <input id="nu2" className="inp" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@vivoxmarketing.com.br" />
             </div>
-
-            {error && <ErrorBox message={error} />}
-
-            <button
-              type="submit"
-              disabled={loadingForm}
-              className="pw-glass-control pw-glass-primary rounded-xl w-full sm:w-auto px-5 py-2.5 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <UserPlus className="w-4 h-4" /> {loadingForm ? 'Criando...' : 'Criar usuário'}
+            <div className="fld">
+              <label htmlFor="nu3">Senha inicial</label>
+              <input id="nu3" className="inp" type="password" required minLength={6} value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
+            </div>
+            {error && <Erro message={error} />}
+            <button className="btn pri" type="submit" disabled={loadingForm} style={{ alignSelf: 'flex-start' }}>
+              {loadingForm ? 'Criando...' : 'Criar usuário'}
             </button>
           </form>
-        </section>
-      )}
+        )}
 
-      {/* MINHA CONTA */}
-      {secao === 'conta' && (
-        <section className="pw-glass-panel p-6 max-w-xl">
-          <SectionHeader title="Minha conta" subtitle="Dados do usuário com o qual você está conectado." />
-          <div className="pw-glass-card rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-12 h-12 shrink-0 bg-[#FAF2E4] border border-[#E8D4B4] rounded-xl flex items-center justify-center text-[#8A6828] font-bold">
-              {(me?.nome || currentUser?.nome || '?').charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[#1E1A16] truncate">{me?.nome || currentUser?.nome || '-'}</p>
-              <p className="text-xs text-[#5E574C] truncate">{me?.email || currentUser?.email || '-'}</p>
-            </div>
-            <RoleBadge role={currentUser?.role as Role | undefined} />
-          </div>
-          {me && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              <button
-                type="button"
-                onClick={() => openEditModal(me)}
-                className="pw-glass-control rounded-xl px-3 py-2 text-xs font-semibold text-[#1E1A16] flex items-center gap-1.5 cursor-pointer"
-              >
-                <Edit2 className="w-3.5 h-3.5 text-[#7A6440]" /> Editar meus dados
-              </button>
-              <button
-                type="button"
-                onClick={() => openResetModal(me)}
-                className="pw-glass-control rounded-xl px-3 py-2 text-xs font-semibold text-[#B83B32] flex items-center gap-1.5 cursor-pointer"
-              >
-                <KeyRound className="w-3.5 h-3.5" /> Redefinir minha senha
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* APARÊNCIA */}
-      {secao === 'aparencia' && (
-        <section className="pw-glass-panel p-6 max-w-2xl">
-          <SectionHeader
-            title="Aparência"
-            subtitle="Como a barra lateral aparece para você. Fica salvo neste navegador."
-          />
-
-          <div className="cfg-opts">
-            <div className="cfg-opt">
-              <div className="cfg-opt-t">
-                <b>Barra lateral</b>
-                <small>Aberta mostra o nome dos módulos. Recolhida deixa só os ícones.</small>
-              </div>
-              <div className="cfg-seg" role="group" aria-label="Barra lateral">
-                <button
-                  type="button"
-                  aria-pressed={!sidebarPrefs.collapsed}
-                  onClick={() => updateSidebar({ collapsed: false })}
-                >
-                  Aberta
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={sidebarPrefs.collapsed}
-                  onClick={() => updateSidebar({ collapsed: true })}
-                >
-                  Recolhida
-                </button>
+        {secao === 'conta' && (
+          <section className="card cp" style={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span className="av" style={{ width: 52, height: 52, fontSize: 16 }}>{iniciais(me?.nome || currentUser?.nome)}</span>
+              <div style={{ minWidth: 0 }}>
+                <b style={{ fontSize: 16 }}>{me?.nome || currentUser?.nome || '-'}</b>
+                <p className="mut">{me?.email || currentUser?.email || '-'} · {PAPEL[(currentUser?.role as Role) || 'COLABORADOR'] ?? currentUser?.role}</p>
               </div>
             </div>
-          </div>
+            {me && (
+              <div className="acts">
+                <button className="btn sec" type="button" onClick={() => openEditModal(me)}><Pencil className="i" aria-hidden="true" />Editar meus dados</button>
+                <button className="btn sec" type="button" onClick={() => openResetModal(me)}><KeyRound className="i" aria-hidden="true" />Trocar minha senha</button>
+              </div>
+            )}
+          </section>
+        )}
 
-          <div className="cfg-prev" aria-hidden="true">
-            <div className="cfg-prev-side">
-              <PanelLeftClose className="w-4 h-4" />
-              <i className="on" />
-              <i />
-              <i />
+        {secao === 'aparencia' && (
+          <section className="card cp" style={{ maxWidth: 640 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 630 }}>Aparência</h2>
+            <p className="mut" style={{ fontSize: 12.5, marginTop: 2 }}>Fica salvo neste navegador.</p>
+            <div className="opt">
+              <div><b>Barra lateral recolhida</b><small>Mostra só os ícones dos módulos.</small></div>
+              <button
+                className={sidebarPrefs.collapsed ? 'tgl on' : 'tgl'}
+                type="button"
+                role="switch"
+                aria-checked={sidebarPrefs.collapsed}
+                aria-label="Barra lateral recolhida"
+                onClick={() => updateSidebar({ collapsed: !sidebarPrefs.collapsed })}
+              />
             </div>
-            <div className="cfg-prev-main">
-              <span>Prévia</span>
-            </div>
-          </div>
-        </section>
-      )}
-
-        </div>
+          </section>
+        )}
       </div>
 
-      {/* TOAST */}
       {toast && (
-        <div
-          role="status"
-          className="fixed bottom-6 right-6 z-[60] pw-glass-pill pw-glass-success px-4 py-2.5 text-xs font-bold flex items-center gap-2"
-        >
-          <CheckCircle2 className="w-4 h-4" /> {toast}
-        </div>
+        <div role="status" className="toast"><CheckCircle2 className="i" aria-hidden="true" />{toast}</div>
       )}
 
-      {/* Modal Confirmar Papel */}
-      <Modal isOpen={!!pendingRole} onClose={() => setPendingRole(null)} title="Alterar papel">
-        <div className="space-y-4 mt-2">
-          <p className="text-sm text-[#625746]">
-            Alterar o papel de <strong>{pendingRole?.user.nome}</strong> para <strong>{pendingRole?.role}</strong>?
-          </p>
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              onClick={() => setPendingRole(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#625746] hover:bg-[#FAF6F0] rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={confirmRoleChange}
-              className="px-4 py-2 rounded-xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold transition-colors"
-            >
-              Confirmar
-            </button>
-          </div>
+      <VxDialog open={!!pendingRole} onClose={() => setPendingRole(null)} title="Alterar papel">
+        <p>
+          Alterar o papel de <b>{pendingRole?.user.nome}</b> para <b>{pendingRole ? PAPEL[pendingRole.role] : ''}</b>?
+        </p>
+        <div className="acts" style={{ justifyContent: 'flex-end' }}>
+          <button className="btn sec" type="button" onClick={() => setPendingRole(null)}>Cancelar</button>
+          <button className="btn pri" type="button" onClick={confirmRoleChange}>Confirmar</button>
         </div>
-      </Modal>
+      </VxDialog>
 
-      {/* Modal Editar Usuário */}
-      <Modal isOpen={!!editingUser} onClose={() => setEditingUser(null)} title="Editar Usuário">
-        <form onSubmit={handleEditUser} className="space-y-4 mt-2">
-          <div>
-            <label className={LABEL_CLASS}>Nome completo</label>
-            <input type="text" required value={editNome} onChange={(e) => setEditNome(e.target.value)} className={INPUT_CLASS} />
+      <VxDialog open={!!editingUser} onClose={() => setEditingUser(null)} title="Editar usuário">
+        <form onSubmit={handleEditUser} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="fld">
+            <label htmlFor="eu1">Nome completo</label>
+            <input id="eu1" className="inp" required value={editNome} onChange={(e) => setEditNome(e.target.value)} />
           </div>
-          <div>
-            <label className={LABEL_CLASS}>E-mail</label>
-            <input type="email" required value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className={INPUT_CLASS} />
+          <div className="fld">
+            <label htmlFor="eu2">E-mail</label>
+            <input id="eu2" className="inp" type="email" required value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
           </div>
-
-          {editError && <ErrorBox message={editError} />}
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              onClick={() => setEditingUser(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#625746] hover:bg-[#FAF6F0] rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loadingForm}
-              className="px-4 py-2 rounded-xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold transition-colors disabled:opacity-50"
-            >
-              {loadingForm ? 'Salvando...' : 'Salvar alterações'}
-            </button>
+          {editError && <Erro message={editError} />}
+          <div className="acts" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn sec" type="button" onClick={() => setEditingUser(null)}>Cancelar</button>
+            <button className="btn pri" type="submit" disabled={loadingForm}>{loadingForm ? 'Salvando...' : 'Salvar alterações'}</button>
           </div>
         </form>
-      </Modal>
+      </VxDialog>
 
-      {/* Modal Redefinir Senha */}
-      <Modal isOpen={!!resettingUser} onClose={() => setResettingUser(null)} title="Redefinir Senha">
-        <form onSubmit={handleResetPassword} className="space-y-4 mt-2">
-          <p className="text-sm text-[#625746] mb-4">
-            Defina uma nova senha para o usuário <strong>{resettingUser?.nome}</strong>. A senha atual deixará de funcionar.
-          </p>
-          <div>
-            <label className={LABEL_CLASS}>Nova senha</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={newSenha}
-              onChange={(e) => setNewSenha(e.target.value)}
-              className={INPUT_CLASS}
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
-
-          {resetError && <ErrorBox message={resetError} />}
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              onClick={() => setResettingUser(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#625746] hover:bg-[#FAF6F0] rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loadingForm}
-              className="px-4 py-2 rounded-xl bg-[#B83B32] hover:bg-[#9E3128] text-white text-xs font-bold transition-colors disabled:opacity-50"
-            >
-              {loadingForm ? 'Salvando...' : 'Redefinir senha'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Modal Permissões de Módulos */}
-      <Modal
-        isOpen={!!modulosUser}
-        onClose={() => !savingModulos && setModulosUser(null)}
-        title={`Permissões de Módulos: ${modulosUser?.nome || ''}`}
+      <VxDialog
+        open={!!resettingUser}
+        onClose={() => setResettingUser(null)}
+        title="Redefinir senha"
+        subtitle={resettingUser ? `Nova senha para ${resettingUser.nome}. A senha atual deixa de funcionar.` : undefined}
       >
-        <div className="space-y-4 mt-2 text-[#1E1A16]">
-          <div className="flex items-center justify-between pb-2 border-b border-[#524B40]/10 flex-wrap gap-2">
-            <p className="text-xs text-[#5E574C]">
-              Selecione os módulos que o colaborador pode acessar:
-            </p>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setSelectedModulos([...TODOS_MODULOS])}
-                className="pw-glass-control px-2.5 py-1 text-[11px] font-bold text-[#7A6440] hover:text-[#1E1A16] rounded-lg transition-colors cursor-pointer"
-              >
-                Marcar todos
-              </button>
-              <span className="text-[#5E574C]/30 text-xs">|</span>
-              <button
-                type="button"
-                onClick={() => setSelectedModulos([])}
-                className="pw-glass-control px-2.5 py-1 text-[11px] font-bold text-[#8F8271] hover:text-[#B83B32] rounded-lg transition-colors cursor-pointer"
-              >
-                Limpar
-              </button>
-            </div>
+        <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="fld">
+            <label htmlFor="rs1">Nova senha</label>
+            <input id="rs1" className="inp" type="password" required minLength={6} value={newSenha} onChange={(e) => setNewSenha(e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
           </div>
-
-          {/* Lista dos 6 módulos em toggles */}
-          <div className="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1">
-            {MODULOS.map((mod) => {
-              const Icon = mod.icone;
-              const ativo = selectedModulos.includes(mod.id);
-              return (
-                <div
-                  key={mod.id}
-                  onClick={() => toggleModulo(mod.id)}
-                  className={`pw-glass-panel p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    ativo
-                      ? 'border-[#C7A15F]/60 bg-white/80 shadow-2xs'
-                      : 'border-[#524B40]/10 bg-white/40 opacity-75 hover:opacity-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
-                        ativo
-                          ? 'bg-[#FAF2E4] border-[#E8D4B4] text-[#8A6828]'
-                          : 'bg-stone-100 border-stone-200 text-stone-500'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-[#1E1A16] truncate">{mod.label}</h4>
-                        <span className="font-mono text-[10px] text-[#8F8271] bg-stone-100 px-1.5 py-0.5 rounded">
-                          {mod.rotaInicial}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#5E574C] line-clamp-1">{mod.descricao}</p>
-                    </div>
-                  </div>
-
-                  {/* Toggle switch visual */}
-                  <div className="shrink-0 flex items-center pl-2">
-                    <div
-                      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                        ativo ? 'bg-[#C7A15F]' : 'bg-stone-300'
-                      }`}
-                    >
-                      <div
-                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                          ativo ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          {resetError && <Erro message={resetError} />}
+          <div className="acts" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn sec" type="button" onClick={() => setResettingUser(null)}>Cancelar</button>
+            <button className="btn pri" type="submit" disabled={loadingForm}>{loadingForm ? 'Salvando...' : 'Redefinir senha'}</button>
           </div>
+        </form>
+      </VxDialog>
 
-          {modulosError && <ErrorBox message={modulosError} />}
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#524B40]/10">
-            <button
-              type="button"
-              disabled={savingModulos}
-              onClick={() => setModulosUser(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#625746] hover:bg-[#FAF6F0] rounded-xl transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={savingModulos}
-              onClick={handleSaveModulos}
-              className="px-4 py-2 rounded-xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
-            >
-              {savingModulos ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
-                </>
-              ) : (
-                'Salvar alterações'
-              )}
-            </button>
+      <VxDialog
+        open={!!modulosUser}
+        onClose={() => !savingModulos && setModulosUser(null)}
+        title={`Permissões de ${modulosUser?.nome || ''}`}
+        subtitle="Escolha os módulos que esta pessoa pode abrir. O menu e as rotas seguem esta lista."
+      >
+        <div className="acts">
+          <button className="btn gh sm" type="button" onClick={() => setSelectedModulos([...TODOS_MODULOS])}>Marcar todos</button>
+          <button className="btn gh sm" type="button" onClick={() => setSelectedModulos([])}>Limpar</button>
+        </div>
+        <div>
+          {MODULOS.map((mod) => {
+            const ativo = selectedModulos.includes(mod.id);
+            return (
+              <div className="pm" key={mod.id}>
+                <div><b>{mod.label}</b><small>{mod.descricao}</small></div>
+                <button className={ativo ? 'tgl on' : 'tgl'} type="button" role="switch" aria-checked={ativo} aria-label={mod.label} onClick={() => toggleModulo(mod.id)} />
+              </div>
+            );
+          })}
+        </div>
+        {modulosError && <Erro message={modulosError} />}
+        <div className="acts" style={{ justifyContent: 'space-between' }}>
+          <span className="mut" style={{ fontSize: 12.5 }}>{selectedModulos.length} de {MODULOS.length} módulos</span>
+          <div className="acts">
+            <button className="btn sec" type="button" disabled={savingModulos} onClick={() => setModulosUser(null)}>Cancelar</button>
+            <button className="btn pri" type="button" disabled={savingModulos} onClick={handleSaveModulos}>{savingModulos ? 'Salvando...' : 'Salvar permissões'}</button>
           </div>
         </div>
-      </Modal>
+      </VxDialog>
     </div>
   );
 }
