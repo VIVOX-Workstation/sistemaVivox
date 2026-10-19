@@ -269,6 +269,8 @@
           email: p.email || '',
           photo: extrasHelper() ? extrasHelper().sanitizeImageUrl(p.fotoUrl || p.avatarUrl || '') : '',
           role: p.role,
+          cargo: p.cargo || '',
+          funcao: /^(owner|lead|maker|viewer)$/.test(p.funcao || p.funcaoKanban || '') ? p.funcao || p.funcaoKanban : '',
         };
       });
     }
@@ -361,7 +363,15 @@
       };
     }
     async function load() {
-      var raw = await Promise.all([api('/kanban/quadros'), api('/users'), api('/tarefas')]),
+      var raw = await Promise.all([
+          api('/kanban/quadros'),
+          api('/users'),
+          api('/tarefas'),
+          api('/kanban/equipe').catch(function () {
+            return null;
+          }),
+        ]),
+        team = raw[3],
         summaries = raw[2];
       if (config.workspaceId)
         summaries = summaries.filter(function (t) {
@@ -370,7 +380,7 @@
       var tasks = await mapLimit(summaries, function (t) {
         return api.getTask(t.id);
       });
-      registerPeople(raw[1], tasks);
+      registerPeople(team && team.pessoas ? team.pessoas : raw[1], tasks);
       var boards = raw[0].map(function (b) {
         return {
           id: b.id,
@@ -412,6 +422,15 @@
         PROFILES: Object.fromEntries(Object.entries(profiles)),
         viewer: peopleName(userId),
         user: user,
+        team: team
+          ? {
+              permissoes: team.permissoes || {},
+              cargos: team.cargos || [],
+              diasClientes: team.diasClientes || {},
+              clientes: team.clientes || [],
+              acesso: team.acesso || {},
+            }
+          : null,
       };
     }
     function boardPayload(b) {
@@ -759,6 +778,37 @@
       },
       api: api,
       user: user,
+      /* equipe: cargo, função e foto ficam na conta; matriz, cargos extras e dias de postagem no servidor */
+      team: {
+        setPerson: function (name, dto) {
+          return api('/kanban/equipe/pessoas/' + encodeURIComponent(nameToId(name)), { method: 'PATCH', body: dto });
+        },
+        setPerms: function (permissoes) {
+          return api('/kanban/equipe/permissoes', { method: 'PUT', body: { permissoes: permissoes } });
+        },
+        setCargos: function (cargos) {
+          return api('/kanban/equipe/cargos', { method: 'PUT', body: { cargos: cargos } });
+        },
+        setDays: function (cliente, dias) {
+          return api('/kanban/equipe/dias-clientes', { method: 'PUT', body: { cliente: cliente, dias: dias } });
+        },
+        setPhoto: function (blob) {
+          var form = new FormData();
+          form.append('file', blob, 'foto.jpg');
+          return api('/kanban/equipe/eu/foto', { method: 'POST', body: form });
+        },
+        removePhoto: function () {
+          return api('/kanban/equipe/eu/foto', { method: 'DELETE' });
+        },
+        setName: function (nome) {
+          return api('/users/' + encodeURIComponent(userId), { method: 'PATCH', body: { nome: nome } });
+        },
+        setClientLogo: function (clienteId, blob) {
+          var form = new FormData();
+          form.append('file', blob, 'logo.jpg');
+          return api('/kanban/clientes/' + encodeURIComponent(clienteId) + '/logo', { method: 'POST', body: form });
+        },
+      },
       peopleName: peopleName,
       nameToId: nameToId,
     };

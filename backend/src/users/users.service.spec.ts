@@ -16,7 +16,7 @@ describe('Users module permissions API', () => {
   it('lists internal users with modules and excludes CLIENTE', () => {
     service.findAll();
     expect(prisma.user.findMany).toHaveBeenCalledWith({
-      where: { role: { not: Role.CLIENTE } }, select: { id: true, nome: true, email: true, role: true, modulos: true },
+      where: { role: { not: Role.CLIENTE } }, select: { id: true, nome: true, email: true, role: true, modulos: true, cargo: true, funcaoKanban: true, fotoUrl: true },
     });
   });
   it('reads the current user from the database with only the requested fields', async () => {

@@ -417,6 +417,7 @@
   function teamRoleLabel(k) { for (var i = 0; i < TEAM_ROLES.length; i++) if (TEAM_ROLES[i][0] === k) return TEAM_ROLES[i][1]; return ''; }
   function teamRole(n) {
     var p = typeof PROFILES !== 'undefined' ? PROFILES[n] : null;
+    if (INTEGRATED && p && p.funcao) return p.funcao;
     return TEAM.roles[n] || (INTEGRATED ? '' : TEAM_DEFAULT[n]) || (INTEGRATED && p && p.role === 'ADMIN' ? 'owner' : 'maker');
   }
   /* cargo (departamento) de cada pessoa: define o que ela faz na equipe, independente da função na tarefa */
@@ -474,7 +475,48 @@
     return false;
   }
   function cargoTag(n) { var c = cargoOf(n); return c ? ' <small class="cg">' + esc(c) + '</small>' : ''; }
-  function saveTeam() { try { localStorage.setItem('vivox-kanban-team', JSON.stringify(TEAM)); } catch (err) {} }
+  function saveTeam() { if (INTEGRATED) return; try { localStorage.setItem('vivox-kanban-team', JSON.stringify(TEAM)); } catch (err) {} }
+  /* No Sistema VIVOX, cargo, função, permissões, fotos e dias de postagem são salvos no servidor */
+  function teamApi() { return syncBackend && syncBackend.team ? syncBackend.team : null; }
+  function teamFail(err) { toast(err && err.message ? err.message : 'Não foi possível salvar. Tente de novo'); }
+  function teamReload(okMsg) {
+    syncSetBusy(true);
+    return syncBackend.load().then(function (st) { syncHydrate(st, false); if (okMsg) toast(okMsg); if (tOpen()) renderTeam(); if (sOpen()) renderSettings(); })
+      .catch(teamFail).then(function () { syncSetBusy(false); });
+  }
+  function applyTeamState(team) {
+    if (!team) return;
+    TEAM.perms = {};
+    Object.keys(team.permissoes || {}).forEach(function (r) { TEAM.perms[r] = Object.assign({}, team.permissoes[r]); });
+    TEAM.cargos = (team.cargos || []).slice();
+    CLIENT_DAYS = {};
+    Object.keys(team.diasClientes || {}).forEach(function (k) { if (Array.isArray(team.diasClientes[k]) && team.diasClientes[k].length) CLIENT_DAYS[k] = team.diasClientes[k].slice(); });
+    CLIENTS = {}; CLIENT_IDS = {};
+    var clean = window.VvoxSyncTaskExtras && window.VvoxSyncTaskExtras.sanitizeImageUrl;
+    (team.clientes || []).forEach(function (c) {
+      if (!c || !c.nome) return;
+      CLIENT_IDS[c.nome] = c.id;
+      var u = clean ? clean(c.logoUrl || '') : '';
+      if (u) CLIENTS[c.nome] = u;
+    });
+  }
+  function squareBlob(file, size, done) {
+    if (!/^image\//.test(file.type)) { toast('Escolha uma imagem JPG, PNG ou WebP'); return; }
+    if (file.size > 8 * 1048576) { toast('A imagem passa de 8 MB'); return; }
+    var fr = new FileReader();
+    fr.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var sq = Math.min(img.width, img.height), c = document.createElement('canvas');
+        c.width = c.height = size;
+        c.getContext('2d').drawImage(img, (img.width - sq) / 2, (img.height - sq) / 2, sq, sq, 0, 0, size, size);
+        c.toBlob(function (blob) { if (blob) done(blob); else toast('Não foi possível ler essa imagem'); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { toast('Não foi possível ler essa imagem'); };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
   function userFrom(name) {
     var u = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
     if (u.length < 3) u = (u + '.vivox').slice(0, 24);
@@ -532,6 +574,7 @@
     if (!PROFILES[name]) { var u = userFrom(name); PROFILES[name] = { user: u, email: u + '@vivox.com.br', photo: '' }; }
   }
   (function () {
+    if (INTEGRATED) return;
     try {
       var raw = JSON.parse(localStorage.getItem('vivox-kanban-team') || 'null');
       if (raw && typeof raw === 'object') {
@@ -765,9 +808,9 @@
     return '<span class="av"' + (tip ? ' tabindex="0" aria-label="' + esc(tip) + '"' : '') + ' style="--c:' + tn[0] + ';--t:' + tn[1] + (photo ? ';background-image:url(' + photo + ')' : '') + '">' + (photo ? '' : initials(name)) + (tip ? '<span class="tip" role="tooltip">' + esc(tip) + '</span>' : '') + '</span>';
   }
   /* cliente: vem do campo "cliente" da tarefa ou do começo da frase ("Studio Nativa · seção de depoimentos"); a foto fica salva por cliente neste navegador */
-  var CLIENTS = {};
+  var CLIENTS = {}, CLIENT_IDS = {};
   try {
-    var rawC = JSON.parse(localStorage.getItem('vivox-kanban-clients') || 'null');
+    var rawC = INTEGRATED ? null : JSON.parse(localStorage.getItem('vivox-kanban-clients') || 'null');
     if (rawC && typeof rawC === 'object') Object.keys(rawC).forEach(function (k) {
       if (typeof rawC[k] === 'string' && rawC[k].indexOf('data:image/jpeg;base64,') === 0 && rawC[k].length < 90000) CLIENTS[k] = rawC[k];
     });
@@ -780,7 +823,7 @@
     "Consultório Prado": "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"
   };
   // Customer photos are user preferences; demonstration logos are never assigned to real tasks.
-  function saveClients() { try { localStorage.setItem('vivox-kanban-clients', JSON.stringify(CLIENTS)); } catch (err) {} }
+  function saveClients() { if (INTEGRATED) return; try { localStorage.setItem('vivox-kanban-clients', JSON.stringify(CLIENTS)); } catch (err) {} }
   function clientOf(t) {
     if (t.client) return t.client;
     var n = t.note || '', i = n.indexOf(' · ');
@@ -793,6 +836,18 @@
   }
   function setClientPhoto(name, file) {
     if (!name || !file) return;
+    if (INTEGRATED && teamApi()) {
+      if (!CLIENT_IDS[name]) { toast('Cadastre ' + name + ' em Clientes no Sistema VIVOX para salvar a logo'); return; }
+      squareBlob(file, 320, function (blob) {
+        teamApi().setClientLogo(CLIENT_IDS[name], blob).then(function (r) {
+          var clean = window.VvoxSyncTaskExtras && window.VvoxSyncTaskExtras.sanitizeImageUrl, u = clean && r ? clean(r.logoUrl || '') : '';
+          if (u) CLIENTS[name] = u;
+          refreshAllCards(); renderDetail(); if (mainView === 'cal') renderPubCal();
+          toast('Logo de ' + name + ' atualizada no cadastro do cliente');
+        }).catch(teamFail);
+      });
+      return;
+    }
     if (!/^image\//.test(file.type)) { toast('Escolha uma imagem JPG, PNG ou WebP'); return; }
     if (file.size > 8 * 1048576) { toast('A imagem passa de 8 MB'); return; }
     var fr = new FileReader();
@@ -2460,7 +2515,7 @@
       return;
     }
     var cr = e.target.closest('[data-clirm]');
-    if (cr) { delete CLIENTS[cr.dataset.clirm]; saveClients(); refreshAllCards(); renderDetail(); toast('Foto removida'); return; }
+    if (cr) { if (INTEGRATED) { toast('Para tirar a logo, edite o cliente em Clientes no Sistema VIVOX'); return; } delete CLIENTS[cr.dataset.clirm]; saveClients(); refreshAllCards(); renderDetail(); toast('Foto removida'); return; }
     var ld = e.target.closest('[data-lkdel]');
     if (ld) {
       var ll = locate(detailId);
@@ -3034,7 +3089,7 @@
     return h + '</ul>' + (cur2 ? '<button class="btn sm" type="button" data-nwpick="">Deixar sem responsável</button>' : '');
   }
   function tcargoHTML() {
-    var who = popState.role, cur2 = TEAM.cargo[who] !== undefined ? TEAM.cargo[who] : (CARGO_DEFAULT[who] || ''), h = '<h4>Cargo de ' + esc(who.split(' ')[0]) + '</h4><ul class="opts">';
+    var who = popState.role, cur2 = cargoOf(who), h = '<h4>Cargo de ' + esc(who.split(' ')[0]) + '</h4><ul class="opts">';
     cargoList().forEach(function (c) {
       h += '<li class="opt"><button type="button" class="opt-b' + (cur2 === c ? ' on' : '') + '" data-tcpick="' + esc(c) + '"><span>' + esc(c) + '</span>' + (cur2 === c ? icon('check', 'tick') : '') + '</button></li>';
     });
@@ -3043,6 +3098,16 @@
   }
   function setCargo(who, value) {
     if (!allow('team_manage')) return;
+    if (INTEGRATED && teamApi()) {
+      var pf = PROFILES[who] || {}, prev = pf.cargo || '';
+      pf.cargo = value;
+      if (value && cargoList().indexOf(value) < 0) TEAM.cargos.push(value);
+      closePop(true); renderTeam(); refreshAllCards();
+      teamApi().setPerson(who, { cargo: value || null }).then(function () {
+        toast(value ? who + ' agora é ' + value : 'Cargo de ' + who + ' removido');
+      }).catch(function (err) { pf.cargo = prev; renderTeam(); refreshAllCards(); teamFail(err); });
+      return;
+    }
     TEAM.cargo[who] = value;
     if (value && cargoList().indexOf(value) < 0) TEAM.cargos.push(value);
     saveTeam(); closePop(true); renderTeam(); refreshAllCards();
@@ -3417,6 +3482,13 @@
       if ((b = e.target.closest('[data-trole]'))) {
         if (!allow('team_manage')) return;
         var who = popState.role, nr = b.dataset.trole;
+        if (INTEGRATED && teamApi()) {
+          var pf2 = PROFILES[who] || {}, prev2 = pf2.funcao || '';
+          pf2.funcao = nr; closePop(true); renderTeam(); applyPerms(); refreshAllCards();
+          teamApi().setPerson(who, { funcao: nr }).then(function () { toast(who + ' agora é ' + teamRoleLabel(nr)); })
+            .catch(function (err) { pf2.funcao = prev2; renderTeam(); applyPerms(); refreshAllCards(); teamFail(err); });
+          return;
+        }
         TEAM.roles[who] = nr; saveTeam(); closePop(true);
         toast(who + ' agora é ' + teamRoleLabel(nr));
         renderTeam();
@@ -3433,8 +3505,8 @@
       if ((b = e.target.closest('[data-wd]'))) {
         var w = +b.dataset.wd, cur2 = daysOf(cn).slice(), ix = cur2.indexOf(w);
         if (ix > -1) { if (cur2.length > 1) cur2.splice(ix, 1); else toast('Deixe pelo menos um dia de postagem'); } else cur2.push(w);
-        CLIENT_DAYS[cn] = cur2.sort(function (x, y) { return x - y; }); saveDays(); buildPop(); placePop(); renderPubCal();
-      } else if (e.target.closest('[data-wdreset]')) { delete CLIENT_DAYS[cn]; saveDays(); buildPop(); placePop(); renderPubCal(); }
+        CLIENT_DAYS[cn] = cur2.sort(function (x, y) { return x - y; }); saveDays(cn); buildPop(); placePop(); renderPubCal();
+      } else if (e.target.closest('[data-wdreset]')) { delete CLIENT_DAYS[cn]; saveDays(cn); buildPop(); placePop(); renderPubCal(); }
       else if (e.target.closest('[data-pcancel]')) closePop(true);
       return;
     }
@@ -3458,7 +3530,7 @@
       if (e.target.closest('[data-opensettings]')) { closePop(); openSettings(); return; }
       if ((b = e.target.closest('[data-ph]'))) {
         if (b.dataset.ph === 'pick') popEl.querySelector('#phFile').click();
-        else { if (syncBackend) { toast('A foto é gerenciada nas configurações da sua conta'); return; } PROFILES[viewer].photo = ''; saveProfiles(); afterProfile(); toast('Foto removida'); }
+        else { if (syncBackend) { if (teamApi()) { closePop(true); teamApi().removePhoto().then(function () { return teamReload('Foto removida'); }).catch(teamFail); } return; } PROFILES[viewer].photo = ''; saveProfiles(); afterProfile(); toast('Foto removida'); }
       } else if (e.target.closest('[data-pcancel]')) closePop(true);
       return;
     }
@@ -3894,13 +3966,13 @@
   }
   function renderTeam() {
     if (!tOpen()) return;
-    var adm = can('team_manage') && !INTEGRATED, realAdm = isAdmin(REAL_USER) && !INTEGRATED;
+    var adm = can('team_manage') && (!INTEGRATED || !!teamApi()), realAdm = isAdmin(REAL_USER) && !INTEGRATED, own = adm && !INTEGRATED;
     $('tSub').textContent = tView.mode === 'list'
       ? 'Quem faz parte da equipe, o cargo e a função de cada pessoa, e o que cada função pode fazer.'
       : 'Escolha quem fica com as tarefas antes de remover.';
     if (tView.mode === 'list') {
       var h = INTEGRATED
-        ? '<p class="tnote">' + icon('lock') + '<span>As pessoas, os e-mails e o acesso vêm das contas do Sistema VIVOX.' + (isAdmin(viewer) ? ' <button type="button" class="link" data-gotosys="/configuracoes">Gerenciar usuários no sistema</button>' : '') + '</span></p>'
+        ? '<p class="tnote">' + icon(adm ? 'users' : 'lock') + '<span>As pessoas, os e-mails e o acesso vêm das contas do Sistema VIVOX.' + (adm ? ' Cargo, função e permissões ficam salvos na conta de cada pessoa.' : ' Só administradores mudam cargos, funções e permissões.') + (isAdmin(viewer) ? ' <button type="button" class="link" data-gotosys="/configuracoes">Adicionar ou remover pessoas no sistema</button>' : '') + '</span></p>'
         : (adm ? '' : '<p class="tnote">' + icon('lock') + 'Só administradores podem mudar cargos, funções, permissões e a equipe. Você pode consultar tudo aqui.</p>');
       h += '<ul class="tlist">' + PEOPLE.map(function (n) {
         var pr = PROFILES[n], me = n === viewer, cnt = personTasks(n).length, ad = isAdmin(n), dis = adm ? '' : ' disabled';
@@ -3909,9 +3981,9 @@
           '<button class="trolebtn tcg" type="button" data-tc="' + esc(n) + '"' + dis + ' aria-haspopup="dialog" aria-expanded="false" aria-label="Cargo de ' + esc(n) + ': ' + esc(cargoOf(n) || 'sem cargo') + (adm ? '. Alterar' : '. Só administradores alteram') + '" title="' + (adm ? 'Mudar o cargo' : 'Só administradores mudam o cargo') + '">' + icon('briefcase') + esc(cargoOf(n) || 'Sem cargo') + (adm ? icon('down') : icon('lock')) + '</button>' +
           '<button class="trolebtn" type="button" data-tr="' + esc(n) + '"' + dis + ' aria-haspopup="dialog" aria-expanded="false" aria-label="Função de ' + esc(n) + ': ' + teamRoleLabel(teamRole(n)) + (adm ? '. Alterar' : '. Só administradores alteram') + '" title="' + (adm ? 'Mudar a função' : 'Só administradores mudam a função') + '">' + icon('users') + teamRoleLabel(teamRole(n)) + (adm ? icon('down') : icon('lock')) + '</button>' +
           '<div class="tact">' +
-          (adm ? '<button class="ib' + (ad ? ' on' : '') + '" type="button" data-tadm="' + esc(n) + '"' + (lastAdm ? ' disabled' : '') + ' aria-pressed="' + ad + '" title="' + (lastAdm ? 'É preciso ter pelo menos um administrador' : ad ? 'Tirar de administrador' : 'Tornar administrador') + '" aria-label="' + (ad ? 'Tirar ' : 'Tornar ') + esc(n) + (ad ? ' de administrador' : ' administrador') + '">' + icon('shield') + '</button>' : '') +
+          (own ? '<button class="ib' + (ad ? ' on' : '') + '" type="button" data-tadm="' + esc(n) + '"' + (lastAdm ? ' disabled' : '') + ' aria-pressed="' + ad + '" title="' + (lastAdm ? 'É preciso ter pelo menos um administrador' : ad ? 'Tirar de administrador' : 'Tornar administrador') + '" aria-label="' + (ad ? 'Tirar ' : 'Tornar ') + esc(n) + (ad ? ' de administrador' : ' administrador') + '">' + icon('shield') + '</button>' : '') +
           (realAdm && n !== viewer ? '<button class="ib" type="button" data-tas="' + esc(n) + '" title="Ver o painel como ' + esc(n) + '" aria-label="Ver o painel como ' + esc(n) + '">' + icon('eye') + '</button>' : '') +
-          (adm ? '<button class="ib" type="button" data-trm="' + esc(n) + '"' + (me ? ' disabled title="Você não pode remover a si mesmo(a)"' : ' title="Remover da equipe"') + ' aria-label="Remover ' + esc(n) + ' da equipe">' + icon('trash') + '</button>' : '') +
+          (own ? '<button class="ib" type="button" data-trm="' + esc(n) + '"' + (me ? ' disabled title="Você não pode remover a si mesmo(a)"' : ' title="Remover da equipe"') + ' aria-label="Remover ' + esc(n) + ' da equipe">' + icon('trash') + '</button>' : '') +
           '</div></li>';
       }).join('') + '</ul>';
       /* matriz de permissões por função */
@@ -3926,7 +3998,7 @@
         }).join('') +
         '<div class="tpa">Gerenciar colaboradores, cargos e funções</div><div class="tpc wide" style="grid-column:2/6"><span class="tonly">' + icon('shield') + 'Somente administradores</span></div>' +
         '</div></section>';
-      if (adm) h += '<form class="tadd" id="tAddForm" autocomplete="off"><h3>Adicionar colaborador(a)</h3><div class="tf">' +
+      if (own) h += '<form class="tadd" id="tAddForm" autocomplete="off"><h3>Adicionar colaborador(a)</h3><div class="tf">' +
         '<label>Nome<input id="tName" type="text" maxlength="40" placeholder="Ex.: Ana Souza"></label>' +
         '<label>Cargo<input id="tCargo" type="text" maxlength="28" placeholder="Ex.: Designer"></label>' +
         '<button class="btn primary" type="submit">Adicionar</button></div><p class="terr" id="tErr" role="alert" hidden></p></form>';
@@ -3969,7 +4041,14 @@
       if (!allow('team_manage')) return;
       var pr2 = b.dataset.perm.split(':'), role2 = pr2[0], key2 = pr2[1];
       TEAM.perms[role2] = TEAM.perms[role2] || {};
+      var was2 = TEAM.perms[role2][key2];
       TEAM.perms[role2][key2] = !permOn(role2, key2);
+      if (INTEGRATED && teamApi()) {
+        teamApi().setPerms(TEAM.perms).catch(function (err) {
+          if (was2 === undefined) delete TEAM.perms[role2][key2]; else TEAM.perms[role2][key2] = was2;
+          applyPerms(); renderTeam(); teamFail(err);
+        });
+      }
       saveTeam(); applyPerms(); renderTeam();
       toast(teamRoleLabel(role2) + (TEAM.perms[role2][key2] ? ' pode ' : ' não pode mais ') + (PERM_TEXT[key2] || 'isso'));
       return;
@@ -4074,9 +4153,14 @@
   function integratedProfileHTML() {
     var pr = PROFILES[viewer] || {}, ad = isAdmin(viewer);
     var row = function (k, v) { return '<li><span>' + k + '</span><em style="color:var(--fg)">' + esc(v || '—') + '</em></li>'; };
-    return '<div class="spf"><span class="spa">' + avatar(viewer) + '</span><div class="spb"><b>' + esc(viewer) + '</b><small>' + esc(ad ? 'Administrador' : teamRoleLabel(teamRole(viewer))) + (cargoOf(viewer) ? ' · ' + esc(cargoOf(viewer)) : '') + '</small></div></div>' +
-      '<ul class="srows">' + row('Nome', viewer) + row('E-mail', pr.email) + row('Usuário', pr.user ? '@' + pr.user : '') + '</ul>' +
-      '<p class="shint">Esses dados vêm da sua conta no Sistema VIVOX e valem em todo o sistema.</p>';
+    return '<div class="spf"><span class="spa">' + avatar(viewer) + '</span><div class="spb"><b>' + esc(viewer) + '</b><small>' + esc(ad ? 'Administrador' : teamRoleLabel(teamRole(viewer))) + (cargoOf(viewer) ? ' · ' + esc(cargoOf(viewer)) : '') + '</small>' +
+      '<div class="spg"><button class="btn sm" type="button" data-sph="pick">' + icon('camera') + 'Alterar foto</button>' + (pr.photo ? '<button class="btn sm" type="button" data-sph="rm">Remover</button>' : '') + '</div></div></div>' +
+      '<form class="sform" id="sform" autocomplete="off">' +
+      '<label class="sfld"><span>Nome</span><input id="sName" type="text" maxlength="40" autocomplete="name" value="' + esc(sDraft.name) + '"><small>É o nome da sua conta no Sistema VIVOX: aparece nas tarefas, no bate-papo e na atividade</small></label>' +
+      '<p class="perr" id="sErr" role="alert" hidden></p>' +
+      '<div class="sact"><button class="btn primary" type="submit">Salvar nome</button></div></form>' +
+      '<ul class="srows">' + row('E-mail', pr.email) + row('Usuário', pr.user ? '@' + pr.user : '') + '</ul>' +
+      '<p class="shint">O e-mail e a senha são alterados em Configurações do sistema.</p>';
   }
   function paneHTML() {
     var pr = PROFILES[viewer], h = '';
@@ -4148,6 +4232,7 @@
     var b;
     if ((b = e.target.closest('[data-sph]'))) {
       if (b.dataset.sph === 'pick') sFile.click();
+      else if (INTEGRATED && teamApi()) teamApi().removePhoto().then(function () { return teamReload('Foto removida'); }).catch(teamFail);
       else { PROFILES[viewer].photo = ''; saveProfiles(); afterProfile(); toast('Foto removida'); }
       return;
     }
@@ -4177,6 +4262,13 @@
   });
   sbodyEl.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (INTEGRATED && teamApi()) {
+      var nm2 = sDraft.name.trim().replace(/\s+/g, ' '), err2 = $('sErr');
+      if (nm2.length < 2 || nm2.length > 40) { err2.textContent = 'Digite o seu nome, com 2 a 40 letras.'; err2.hidden = false; $('sName').focus(); return; }
+      if (nm2 === viewer) { toast('Nada para salvar'); return; }
+      teamApi().setName(nm2).then(function () { sDraft.name = nm2; return teamReload('Nome atualizado para ' + nm2); }).catch(teamFail);
+      return;
+    }
     var user = sDraft.user.trim().toLowerCase().replace(/^@/, ''), nm = sDraft.name.trim().replace(/\s+/g, ' '), err = $('sErr');
     function fail(msg, id) { err.textContent = msg; err.hidden = false; $(id).focus(); }
     if (nm.length < 2) { fail('Digite o seu nome, com pelo menos 2 letras.', 'sName'); return; }
@@ -4199,7 +4291,11 @@
     if (typeof sOpen === 'function' && sOpen()) renderSettings();
   }
   function setPhoto(file) {
-    if (syncBackend) { toast('A foto é gerenciada nas configurações da sua conta'); return; }
+    if (syncBackend) {
+      if (!file || !teamApi()) return;
+      squareBlob(file, 256, function (blob) { teamApi().setPhoto(blob).then(function () { return teamReload('Foto atualizada'); }).catch(teamFail); });
+      return;
+    }
     if (!file) return;
     if (!/^image\//.test(file.type)) { toast('Escolha uma imagem JPG, PNG ou WebP'); return; }
     if (file.size > 8 * 1048576) { toast('A imagem passa de 8 MB'); return; }
@@ -4453,13 +4549,20 @@
   var WD3 = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'], WD_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
   var CLIENT_DAYS = {};
   try {
-    var rawD = JSON.parse(localStorage.getItem('vivox-kanban-clientdays') || 'null');
+    var rawD = INTEGRATED ? null : JSON.parse(localStorage.getItem('vivox-kanban-clientdays') || 'null');
     if (rawD && typeof rawD === 'object') Object.keys(rawD).forEach(function (k) {
       if (Array.isArray(rawD[k])) { var a = rawD[k].filter(function (n) { return n >= 0 && n <= 6; }).slice(0, 7); if (a.length) CLIENT_DAYS[k] = a; }
     });
   } catch (err) {}
   function daysOf(name) { return CLIENT_DAYS[name] && CLIENT_DAYS[name].length ? CLIENT_DAYS[name] : [2, 4]; }
-  function saveDays() { try { localStorage.setItem('vivox-kanban-clientdays', JSON.stringify(CLIENT_DAYS)); } catch (err) {} }
+  function saveDays(cn) {
+    if (INTEGRATED) {
+      if (!teamApi() || !cn) return;
+      teamApi().setDays(cn, CLIENT_DAYS[cn] && CLIENT_DAYS[cn].length ? CLIENT_DAYS[cn] : null).catch(function (err) { teamFail(err); teamReload(); });
+      return;
+    }
+    try { localStorage.setItem('vivox-kanban-clientdays', JSON.stringify(CLIENT_DAYS)); } catch (err) {}
+  }
   function planLegend() {
     var cs = cols.filter(function (c) { return c.plan; });
     if (!cs.length) return '<span>Marque uma coluna no menu dela, em Calendário de publicações, para ela aparecer aqui.</span>';
@@ -5261,6 +5364,7 @@
     }); });
     boards.forEach(function(b) { b.cols.forEach(function(c) { c.tasks.forEach(function(t) { if (t.descHtml) t.descHtml = sanitizeHTML(t.descHtml); if(t.category && !catOf(t.category)) CATS.push({id:t.category,label:t.category,icon:CAT_ICONS.indexOf(t.categoryIcon)>=0?t.categoryIcon:'star',group:'other'}); }); }); });
     PEOPLE = state.PEOPLE; PROFILES = state.PROFILES; viewer = state.viewer; REAL_USER = viewer;
+    applyTeamState(state.team);
     syncApplyBoardOrder();
     if (!boards.length) throw new Error('Nenhum quadro disponível para esta conta.');
     var linkedBoard = taskId && boards.find(function(b) {return b.cols.some(function(c) {return c.tasks.some(function(t) {return t.id === taskId;});});});
