@@ -1,0 +1,166 @@
+/* VIVOX Flow · visual clean das telas (docs/DESIGN_SYSTEM.md). Copiado do canvas "Sistema VIVOX — interface clean".
+   Tudo fica dentro de .vxp (raiz de cada tela migrada) para não mexer nas telas que ainda estão no visual antigo. */
+/* Sistema VIVOX — interface clean. Base compartilhada por todas as telas. */
+.vxp{--bg:#F6F2EC;--sf:#FFFFFF;--soft:#FBF8F4;--sk:#F1EBE2;--ln:rgba(80,58,30,.10);--ln2:rgba(80,58,30,.18);--ink:#1F1A15;--ink2:#55493C;--ink3:#6B5F52;--acc-ink:color-mix(in oklab,var(--accent) 78%,#1b1209);--acc-soft:color-mix(in oklab,var(--accent) 11%,#fff);--acc-soft2:color-mix(in oklab,var(--accent) 20%,#fff);--ring:color-mix(in oklab,var(--accent) 40%,transparent);--ok:#2E7A4B;--ok-s:#E6F2EA;--warn:#9A5408;--warn-s:#FBEFDF;--bad:#B23A30;--bad-s:#FBEAE6;--info:#2B5E9C;--info-s:#E7EEF8;--r:12px;--e:cubic-bezier(.2,.8,.2,1);--accent:#91672B;color:var(--ink);font-family:var(--vx-font,'Geist',-apple-system,'Segoe UI',sans-serif);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.vxp *,.vxp *::before,.vxp *::after{box-sizing:border-box}
+.vxp h1,.vxp h2,.vxp h3,.vxp p{margin:0}
+.vxp a{color:inherit;text-decoration:none}
+.vxp svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.vxp .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Área principal */
+.vxp .pg{width:100%;max-width:1240px;margin:0 auto;padding:28px 32px 48px;display:flex;flex-direction:column;gap:24px}
+.vxp .ph{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.vxp .ph h1{font-size:24px;font-weight:650;letter-spacing:-.02em;line-height:1.15}
+.vxp .ph p{color:var(--ink3);margin-top:4px}
+.vxp .acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vxp .kick{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.vxp .sec-t{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vxp .sec-t h2{font-size:15px;font-weight:630}
+.vxp .sec-t a{font-size:12.5px;color:var(--acc-ink);font-weight:560}
+
+/* Botões */
+.vxp .btn{appearance:none;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 14px;border-radius:10px;font:inherit;font-size:13px;font-weight:580;white-space:nowrap;cursor:pointer;transition:background .15s var(--e),box-shadow .15s var(--e),transform .1s var(--e)}
+.vxp .btn svg.i{width:16px;height:16px}
+.vxp .btn:active{transform:scale(.98)}
+.vxp .btn.pri{background:var(--accent);color:#fff}
+.vxp .btn.pri:hover{background:var(--acc-ink)}
+.vxp .btn.sec{background:var(--sf);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ln2)}
+.vxp .btn.sec:hover{background:var(--soft)}
+.vxp .btn.gh{background:transparent;color:var(--ink2)}
+.vxp .btn.gh:hover{background:var(--sk);color:var(--ink)}
+.vxp .btn.dg{background:transparent;color:var(--bad)}
+.vxp .btn.dg:hover{background:var(--bad-s)}
+.vxp .btn.sm{height:32px;padding:0 11px;font-size:12.5px;border-radius:9px}
+.vxp .btn.full{width:100%;height:44px}
+.vxp .ib{appearance:none;border:0;width:36px;height:36px;display:inline-grid;place-items:center;flex:none;border-radius:9px;background:transparent;color:var(--ink2);cursor:pointer}
+.vxp .ib:hover{background:var(--sk);color:var(--ink)}
+.vxp .ib.on{background:var(--acc-soft);color:var(--acc-ink)}
+.vxp .ib.sm{width:30px;height:30px}
+.vxp .ib.sm svg.i{width:16px;height:16px}
+
+/* Superfícies */
+.vxp .card{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r)}
+.vxp .cp{padding:20px}
+.vxp .ch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--ln)}
+.vxp .ch h2{font-size:14px;font-weight:620}
+.vxp .ch a{font-size:12.5px;color:var(--acc-ink);font-weight:560}
+.vxp .grid{display:grid;gap:16px}
+.vxp .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.vxp .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.vxp .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.vxp .g6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.vxp .span2{grid-column:span 2}
+@media(max-width:1100px){.vxp .g4,.vxp .g6{grid-template-columns:repeat(3,minmax(0,1fr))}.vxp .g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.vxp .g2,.vxp .g3,.vxp .g4,.vxp .g6{grid-template-columns:minmax(0,1fr)}.vxp .span2{grid-column:auto}}
+.vxp .kpi{display:flex;flex-direction:column;gap:4px;padding:16px 18px}
+.vxp .kpi span{font-size:12.5px;color:var(--ink3)}
+.vxp .kpi b{font-size:26px;font-weight:620;letter-spacing:-.02em;line-height:1.15}
+.vxp .kpi small{font-size:12px;color:var(--ink3)}
+.vxp .kpi.alert b{color:var(--bad)}
+.vxp a.kpi:hover{background:var(--soft)}
+
+/* Chips, selos, abas */
+.vxp .chips{display:flex;gap:6px;flex-wrap:wrap}
+.vxp .chip{appearance:none;border:0;height:32px;padding:0 12px;border-radius:999px;background:var(--sf);box-shadow:inset 0 0 0 1px var(--ln2);color:var(--ink2);font:inherit;font-size:12.5px;font-weight:560;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.vxp .chip em{font-style:normal;color:var(--ink3);font-weight:500}
+.vxp .chip:hover{color:var(--ink)}
+.vxp .chip.on{background:var(--ink);color:#fff;box-shadow:none}
+.vxp .chip.on em{color:rgba(255,255,255,.72)}
+.vxp .bd{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:var(--sk);color:var(--ink2)}
+.vxp .bd::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.vxp .bd.plain::before{display:none}
+.vxp .bd.ok{background:var(--ok-s);color:var(--ok)}
+.vxp .bd.warn{background:var(--warn-s);color:var(--warn)}
+.vxp .bd.bad{background:var(--bad-s);color:var(--bad)}
+.vxp .bd.info{background:var(--info-s);color:var(--info)}
+.vxp .bd.acc{background:var(--acc-soft);color:var(--acc-ink)}
+.vxp .tabs{display:flex;gap:4px;border-bottom:1px solid var(--ln);overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.vxp .tabs::-webkit-scrollbar{display:none}
+.vxp .tab{appearance:none;border:0;background:transparent;height:42px;padding:0 12px;font:inherit;font-size:13px;font-weight:560;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.vxp .tab svg.i{width:16px;height:16px}
+.vxp .tab:hover{color:var(--ink)}
+.vxp .tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+.vxp .seg{display:inline-flex;padding:3px;border-radius:10px;background:var(--sk);gap:2px}
+.vxp .seg button{appearance:none;border:0;height:30px;padding:0 12px;border-radius:8px;background:transparent;font:inherit;font-size:12.5px;font-weight:560;color:var(--ink2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.vxp .seg button svg.i{width:15px;height:15px}
+.vxp .seg button.on{background:var(--sf);color:var(--ink);box-shadow:0 1px 2px rgba(60,40,10,.14)}
+
+/* Tabelas */
+.vxp .tw{overflow-x:auto}
+.vxp .tbl{width:100%;border-collapse:collapse;font-size:13px}
+.vxp .tbl th{text-align:left;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);padding:10px 16px;border-bottom:1px solid var(--ln);white-space:nowrap;background:var(--soft)}
+.vxp .tbl td{padding:12px 16px;border-bottom:1px solid var(--ln);vertical-align:middle}
+.vxp .tbl tr:last-child td{border-bottom:0}
+.vxp .tbl tbody tr:hover td{background:var(--soft)}
+.vxp .tbl .r{text-align:right}
+.vxp .tbl .c{text-align:center}
+.vxp .mut{color:var(--ink3)}
+.vxp .strong{font-weight:600}
+
+/* Campos */
+.vxp .fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vxp .fld label{font-size:12.5px;font-weight:580;color:var(--ink2)}
+.vxp .fld small{font-size:12px;color:var(--ink3)}
+.vxp .inp{height:40px;width:100%;padding:0 12px;border-radius:10px;border:1px solid var(--ln2);background:var(--sf);font:inherit;font-size:13.5px;color:var(--ink)}
+.vxp textarea.inp{height:auto;padding:10px 12px;resize:vertical;line-height:1.45}
+.vxp select.inp{appearance:auto}
+.vxp .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.vxp .inp::placeholder{color:#8C8073}
+.vxp .srch{position:relative;display:flex;align-items:center;flex:1;min-width:220px;max-width:420px}
+.vxp .srch svg.i{position:absolute;left:12px;width:16px;height:16px;color:var(--ink3);pointer-events:none}
+.vxp .srch .inp{padding-left:36px}
+.vxp .tgl{appearance:none;border:0;width:38px;height:22px;border-radius:999px;background:var(--ln2);position:relative;cursor:pointer;flex:none;transition:background .15s var(--e)}
+.vxp .tgl::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s var(--e)}
+.vxp .tgl.on{background:var(--accent)}
+.vxp .tgl.on::after{transform:translateX(16px)}
+
+/* Listas */
+.vxp .row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--ln)}
+.vxp .row:last-child{border-bottom:0}
+.vxp a.row:hover{background:var(--soft)}
+.vxp .row .t{flex:1;min-width:0}
+.vxp .row .t b{display:block;font-weight:580;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vxp .row .t small{display:block;font-size:12px;color:var(--ink3)}
+.vxp .mono{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none;font-weight:650;font-size:13px;background:var(--sk);color:var(--ink2)}
+.vxp .mono.lg{width:56px;height:56px;border-radius:14px;font-size:18px}
+.vxp .bar{height:6px;border-radius:999px;background:var(--sk);overflow:hidden}
+.vxp .bar i{display:block;height:100%;border-radius:inherit;background:var(--accent)}
+.vxp .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ink3)}
+.vxp .meta{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)}
+.vxp .meta svg.i{width:14px;height:14px}
+
+/* Janelas */
+.vxp .ov{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:24px;background:rgba(31,26,21,.32)}
+.vxp .dlg{width:100%;max-width:520px;max-height:calc(100vh - 48px);overflow:auto;background:var(--sf);border-radius:16px;box-shadow:0 24px 60px -20px rgba(40,25,5,.45)}
+.vxp .dlg.lg{max-width:760px}
+.vxp .dlg-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 24px 0}
+.vxp .dlg-h h2{font-size:17px;font-weight:640}
+.vxp .dlg-h p{color:var(--ink3);font-size:13px;margin-top:2px}
+.vxp .dlg-b{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.vxp .dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:16px 24px;border-top:1px solid var(--ln)}
+.vxp .drw{position:fixed;top:0;right:0;bottom:0;z-index:45;width:min(400px,100%);display:flex;flex-direction:column;background:var(--sf);border-left:1px solid var(--ln);box-shadow:-24px 0 60px -30px rgba(40,25,5,.4)}
+.vxp .drw-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--ln)}
+.vxp .drw-h h2{font-size:15px;font-weight:630;flex:1}
+.vxp .drw-b{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.vxp .drw-f{padding:14px 20px;border-top:1px solid var(--ln);display:flex;gap:8px}
+.vxp .bub{max-width:88%;padding:10px 12px;border-radius:12px;background:var(--sk);font-size:13px}
+.vxp .bub.me{align-self:flex-end;background:var(--ink);color:#fff}
+.vxp .empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px;text-align:center;color:var(--ink3)}
+.vxp .empty b{color:var(--ink);font-size:14px}
+
+
+/* Ajustes da aplicação */
+.vxp{min-height:100%;background:var(--bg)}
+.vxp .pg{flex:1}
+.vxp .ov{z-index:60}
+.vxp .drw{z-index:65}
+@media(max-width:760px){.vxp .pg{padding-left:16px;padding-right:16px}.vxp .ph h1{font-size:21px}}
+/* Gráficos simples e layouts de página (Dashboard e afins) */
+.vxp .chart{display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:8px}
+.vxp .chart-c{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+.vxp .chart-b{width:100%;max-width:30px;border-radius:6px 6px 2px 2px;background:var(--accent)}
+.vxp .chart-c span{font-size:11px;color:var(--ink3);white-space:nowrap}
+.vxp .hb{display:grid;grid-template-columns:120px minmax(0,1fr) 40px;align-items:center;gap:12px;font-size:12.5px}
+.vxp .vxp-2-1{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:start}
+@media (max-width:1024px){.vxp .vxp-2-1{grid-template-columns:minmax(0,1fr)}}
