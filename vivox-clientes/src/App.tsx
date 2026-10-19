@@ -99,15 +99,18 @@ function SemAcesso() {
   const rotaInicial = useRotaInicial();
   // Se o admin liberar algum módulo depois, sai daqui sozinho
   if (rotaInicial !== '/sem-acesso') return <Navigate to={rotaInicial} replace />;
+  const primeiro = user?.nome?.split(' ')[0];
   return (
-    <div className="planning-workspace w-full">
-      <div className="pw-lg-scene" aria-hidden="true" />
-      <div className="pw-glass-panel p-8 max-w-md mx-auto mt-16 text-center space-y-2">
-        <h1 className="text-lg font-bold text-[#1E1A16]">Nenhum módulo liberado</h1>
-        <p className="text-xs text-[#5E574C]">
-          Olá{user?.nome ? `, ${user.nome}` : ''}! Sua conta ainda não tem acesso a nenhum módulo.
-          Peça a um administrador para liberar o que você precisa.
-        </p>
+    <div className="vxp">
+      <div className="pg" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <section className="card" style={{ maxWidth: 440, width: '100%', padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+          <h1 style={{ fontSize: 19, fontWeight: 650 }}>Nenhum módulo liberado</h1>
+          <p className="mut">
+            Olá{primeiro ? `, ${primeiro}` : ''}. A sua conta ainda não tem acesso a nenhum módulo. Peça a um administrador para
+            liberar o que você precisa em Configurações › Equipe.
+          </p>
+          <p className="mut" style={{ fontSize: 12.5 }}>Esta tela fecha sozinha assim que algum módulo for liberado.</p>
+        </section>
       </div>
     </div>
   );

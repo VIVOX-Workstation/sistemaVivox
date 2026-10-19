@@ -17,6 +17,8 @@ import { ChamadoModal } from '../components/gp/ChamadoModal';
 import { NovoChamadoModal } from '../components/gp/NovoChamadoModal';
 import { ImportBitrixModal } from '../components/gp/ImportBitrixModal';
 import { ImportBackupModal } from '../components/gp/ImportBackupModal';
+import { MinhasTarefasView } from '../components/clean/MinhasTarefasView';
+import { ChamadosView } from '../components/clean/ChamadosView';
 import { getStoredColunas, getKanbanStorageKey } from '../components/gp/KanbanBoard';
 import {
   Kanban,
@@ -469,6 +471,70 @@ export const VivoxGP: React.FC = () => {
     });
     return () => { active = false; };
   }, [usaListaCompletaDeTarefas, selectedWorkspaceId, buscaDebounced, apenasMinhas, user?.id, filtroResponsavel, filtroPrioridade, kanbanRefreshSignal]);
+
+  // Minhas tarefas e Central de chamados usam as telas do layout clean;
+  // detalhe e criação continuam nos modais do GP.
+  if (isMinhasTarefas || selectedWorkspaceId === 'ALL') {
+    return (
+      <>
+        {isMinhasTarefas ? (
+          <MinhasTarefasView
+            tarefas={tarefasFiltradas}
+            loading={loading}
+            erro={loadError}
+            onSelect={handleSelectTarefa}
+            onNova={() => {
+              setCreateInitialStatus('A_FAZER');
+              setIsCreateModalOpen(true);
+            }}
+            onRecarregar={carregarDados}
+          />
+        ) : (
+          <ChamadosView
+            chamados={chamados}
+            clientes={clientes}
+            loading={loading}
+            erro={loadError}
+            onOpen={setChamadoSelecionado}
+            onNovo={() => setIsNovoChamadoModalOpen(true)}
+            onStatus={handleUpdateChamadoStatus}
+            onRecarregar={carregarDados}
+          />
+        )}
+
+        {tarefaSelecionadaId && (
+          <TaskModal tarefaId={tarefaSelecionadaId} onClose={handleCloseTaskModal} onTaskUpdated={carregarDados} />
+        )}
+        {chamadoSelecionado && (
+          <ChamadoModal
+            chamado={chamadoSelecionado}
+            clientes={clientes}
+            onClose={() => setChamadoSelecionado(null)}
+            onUpdate={(updatedChamado) => {
+              setChamados((prev) => prev.map((c) => (c.id === updatedChamado.id ? updatedChamado : c)));
+              setChamadoSelecionado(updatedChamado);
+            }}
+          />
+        )}
+        {isCreateModalOpen && (
+          <TaskFormModal
+            initialStatus={createInitialStatus}
+            initialWorkspaceId={null}
+            workspaces={workspaces}
+            onClose={() => setIsCreateModalOpen(false)}
+            onTaskCreated={carregarDados}
+          />
+        )}
+        {isNovoChamadoModalOpen && (
+          <NovoChamadoModal
+            initialClienteId={queryClienteId}
+            onClose={() => setIsNovoChamadoModalOpen(false)}
+            onChamadoCreated={carregarDados}
+          />
+        )}
+      </>
+    );
+  }
 
   // Se nenhum workspace estiver na URL (e não estiver abrindo uma tarefa nem na visão "Minhas Tarefas"), exibe o Hub
   if (!isMinhasTarefas && selectedWorkspaceId === null && !tarefaSelecionadaId) {

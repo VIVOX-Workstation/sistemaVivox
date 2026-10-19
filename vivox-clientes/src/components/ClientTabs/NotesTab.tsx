@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Check } from 'lucide-react';
 import type { Cliente } from '../../types';
 import { api } from '../../api/client';
-import { Button } from '../Button';
-import { Textarea } from '../Textarea';
-import { Save } from 'lucide-react';
+
+// Anotações internas do cliente (campo observacoes), no layout clean.
 
 interface Props {
   cliente: Cliente;
@@ -13,40 +13,47 @@ interface Props {
 export function NotesTab({ cliente, onChange }: Props) {
   const [observacoes, setObservacoes] = useState(cliente.observacoes || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+  const [erro, setErro] = useState(false);
+  const alterado = observacoes !== (cliente.observacoes || '');
 
   const handleSave = async () => {
     setIsSaving(true);
+    setErro(false);
     try {
       await api.patch(`/clientes/${cliente.id}`, { observacoes });
       onChange(cliente.id);
-    } catch (err) {
-      alert("Erro ao salvar observações");
+      setSalvo(true);
+      setTimeout(() => setSalvo(false), 2500);
+    } catch {
+      setErro(true);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <h3 className="text-lg font-semibold text-slate-800 mb-2">Observações Internas</h3>
-      <p className="text-sm text-slate-500 mb-4">
-        Utilize este espaço para anotar informações importantes, particularidades no atendimento ou qualquer detalhe relevante sobre a conta.
-      </p>
-      
-      <Textarea 
+    <section className="card cp" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 760 }}>
+      <div className="sec-t">
+        <h2>Anotações internas</h2>
+        {salvo && <span className="meta"><Check className="i" aria-hidden="true" />Salvo agora</span>}
+        {erro && <span className="meta" style={{ color: 'var(--bad)' }} role="alert">Não foi possível salvar</span>}
+      </div>
+      <label htmlFor="notas" className="sr">Anotações internas</label>
+      <textarea
+        id="notas"
+        className="inp"
+        rows={10}
         value={observacoes}
         onChange={(e) => setObservacoes(e.target.value)}
-        placeholder="Digite suas observações aqui..."
-        rows={12}
-        className="font-sans"
+        placeholder="Tom de voz, restrições, quem aprova, horários de aprovação"
       />
-      
-      <div className="flex justify-end pt-2">
-        <Button onClick={handleSave} disabled={isSaving || observacoes === cliente.observacoes} className="gap-2">
-          <Save className="w-4 h-4" />
-          {isSaving ? 'Salvando...' : 'Salvar Observações'}
-        </Button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <p className="mut" style={{ fontSize: 12.5 }}>Só a equipe interna vê estas anotações.</p>
+        <button className="btn pri sm" type="button" onClick={handleSave} disabled={isSaving || !alterado}>
+          {isSaving ? 'Salvando...' : 'Salvar anotações'}
+        </button>
       </div>
-    </div>
+    </section>
   );
 }

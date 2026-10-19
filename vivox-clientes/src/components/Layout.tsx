@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { VivoxLogo } from './brand/VivoxLogo';
+import { VivoxFlowLogo } from './brand/VivoxFlowLogo';
 import { VivoxMark } from './brand/SistemaVivoxLogo';
 import { useSidebarPrefs } from '../utils/sidebarPrefs';
 import VivoxIntro from './VivoxIntro';
@@ -94,9 +94,8 @@ const LAYOUT_CSS = `
 .vsb-head{height:64px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px 0 20px;border-bottom:1px solid var(--vx-line);flex:none}
 .vsb-head.is-collapsed{justify-content:center;padding:0}
 .vsb-brand{display:flex;align-items:center;gap:10px;color:var(--vx-ink);text-decoration:none;min-width:0}
-.vsb-logo{display:block;width:84px;height:auto}
+.vsb-logo{display:block;width:148px;max-width:100%;height:auto}
 .vsb-mark{display:block;height:22px;width:auto}
-.vsb-tag{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--vx-ink-3);padding-top:2px}
 .vsb-toggle{flex:none;width:30px;height:30px;display:grid;place-items:center;border-radius:8px;border:0;background:transparent;color:var(--vx-ink-3);cursor:pointer;transition:background .15s var(--vx-ease),color .15s var(--vx-ease)}
 .vsb-toggle:hover{background:var(--vx-sunken);color:var(--vx-ink)}
 .vsb-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
@@ -152,7 +151,9 @@ export function Layout() {
     location.pathname.startsWith('/acompanhamento') ||
     location.pathname === '/hospedagens' ||
     location.pathname === '/renovacoes' ||
-    location.pathname === '/configuracoes';
+    location.pathname === '/configuracoes' ||
+    location.pathname.startsWith('/educacional') ||
+    location.pathname === '/sem-acesso';
 
   const [showIntro, setShowIntro] = useState(false);
   const [iaAberta, setIaAberta] = useState(false);
@@ -186,9 +187,8 @@ export function Layout() {
           {/* Logo + recolher */}
           <div className={`vsb-head ${recolhida ? 'is-collapsed' : ''}`}>
             {!recolhida && (
-              <NavLink to="/" className="vsb-brand" aria-label="Sistema VIVOX, ir para o início">
-                <VivoxLogo className="vsb-logo" />
-                <span className="vsb-tag">Sistema</span>
+              <NavLink to="/" className="vsb-brand" aria-label="VIVOX Flow, ir para o início">
+                <VivoxFlowLogo className="vsb-logo" />
               </NavLink>
             )}
             {recolhida && telaEstreita && <VivoxMark className="vsb-mark" />}
