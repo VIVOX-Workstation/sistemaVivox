@@ -1,19 +1,6 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Building2, 
-  Search, 
-  Plus, 
-  RefreshCw, 
-  AlertCircle, 
-  ClipboardList, 
-  Calendar as CalendarIcon,
-  CalendarDays,
-  ChevronDown,
-  Share2,
-  Download,
-  Upload,
-} from 'lucide-react';
+import { Plus, RefreshCw, AlertCircle, Share2, Download, Upload } from 'lucide-react';
 import { 
   acompanhamentoApi, 
   type AcompanhamentoResponse, 
@@ -28,7 +15,6 @@ import { TabelaAcompanhamento } from '../components/acompanhamento/TabelaAcompan
 import { baixarJson, lerBackupJson } from '../components/acompanhamento/backupJson';
 import { CronogramasPainel } from '../components/acompanhamento/CronogramasPainel';
 import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
-import { PopoverAncorado } from '../components/ui/PopoverAncorado';
 import {
   type Periodo,
   dataPadraoNova,
@@ -46,8 +32,6 @@ const urlPara = (clienteId: string, periodo: Periodo, tipos: TipoPublicacao[], a
   }
   return `/acompanhamento/${clienteId}?${params.toString()}`;
 };
-import { resolveMediaUrl } from '../utils/mediaUrl';
-import { useLiquidGlass } from '../hooks/useLiquidGlass';
 import './planning-workspace.css';
 
 // Mesmo limite do backend (IMPORTACAO_MAX_LINHAS)
@@ -68,10 +52,6 @@ export function Acompanhamento() {
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [clienteSelecionadoId, setClienteSelecionadoId] = useState<string | null>(urlClienteId || null);
 
-  // Busca no dropdown de clientes
-  const [buscaCliente, setBuscaCliente] = useState('');
-  const [dropdownClienteAberto, setDropdownClienteAberto] = useState(false);
-  const dropdownRef = useRef<HTMLButtonElement>(null);
 
   // Dados do acompanhamento
   const [loading, setLoading] = useState(false);
@@ -87,8 +67,6 @@ export function Acompanhamento() {
   // Status de salvamento por linha da tabela
   const [rowStatus, setRowStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
 
-  const workspaceRef = useRef<HTMLDivElement>(null);
-  useLiquidGlass(workspaceRef, !loading);
 
   const handleMudarAba = (novaAba: 'publicacoes' | 'cronogramas') => {
     if (clienteSelecionadoId) {
@@ -117,8 +95,6 @@ export function Acompanhamento() {
     fetchClientes();
   }, []);
 
-  // Clique fora / Esc fecham a lista (tratado pelo PopoverAncorado)
-  const fecharDropdownCliente = useCallback(() => setDropdownClienteAberto(false), []);
 
   // Sincroniza se o cliente na URL mudar
   useEffect(() => {
@@ -154,8 +130,6 @@ export function Acompanhamento() {
 
   const handleMudarCliente = (novoId: string) => {
     setClienteSelecionadoId(novoId);
-    setDropdownClienteAberto(false);
-    setBuscaCliente('');
     navigate(urlPara(novoId, periodo, tipos, abaAtiva));
   };
 
@@ -333,160 +307,50 @@ export function Acompanhamento() {
     }
   };
 
-  const clientesFiltrados = clientes.filter((c) =>
-    c.nomeFantasia.toLowerCase().includes(buscaCliente.toLowerCase())
-  );
-
   return (
-    <div ref={workspaceRef} className="planning-workspace min-h-screen w-full select-none flex flex-col text-[#1E1A16]">
-      <div className="pw-lg-scene" aria-hidden="true" />
-
-      {/* CABEÇALHO */}
-      <div className="relative z-10 space-y-6">
-        {/* z-30: cada pw-glass-panel isola o empilhamento (isolation/backdrop-filter);
-            sem isso a lista de clientes fica atrás dos painéis seguintes */}
-        <div className="pw-glass-panel z-30 p-5 sm:p-6 rounded-3xl border border-white/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="pw-section-label flex items-center gap-1.5">
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span>Acompanhamento Mensal</span>
-            </span>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#1E1A16] font-archivo">
-              Planilha de Publicações
-            </h1>
-            <p className="text-xs text-[#5E574C]">
-              Registro e conferência mensal de postagens, formatos e métricas da conta.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-          {/* Compartilhar: login do portal + link direto para este acompanhamento */}
-          <button
-            type="button"
-            onClick={() => setCompartilharAberto(true)}
-            disabled={!clienteSelecionadoId}
-            title="Compartilhar este acompanhamento com o cliente"
-            className="pw-glass-control px-4 py-2.5 rounded-2xl text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Share2 className="w-4 h-4 text-[#C7A15F]" />
-            <span>Compartilhar</span>
-          </button>
-
-          {/* Seletor de Cliente em Dropdown com Busca */}
+    <div className="vxp">
+      <div className="pg" style={{ maxWidth: 1320 }}>
+        <div className="ph">
           <div>
-            <button
-              ref={dropdownRef}
-              type="button"
-              onClick={() => setDropdownClienteAberto(!dropdownClienteAberto)}
-              className="pw-glass-control px-4 py-2.5 rounded-2xl flex items-center gap-3 cursor-pointer shadow-xs min-w-[240px] justify-between"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#FAF2E4] border border-[#E8D4B4] flex items-center justify-center shrink-0 overflow-hidden">
-                  {clienteAtual?.logoUrl ? (
-                    <img
-                      src={resolveMediaUrl(clienteAtual.logoUrl)}
-                      alt={clienteAtual.nomeFantasia}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Building2 className="w-4 h-4 text-[#8A6828]" />
-                  )}
-                </div>
-                <div className="truncate text-left">
-                  <span className="text-[10px] font-bold text-[#8F8271] uppercase tracking-wider block">
-                    Cliente selecionado
-                  </span>
-                  <span className="font-extrabold text-xs text-[#1E1A16] truncate block">
-                    {clienteAtual?.nomeFantasia || 'Selecione um cliente'}
-                  </span>
-                </div>
-              </div>
-              <ChevronDown className="w-4 h-4 text-[#8F8271] shrink-0" />
-            </button>
-
-            {/* Menu Suspenso de Clientes (no <body>, por cima dos painéis e do menu lateral) */}
-            <PopoverAncorado ancoraRef={dropdownRef} aberto={dropdownClienteAberto} onFechar={fecharDropdownCliente}>
-              <div className="w-72 max-w-[calc(100vw-16px)] rounded-2xl bg-[#FFFDF8] border border-white/80 shadow-2xl p-2 animate-scale-in">
-                <div className="relative mb-2">
-                  <Search className="w-3.5 h-3.5 text-[#8F8271] absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={buscaCliente}
-                    onChange={(e) => setBuscaCliente(e.target.value)}
-                    placeholder="Buscar cliente..."
-                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white/80 border border-[#524B40]/15 focus:outline-none focus:border-[#C7A15F]"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-56 overflow-y-auto space-y-1">
-                  {clientesFiltrados.length === 0 ? (
-                    <p className="text-xs text-[#8F8271] text-center py-3">Nenhum cliente encontrado.</p>
-                  ) : (
-                    clientesFiltrados.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => handleMudarCliente(c.id)}
-                        className={`w-full p-2 rounded-xl flex items-center gap-2.5 text-left text-xs font-bold transition-colors cursor-pointer ${
-                          c.id === clienteSelecionadoId
-                            ? 'bg-[#FAF2E4] text-[#8A6828] border border-[#E8D4B4]'
-                            : 'hover:bg-white text-[#1E1A16]'
-                        }`}
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden">
-                          {c.logoUrl ? (
-                            <img src={resolveMediaUrl(c.logoUrl)} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] font-bold text-[#8A6828]">
-                              {c.nomeFantasia.charAt(0)}
-                            </span>
-                          )}
-                        </div>
-                        <span className="truncate">{c.nomeFantasia}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </PopoverAncorado>
+            <span className="kick">Acompanhamento mensal</span>
+            <h1 style={{ marginTop: 6 }}>{clienteAtual?.nomeFantasia || 'Planilha de publicações'}</h1>
+            <p>Registro e conferência das postagens, formatos e métricas da conta.</p>
           </div>
+          <div className="acts">
+            <label htmlFor="a-cli" className="sr">Cliente</label>
+            <select
+              id="a-cli"
+              className="inp"
+              style={{ width: 220 }}
+              value={clienteSelecionadoId ?? ''}
+              disabled={loadingClientes}
+              onChange={(e) => e.target.value && handleMudarCliente(e.target.value)}
+            >
+              {!clienteSelecionadoId && <option value="">Selecione um cliente</option>}
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nomeFantasia}</option>
+              ))}
+            </select>
+            <button className="btn sec" type="button" onClick={() => setCompartilharAberto(true)} disabled={!clienteSelecionadoId}>
+              <Share2 className="i" aria-hidden="true" />Compartilhar
+            </button>
           </div>
         </div>
 
-        {/* NAVEGAÇÃO DE ABAS: Publicações | Cronogramas */}
-        <div className="flex items-center gap-2 border-b border-[#524B40]/10 pb-1">
-          <button
-            type="button"
-            onClick={() => handleMudarAba('publicacoes')}
-            className={`pw-glass-tab px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
-              abaAtiva === 'publicacoes' ? 'is-active text-[#8A6828]' : 'text-[#625746]'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span>Publicações</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleMudarAba('cronogramas')}
-            className={`pw-glass-tab px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
-              abaAtiva === 'cronogramas' ? 'is-active text-[#8A6828]' : 'text-[#625746]'
-            }`}
-          >
-            <CalendarDays className="w-4 h-4" />
-            <span>Cronogramas</span>
-          </button>
+        <div className="tabs" role="tablist" aria-label="Conteúdo do acompanhamento">
+          {(['publicacoes', 'cronogramas'] as const).map((a) => (
+            <button key={a} className={a === abaAtiva ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={a === abaAtiva} onClick={() => handleMudarAba(a)}>
+              {a === 'publicacoes' ? 'Publicações' : 'Cronogramas'}
+            </button>
+          ))}
         </div>
 
         {abaAtiva === 'cronogramas' ? (
-          <CronogramasPainel
-            clienteId={clienteSelecionadoId}
-            clienteNome={clienteAtual?.nomeFantasia}
-            periodoAtual={periodo}
-          />
+          <div className="planning-workspace pw-embed">
+            <CronogramasPainel clienteId={clienteSelecionadoId} clienteNome={clienteAtual?.nomeFantasia} periodoAtual={periodo} />
+          </div>
         ) : (
           <>
-            {/* FILTROS: meses, período personalizado e tipo */}
             <FiltrosAcompanhamento
               periodo={periodo}
               tipos={tipos}
@@ -495,116 +359,56 @@ export function Acompanhamento() {
               onChangeTipos={(t) => aplicarFiltros(periodo, t)}
             />
 
-            {/* CONTEÚDO PRINCIPAL */}
             {loading ? (
-              // Skeleton Loading
-              <div className="space-y-4 animate-pulse" aria-busy="true">
-                <div className="h-20 rounded-2xl bg-white/40" />
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-20 rounded-2xl bg-white/40" />
-                  ))}
-                </div>
-                <div className="h-64 rounded-3xl bg-white/40" />
+              <div className="animate-pulse" aria-busy="true" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="grid g4">{[1, 2, 3, 4].map((i) => <div key={i} className="card" style={{ height: 96 }} />)}</div>
+                <div className="card" style={{ height: 260 }} />
               </div>
             ) : error ? (
-              // Estado de Erro
-              <div className="pw-glass-panel p-8 rounded-3xl border border-red-200 text-center max-w-md mx-auto space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-base font-extrabold text-[#1E1A16]">Erro ao carregar publicações</h2>
-                  <p className="text-xs text-[#5E574C] mt-1">{error}</p>
-                </div>
+              <div className="card empty">
+                <AlertCircle className="i" aria-hidden="true" style={{ color: 'var(--bad)' }} />
+                <b>Erro ao carregar publicações</b>
+                <span>{error}</span>
                 {clienteSelecionadoId && (
-                  <button
-                    type="button"
-                    onClick={() => carregarDados(clienteSelecionadoId)}
-                    className="pw-glass-control pw-glass-gold px-5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-sm"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Tentar novamente</span>
-                  </button>
+                  <button type="button" className="btn pri sm" onClick={() => carregarDados(clienteSelecionadoId)}>Tentar de novo</button>
                 )}
               </div>
             ) : !clienteSelecionadoId ? (
-              // Estado sem cliente selecionado
-              <div className="pw-glass-panel p-12 rounded-3xl border border-white/60 text-center max-w-md mx-auto space-y-3">
-                <Building2 className="w-10 h-10 text-[#C7A15F] mx-auto opacity-70" />
-                <h2 className="text-base font-bold text-[#1E1A16]">Selecione um cliente</h2>
-                <p className="text-xs text-[#5E574C]">
-                  Escolha um cliente no seletor acima para visualizar e editar sua planilha de acompanhamento.
-                </p>
+              <div className="card empty">
+                <b>Selecione um cliente</b>
+                <span>Escolha um cliente no seletor acima para ver e editar a planilha de acompanhamento.</span>
               </div>
             ) : dados ? (
-              <div className="space-y-6">
-                {/* 1. Resumo em frase + Cards de métricas */}
-                <ResumoAcompanhamentoCards
-                  resumo={dados.resumo}
-                  textoPeriodo={textoPeriodo(periodo)}
-                  tiposFiltrados={tipos}
-                />
+              <>
+                <ResumoAcompanhamentoCards resumo={dados.resumo} textoPeriodo={textoPeriodo(periodo)} tiposFiltrados={tipos} />
 
-                {/* 2. Barra de Ações da Tabela */}
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="font-archivo text-xs font-bold uppercase tracking-wider text-[#7A6440]">
-                      Publicações do período ({dados.publicacoes.length})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={handleExportar}
-                    disabled={exportando}
-                    title="Baixar todas as publicações do cliente (todos os períodos) em JSON"
-                    className="pw-glass-control px-4 py-2 rounded-xl text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="w-4 h-4 text-[#C7A15F]" />
-                    <span>Exportar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => inputImportarRef.current?.click()}
-                    disabled={importando}
-                    title="Importar um backup JSON exportado. Publicações que já existem são atualizadas; as demais são criadas."
-                    className="pw-glass-control px-4 py-2 rounded-xl text-xs font-bold text-[#1E1A16] hover:text-[#7A6440] flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-wait"
-                  >
-                    {importando ? (
-                      <RefreshCw className="w-4 h-4 text-[#C7A15F] animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 text-[#C7A15F]" />
-                    )}
-                    <span>{importando ? 'Importando...' : 'Importar'}</span>
-                  </button>
-                  <input
-                    ref={inputImportarRef}
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={handleImportar}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCriarPublicacao}
-                    className="pw-glass-control pw-glass-gold px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all hover:scale-[1.01]"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Nova publicação</span>
-                  </button>
+                <div className="sec-t" style={{ flexWrap: 'wrap' }}>
+                  <h2>Publicações do período <span className="mut" style={{ fontWeight: 500 }}>{dados.publicacoes.length}</span></h2>
+                  <div className="acts">
+                    <button className="btn gh sm" type="button" onClick={handleExportar} disabled={exportando} title="Baixar todas as publicações do cliente (todos os períodos) em JSON">
+                      <Download className="i" aria-hidden="true" />{exportando ? 'Exportando...' : 'Exportar'}
+                    </button>
+                    <button className="btn gh sm" type="button" onClick={() => inputImportarRef.current?.click()} disabled={importando} title="Importar um backup JSON. Publicações existentes são atualizadas; as demais são criadas.">
+                      {importando ? <RefreshCw className="i animate-spin" aria-hidden="true" /> : <Upload className="i" aria-hidden="true" />}
+                      {importando ? 'Importando...' : 'Importar'}
+                    </button>
+                    <input ref={inputImportarRef} type="file" accept=".json,application/json" onChange={handleImportar} hidden />
+                    <button className="btn pri sm" type="button" onClick={handleCriarPublicacao}>
+                      <Plus className="i" aria-hidden="true" />Nova publicação
+                    </button>
                   </div>
                 </div>
 
-                {/* 3. Tabela Estilo Planilha com Edição Inline */}
-                <TabelaAcompanhamento
-                  publicacoes={dados.publicacoes}
-                  readOnly={false}
-                  onUpdatePublicacao={handleUpdatePublicacao}
-                  onDeletePublicacao={handleDeletePublicacao}
-                  rowStatus={rowStatus}
-                />
-              </div>
+                <div className="planning-workspace pw-embed">
+                  <TabelaAcompanhamento
+                    publicacoes={dados.publicacoes}
+                    readOnly={false}
+                    onUpdatePublicacao={handleUpdatePublicacao}
+                    onDeletePublicacao={handleDeletePublicacao}
+                    rowStatus={rowStatus}
+                  />
+                </div>
+              </>
             ) : null}
           </>
         )}
