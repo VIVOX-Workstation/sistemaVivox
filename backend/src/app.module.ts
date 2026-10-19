@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PropostasModule } from './propostas/propostas.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,6 +25,7 @@ import { AcompanhamentoModule } from './acompanhamento/acompanhamento.module';
 
 @Module({
   imports: [
+    PropostasModule,
     AcompanhamentoModule,
     PortalModule,
     ScheduleModule.forRoot(),
