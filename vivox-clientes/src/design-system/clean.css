@@ -164,3 +164,19 @@
 .vxp .hb{display:grid;grid-template-columns:120px minmax(0,1fr) 40px;align-items:center;gap:12px;font-size:12.5px}
 .vxp .vxp-2-1{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:start}
 @media (max-width:1024px){.vxp .vxp-2-1{grid-template-columns:minmax(0,1fr)}}
+/* Tabela com cliente (monograma + nome) e formulário em seções */
+.vxp .tbl a.cl{display:flex;align-items:center;gap:12px;color:inherit;text-decoration:none}
+.vxp .tbl a.cl b{display:block;font-weight:600}
+.vxp .tbl a.cl small{display:block;font-size:12px;color:var(--ink3)}
+.vxp .fs{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;padding:24px;border-bottom:1px solid var(--ln)}
+.vxp .fs h2{font-size:14px;font-weight:620}
+.vxp .fs p{font-size:12.5px;color:var(--ink3);margin-top:4px}
+@media(max-width:900px){.vxp .fs{grid-template-columns:minmax(0,1fr)}}
+/* Calendário de vencimentos (Hospedagens) */
+.vxp .months{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.vxp .mo{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;background:var(--soft);border:1px solid var(--ln)}
+.vxp .mo span{font-size:12px;color:var(--ink3)}
+.vxp .mo b{font-size:20px;font-weight:620}
+.vxp .pips{display:flex;gap:3px;flex-wrap:wrap}
+.vxp .pips i{width:8px;height:8px;border-radius:2px;background:var(--accent)}
+@media(max-width:760px){.vxp .months{grid-template-columns:repeat(3,minmax(0,1fr))}}
