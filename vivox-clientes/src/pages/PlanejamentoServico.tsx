@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { ServicoContratado, Tarefa, AtivoHospedagem } from '../types';
 import { api } from '../api/client';
 import { tarefasApi } from '../api/tarefas';
@@ -10,7 +10,6 @@ import { Modal } from '../components/Modal';
 import { QuadroColaborativo } from '../components/QuadroColaborativo';
 import { 
   X,
-  ArrowLeft, 
   Calendar, 
   Plus, 
   FileText, 
@@ -19,7 +18,6 @@ import {
   Kanban, 
   Save, 
   Loader2, 
-  ChevronRight,
   Globe,
   PenTool,
   Trash2,
@@ -696,182 +694,75 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
   }
 
   return (
-    <div ref={setWorkspaceEl} className="planning-workspace w-full p-4 sm:p-6 pb-20 space-y-6">
-      <div className="pw-lg-scene" aria-hidden="true" />
-      <svg id="pw-lg-filters" width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><defs /></svg>
+    <div className="vxp">
+      <div className="pg">
 
       {/* ======================================================== */}
       {/* 1. SE NENHUM ITEM ESTIVER SELECIONADO: LISTA DE ITENS   */}
       {/* ======================================================== */}
       {!selectedItemId && (
         <>
-          {/* Cabeçalho do Serviço */}
-          <div className="pw-card pw-glass-panel p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(`/cliente/${clienteId}?tab=services`)}
-                title="Voltar ao Mapa de Serviços do cliente"
-                className="pw-glass-pill w-10 h-10 rounded-2xl flex items-center justify-center text-[#1E1A16] transition-all cursor-pointer shadow-2xs shrink-0"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-
-              <div>
-                <span className="text-[12px] font-black uppercase tracking-wider text-[#8F8271] flex items-center gap-1">
-                  <Layout className="w-3.5 h-3.5 text-[#C7A15F]" />
-                  Planejamento · {servico.cliente?.nomeFantasia || 'Cliente'}
-                </span>
-                <h1 className="text-2xl lg:text-3xl font-black text-[#1E1A16] tracking-tight leading-tight mt-0.5">
-                  {getNomeItemPlural()}
-                </h1>
-                <p className="text-xs text-[#625746] mt-1 font-medium">
-                  Defina briefing, conteúdo e publicação de cada entrega. O acompanhamento das tarefas fica no Vivox GP.
-                </p>
-              </div>
+          <div className="ph">
+            <div>
+              <span className="kick">{nomeFormatadoServico.toLowerCase().replace(/^./, (c) => c.toUpperCase())} · {servico.cliente?.nomeFantasia || 'Cliente'}</span>
+              <h1 style={{ marginTop: 6 }}>{getNomeItemPlural()}</h1>
+              <p>Cada entrega tem briefing, conteúdo e tarefas no VVOX Sync.</p>
             </div>
-
-            {/* Ações */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <button
-                onClick={() => navigate(`/gp?clienteId=${clienteId}&servicoId=${servico.id}`)}
-                className="pw-glass-control px-4 py-2.5 rounded-2xl text-xs font-bold text-[#1E1A16] flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
-              >
-                <Kanban className="w-4 h-4 text-[#C7A15F]" />
-                <span>Ver no Vivox GP</span>
-                <ExternalLink className="w-3 h-3 text-[#8F8271]" />
-              </button>
-
-              <button
-                onClick={() => setIsNovoItemModalOpen(true)}
-                className="pw-glass-control pw-glass-primary px-5 py-2.5 rounded-2xl bg-[#181512] hover:bg-[#2B261F] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Novo {getNomeItemSingular()}</span>
+            <div className="acts">
+              <Link className="btn gh" to={`/cliente/${clienteId}?tab=services`}>Voltar ao cliente</Link>
+              <Link className="btn sec" to={`/gp?clienteId=${clienteId}&servicoId=${servico.id}`}>Ver tarefas</Link>
+              <button className="btn pri" type="button" onClick={() => setIsNovoItemModalOpen(true)}>
+                <Plus className="i" aria-hidden="true" />Novo {getNomeItemSingular().toLowerCase()}
               </button>
             </div>
           </div>
 
-          {/* Lista de entregas */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm font-black text-[#1E1A16] uppercase tracking-wider">
-                {itens.length} {itens.length === 1 ? 'entrega' : 'entregas'}
-              </h3>
-              {itens.length > 1 && (
-                <div role="group" aria-label="Filtrar por status" className="flex items-center gap-1.5 flex-wrap">
-                  {([
-                    ['TODOS', 'Todos'],
-                    ['ANDAMENTO', 'Em andamento'],
-                    ['CONCLUIDO', 'Concluídos'],
-                  ] as const).map(([valor, rotulo]) => (
-                    <button
-                      key={valor}
-                      type="button"
-                      aria-pressed={filtroStatus === valor}
-                      onClick={() => setFiltroStatus(valor)}
-                      className={`pw-glass-tab px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${
-                        filtroStatus === valor ? 'is-active text-[#1e1b17]' : 'text-[#5e574c]'
-                      }`}
-                    >
-                      {rotulo}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {itens.length === 0 ? (
-              <div
-                onClick={() => setIsNovoItemModalOpen(true)}
-                className="py-16 border-2 border-dashed border-[#D8CBB8] hover:border-[#1E1A16] bg-[#FFFDF8] rounded-3xl flex flex-col items-center justify-center gap-3 text-center cursor-pointer transition-all group p-6"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D8CBB8] flex items-center justify-center text-[#1E1A16] group-hover:scale-110 transition-transform shadow-xs">
-                  <Plus className="w-7 h-7 text-[#C7A15F]" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-[#1E1A16]">Nenhum item cadastrado</h3>
-                  <p className="text-xs text-[#8F8271] mt-1 max-w-md">
-                    Clique aqui para criar o primeiro {getNomeItemSingular().toLowerCase()} e planejar a estrutura, copy e etapas.
-                  </p>
-                </div>
-                <button className="mt-2 px-4 py-2 bg-[#181512] text-white text-xs font-bold rounded-xl shadow-xs">
-                  + Criar {getNomeItemSingular()}
+          {itens.length > 1 && (
+            <div className="chips" role="group" aria-label="Filtrar por status">
+              {([
+                ['TODOS', 'Todos'],
+                ['ANDAMENTO', 'Em andamento'],
+                ['CONCLUIDO', 'Concluídos'],
+              ] as const).map(([valor, rotulo]) => (
+                <button key={valor} type="button" className={filtroStatus === valor ? 'chip on' : 'chip'} aria-pressed={filtroStatus === valor} onClick={() => setFiltroStatus(valor)}>
+                  {rotulo}
                 </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {itens.map((item, idx) => {
-                  if (filtroStatus === 'CONCLUIDO' && item.status !== 'CONCLUIDO') return null;
-                  if (filtroStatus === 'ANDAMENTO' && item.status === 'CONCLUIDO') return null;
-                  const totalTarefas = tarefas.filter((t) => item.tarefaIds?.includes(t.id)).length;
+              ))}
+            </div>
+          )}
 
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => navigate(`/cliente/${clienteId}/servicos/${servicoId}/planejamento/${item.id}`)}
-                      className="pw-glass-card rounded-3xl p-5 shadow-2xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start gap-2">
-                          <span className="pw-glass-pill px-2.5 py-1 rounded-full text-[12px] font-black uppercase tracking-wider text-[#1E1A16]">
-                            {getNomeItemSingular()} #{idx + 1}
-                          </span>
-
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`pw-glass-pill px-2.5 py-0.5 rounded-full text-[12px] font-bold uppercase tracking-wider border ${
-                                item.status === 'CONCLUIDO'
-                                  ? 'bg-[#247A4A]/10 text-[#247A4A] border-[#247A4A]/30'
-                                  : item.status === 'EM_PRODUCAO'
-                                  ? 'bg-[#FFA800]/15 text-[#B45309] border-[#FFA800]/30'
-                                  : 'bg-[#181512]/10 text-[#181512] border-[#181512]/20'
-                              }`}
-                            >
-                              {item.status.replace(/_/g, ' ')}
-                            </span>
-
-                            <button
-                              onClick={(e) => handleDeletarItem(item.id, e)}
-                              title="Excluir item"
-                              aria-label={`Excluir ${item.titulo}`}
-                              className="text-[#8F8271] hover:text-[#B83B32] p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-black text-base text-[#1E1A16] group-hover:text-[#C7A15F] transition-colors line-clamp-1">
-                            {item.titulo}
-                          </h4>
-                          <p className="text-xs text-[#625746] mt-1 line-clamp-2 leading-relaxed">
-                            {item.descricao || 'Sem descrição cadastrada.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 pt-4 border-t border-[#D8CBB8] flex items-center justify-between gap-2 text-xs text-[#8F8271]">
-                        <div className="flex flex-col gap-0.5 font-medium">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            Prazo: {item.prazo ? new Date(item.prazo).toLocaleDateString('pt-BR') : 'A definir'}
-                          </span>
-                          <span>
-                            {totalTarefas === 0 ? 'Sem tarefas ainda' : `${totalTarefas} ${totalTarefas === 1 ? 'tarefa' : 'tarefas'}`}
-                          </span>
-                        </div>
-
-                        <span className="font-bold text-[#1E1A16] flex items-center gap-1 group-hover:text-[#C7A15F] transition-colors">
-                          Abrir <ChevronRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {itens.length === 0 ? (
+            <div className="card empty">
+              <b>Nenhuma entrega cadastrada</b>
+              <span>Crie o primeiro {getNomeItemSingular().toLowerCase()} para planejar briefing, conteúdo e produção.</span>
+              <button className="btn pri sm" type="button" onClick={() => setIsNovoItemModalOpen(true)}>Criar {getNomeItemSingular().toLowerCase()}</button>
+            </div>
+          ) : (
+            <section className="card">
+              {itens.map((item, idx) => {
+                if (filtroStatus === 'CONCLUIDO' && item.status !== 'CONCLUIDO') return null;
+                if (filtroStatus === 'ANDAMENTO' && item.status === 'CONCLUIDO') return null;
+                const totalTarefas = tarefas.filter((t) => item.tarefaIds?.includes(t.id)).length;
+                const bd = item.status === 'CONCLUIDO' ? 'bd ok' : item.status === 'EM_PRODUCAO' ? 'bd warn' : item.status === 'EM_REVISAO' ? 'bd info' : 'bd plain';
+                return (
+                  <div className="row" key={item.id}>
+                    <span className="mono" style={{ width: 36, height: 36, fontSize: 12 }}>{idx + 1}</span>
+                    <Link className="t" to={`/cliente/${clienteId}/servicos/${servicoId}/planejamento/${item.id}`}>
+                      <b>{item.titulo || `${getNomeItemSingular()} ${idx + 1}`}</b>
+                      <small>
+                        Prazo {item.prazo ? new Date(item.prazo).toLocaleDateString('pt-BR') : 'a definir'} ·{' '}
+                        {totalTarefas === 0 ? 'sem tarefas' : `${totalTarefas} ${totalTarefas === 1 ? 'tarefa' : 'tarefas'}`}
+                      </small>
+                    </Link>
+                    <span className={bd}>{item.status.replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</span>
+                    <button className="ib sm" type="button" aria-label={`Excluir ${item.titulo}`} title="Excluir" onClick={(e) => handleDeletarItem(item.id, e)}>
+                      <Trash2 className="i" aria-hidden="true" />
+                    </button>
+                  </div>
+                );
+              })}
+            </section>
+          )}
         </>
       )}
 
@@ -880,165 +771,62 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
       {/* ======================================================== */}
       {itemAtivo && (
         <div className="space-y-6">
-          {/* Cabeçalho: breadcrumb + salvo, título + status, resumo */}
-          <div className="pw-card pw-glass-panel p-4 md:p-5 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-[#5e574c] min-w-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/cliente/${clienteId}/servicos/${servicoId}/planejamento`)}
-                  title={`Voltar para ${getNomeItemPlural()}`}
-                  className="pw-glass-pill px-2.5 py-1 rounded-full text-[#1e1b17] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>{getNomeItemPlural()}</span>
-                </button>
-                <span className="text-[#524b40]/30">/</span>
-                <span className="text-[#7a6440] font-semibold truncate">
-                  {itemAtivo.titulo || 'Item sem título'}
-                </span>
-              </div>
-
-              {/* Indicador de Salvamento Automático & Sincronização */}
-              <div className="flex items-center gap-2 shrink-0">
+          <div className="ph">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span className="kick">
+                <Link to={`/cliente/${clienteId}/servicos/${servicoId}/planejamento`} style={{ color: 'inherit' }}>{getNomeItemPlural()}</Link>
+                {' · '}{servico?.cliente?.nomeFantasia || 'Cliente'}
+              </span>
+              <input
+                type="text"
+                className="ttl-inp"
+                value={itemAtivo.titulo}
+                onChange={(e) => atualizarItemAtivo({ titulo: e.target.value })}
+                placeholder="Título da entrega"
+                aria-label="Título da entrega"
+              />
+              <p className="meta" style={{ marginTop: 4, gap: 10, flexWrap: 'wrap' }}>
+                <span>Prazo: {itemAtivo.prazo ? formatarDataBR(itemAtivo.prazo.slice(0, 10)) : 'a definir'}</span>
                 {syncError ? (
-                  <div
-                    role="alert"
-                    className="pw-glass-pill flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#fbece9] text-[#b42318] text-xs font-semibold border border-[#b42318]/20"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Sincronização pendente</span>
-                    <button
-                      type="button"
-                      onClick={() => salvarItensNoStorage(itens)}
-                      className="underline ml-1 cursor-pointer font-bold"
-                    >
-                      Tentar
-                    </button>
-                  </div>
+                  <span role="alert" style={{ color: 'var(--bad)' }}>
+                    Sincronização pendente ·{' '}
+                    <button type="button" className="lk-btn" onClick={() => salvarItensNoStorage(itens)}>tentar de novo</button>
+                  </span>
                 ) : savingAuto ? (
-                  <span className="pw-glass-pill flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[#5e574c] text-xs border border-[#524b4029]">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#ccb691]" />
-                    <span>Salvando...</span>
-                  </span>
+                  <span>Salvando...</span>
                 ) : (
-                  <span className="pw-glass-pill flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#eaf2e7] text-[#3d6b35] text-xs font-medium border border-[#3d6b35]/20">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Salvo</span>
-                  </span>
+                  <span style={{ color: 'var(--ok)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle2 className="i" aria-hidden="true" />Salvo</span>
                 )}
-              </div>
+              </p>
             </div>
-
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <input
-                  type="text"
-                  value={itemAtivo.titulo}
-                  onChange={(e) => atualizarItemAtivo({ titulo: e.target.value })}
-                  placeholder="Título da entrega..."
-                  aria-label="Título da entrega"
-                  className="pw-title-field font-archivo text-xl md:text-2xl font-bold text-[#1e1b17] bg-transparent border-b border-transparent hover:border-[#524b4029] focus:border-[#ccb691] outline-none transition-colors w-full"
-                />
-              </div>
-
-              <select
-                value={itemAtivo.status}
-                onChange={(e) => atualizarItemAtivo({ status: e.target.value as any })}
-                aria-label="Status da entrega"
-                className="pw-status-field pw-glass-control text-xs font-bold tracking-wider uppercase px-3 py-1.5 rounded-full text-[#1e1b17] outline-none cursor-pointer transition-colors shrink-0"
-              >
+            <div className="acts">
+              <label htmlFor="p-st" className="sr">Etapa</label>
+              <select id="p-st" className="inp" style={{ width: 190 }} value={itemAtivo.status} onChange={(e) => atualizarItemAtivo({ status: e.target.value as ItemPlanejado['status'] })}>
                 <option value="BRIEFING">Briefing</option>
                 <option value="PLANEJAMENTO">Planejamento</option>
-                <option value="EM_PRODUCAO">Em Produção</option>
-                <option value="EM_REVISAO">Em Revisão</option>
+                <option value="EM_PRODUCAO">Em produção</option>
+                <option value="EM_REVISAO">Em revisão</option>
                 <option value="CONCLUIDO">Concluído</option>
               </select>
             </div>
-
-            <p className="text-xs text-[#5e574c] flex items-center gap-1.5 flex-wrap">
-              <Calendar className="w-3.5 h-3.5 text-[#7a6440]" />
-              Prazo: <strong className="text-[#1e1b17]">{itemAtivo.prazo ? formatarDataBR(itemAtivo.prazo.slice(0, 10)) : 'A definir'}</strong>
-              <span className="text-[#524b40]/30">·</span>
-              <span>{servico?.cliente?.nomeFantasia || 'Cliente'} · {nomeFormatadoServico}</span>
-            </p>
           </div>
 
-          {/* Abas IMEDIATAMENTE abaixo do cabeçalho */}
-          <nav aria-label="Áreas da entrega" className="flex items-center gap-2 border-b border-[#524b4029] pb-3 overflow-x-auto">
-            <button
-              type="button"
-              aria-current={abaItem === 'briefing' ? 'page' : undefined}
-              onClick={() => setAbaItem('briefing')}
-              className={`pw-glass-tab px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-                abaItem === 'briefing'
-                  ? 'is-active text-[#1e1b17]'
-                  : 'text-[#5e574c]'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Briefing
-            </button>
+          <div className="tabs" role="tablist" aria-label="Áreas da entrega">
+            {([
+              ['briefing', 'Briefing'],
+              ['conteudo', 'Conteúdo'],
+              ['producao', 'Produção'],
+              ['publicacao', 'Publicação'],
+              ['quadro', 'Ideias (opcional)'],
+            ] as const).map(([id, rotulo]) => (
+              <button key={id} className={abaItem === id ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={abaItem === id} onClick={() => setAbaItem(id)}>
+                {rotulo}
+                {id === 'publicacao' && hospedagemVinculada && <span className="dot" style={{ background: 'var(--ok)' }} />}
+              </button>
+            ))}
+          </div>
 
-            <button
-              type="button"
-              aria-current={abaItem === 'conteudo' ? 'page' : undefined}
-              onClick={() => setAbaItem('conteudo')}
-              className={`pw-glass-tab px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-                abaItem === 'conteudo'
-                  ? 'is-active text-[#1e1b17]'
-                  : 'text-[#5e574c]'
-              }`}
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Conteúdo
-            </button>
-
-            <button
-              type="button"
-              aria-current={abaItem === 'producao' ? 'page' : undefined}
-              onClick={() => setAbaItem('producao')}
-              className={`pw-glass-tab px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-                abaItem === 'producao'
-                  ? 'is-active text-[#1e1b17]'
-                  : 'text-[#5e574c]'
-              }`}
-            >
-              <Kanban className="w-3.5 h-3.5" />
-              Produção
-            </button>
-
-            <button
-              type="button"
-              aria-current={abaItem === 'publicacao' ? 'page' : undefined}
-              onClick={() => setAbaItem('publicacao')}
-              className={`pw-glass-tab px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-                abaItem === 'publicacao'
-                  ? 'is-active text-[#1e1b17]'
-                  : 'text-[#5e574c]'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              Publicação
-              {hospedagemVinculada && (
-                <span className="w-2 h-2 rounded-full bg-[#3d6b35]"></span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              aria-current={abaItem === 'quadro' ? 'page' : undefined}
-              onClick={() => setAbaItem('quadro')}
-              className={`pw-glass-tab ml-auto px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-                abaItem === 'quadro'
-                  ? 'is-active text-[#1e1b17]'
-                  : 'text-[#5e574c]'
-              }`}
-            >
-              <PenTool className="w-3.5 h-3.5" />
-              <span>Ideias (opcional)</span>
-            </button>
-          </nav>
+          <div ref={setWorkspaceEl} className="planning-workspace pw-embed space-y-6">
 
           {abaItem === 'briefing' && <section className={cardPlanejamento}>
             {cabecalhoAba('Briefing', 'Alinhe o que será entregue, para quem e até quando, antes de começar a produção.', <FileText className="w-4 h-4 text-[#7a6440]" />)}
@@ -1595,6 +1383,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
               <QuadroColaborativo itemId={itemAtivo.id} itemTitulo={itemAtivo.titulo} />
             </div>
           )}
+          </div>
         </div>
       )}
 
@@ -1815,6 +1604,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
           }}
         />
       )}
+      </div>
     </div>
   );
 }
