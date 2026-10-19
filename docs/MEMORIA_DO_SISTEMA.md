@@ -80,6 +80,7 @@ O front é só conveniência. **Quem decide é o backend.**
 | Controller | `@RequerModulo` todos | Só leitura também para |
 |---|---|---|
 | `clientes` | CLIENTES | GP, ANALYTICS, ACOMPANHAMENTO |
+| `clientes/:clienteId/propostas` | CLIENTES (ADMIN e COLABORADOR) | — |
 | `servicos`, `producoes`, `midias`, `planejamento-servico`, `devboard` | CLIENTES | — |
 | `hospedagens` | HOSPEDAGENS, CLIENTES | — |
 | `analytics` (inclui `dashboard-executivo`) | ANALYTICS, CLIENTES | DASHBOARD |
@@ -96,6 +97,12 @@ O front é só conveniência. **Quem decide é o backend.**
 Ao criar um controller novo: `@UseGuards(JwtAuthGuard)` + `@RequerModulo(...)`.
 Não existe guard global.
 
+Exceção autorizada para propostas: `GET /propostas-publicas/:token` usa
+`PropostaLinkGuard`, sem JWT. O segredo aleatório do link tem 256 bits; o banco
+guarda só SHA-256. A resposta usa uma lista explícita de campos do documento,
+sem relação com o cadastro do cliente. Gerar outro link invalida o anterior;
+revogar ou excluir a proposta impede novas consultas. Não há cache da resposta.
+
 ---
 
 ## 3. Mapa de telas → dados
@@ -111,6 +118,8 @@ Rotas reais do front e o que cada uma consome. O detalhe campo a campo está em
 | `/clientes` | `ClientList.tsx` | `GET /clientes` |
 | `/cliente/novo` | `ClientForm.tsx` | `POST /clientes` |
 | `/cliente/:id` | `ClientProfile.tsx` (abas Visão geral, Mapa de serviços, Anotações) | `GET/PATCH /clientes/:id`, uploads de logo/banner, `/servicos/cliente/:id`, `/hospedagens/cliente/:id`, `/tarefas`, `/clientes/:id/acesso-portal`, `/chamados` |
+| `/cliente/:id?tab=propostas` | `features/propostas/PropostasTab.tsx` | `GET/POST /clientes/:id/propostas`, `PATCH/DELETE /clientes/:id/propostas/:pid`, `POST/DELETE /clientes/:id/propostas/:pid/compartilhar` |
+| `/proposta/:token` | `features/propostas/PropostaPublica.tsx` (sem login) | `GET /propostas-publicas/:token` |
 | `/cliente/:id/servicos/:sid/planejamento[/:itemId]` | `PlanejamentoServico.tsx` | `/planejamento-servico/servico/:sid`, `/servicos/:sid`, `/hospedagens`, `/ia/chat`, `/tarefas` |
 | `/cliente/:id/servicos/:sid/devboard` | `DevBoard.tsx` (só serviço `APP`) | `/devboard/*`, `/devboard/servico/:sid/github/*` |
 | `/hospedagens`, `/renovacoes` | `HostingRadar.tsx` | `GET /hospedagens/radar` |
@@ -129,11 +138,12 @@ Rotas reais do front e o que cada uma consome. O detalhe campo a campo está em
 
 ## 4. Modelo de dados: onde cada coisa mora
 
-Schema: `backend/prisma/schema.prisma` (38 models). Os que mais aparecem na interface:
+Schema: `backend/prisma/schema.prisma` (40 models). Os que mais aparecem na interface:
 
 | Assunto | Model | Observação |
 |---|---|---|
 | Cliente | `Cliente` | `contatos` é JSON; `loginsSenhas` é texto livre; tokens da Meta ficam aqui |
+| Proposta comercial | `Proposta` | Cliente, título, destinatário, apresentação, validade opcional, cor e seções em JSON (`titulo`, `texto` em Markdown e `html` opcional para preservar o modelo visual). `linkHash` habilita compartilhamento; nunca sai na API |
 | Usuário | `User` | `modulos[]`, `clienteId` (portal), `senhaPortalCriptografada` (AES, para reexibir a senha do portal) |
 | Serviço contratado | `ServicoContratado` (+ `ServicoHistorico`) | `tipoServico`: GERENCIAMENTO_REDES, FOLDER, REVISTA, LANDING_PAGE, APP, FOTOGRAFIA, VIDEO, TRAFEGO_PAGO, IDENTIDADE_VISUAL |
 | Planejamento | `PlanejamentoServico` | **Os itens/entregas ficam no JSON `flowNodes`** (ver armadilhas) |
@@ -151,12 +161,74 @@ Schema: `backend/prisma/schema.prisma` (38 models). Os que mais aparecem na inte
 | Segundo cérebro | `FonteContexto`, `DocumentoVetorial`, `InteligenciaMercado` | RAG por cliente; telas ligadas estão órfãs (ver 5.3) |
 | Quadro branco | `QuadroSala` | Excalidraw colaborativo |
 
-Migrações: `backend/prisma/migrations/` (31 até hoje). Sempre gere migration
+Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 (`prisma migrate dev`); produção usa `prisma migrate deploy` no boot.
 
 ---
 
 ## 5. Armadilhas conhecidas (leia antes de mudar algo)
+
+### Propostas comerciais
+
+- A visualização usa rolagem contínua da página, sem navegação por slides ou
+  rolagem interna no iframe. No desktop, a barra à direita acompanha a leitura
+  com criação, validade e download em PDF. O encerramento contém apenas a imagem
+  fornecida, sem o antigo rodapé textual. O PDF é gerado no navegador.
+- A proposta abre com `assets/capaProposta.webp` e, imediatamente depois,
+  `assets/subCapa.webp`. `assets/propostaFinal.webp` encerra o documento após o
+  conteúdo. As três imagens mantêm a proporção original, tanto na prévia quanto
+  no link público. São importadas inline para funcionar no iframe com a CSP
+  existente, sem liberar imagens externas nem mudar os dados no backend.
+- A capa segue a referência enviada: nome do destinatário em branco acima de
+  “Proposta Comercial” e “2026”, em dourado e em duas linhas, no canto inferior
+  esquerdo. A subcapa
+  integra o rótulo “Proposta comercial”, o título e a apresentação editáveis sobre
+  a imagem; no celular, o texto vai abaixo da imagem para continuar legível.
+  O antigo cabeçalho separado foi incorporado à subcapa.
+
+- Clientes › Propostas permite criar em branco ou pelo modelo de plataforma de
+  ensino fornecido pelo usuário (sem Kemax), editar todos os textos, tabelas,
+  valores, condições, títulos e a ordem das seções. O modelo conserva o HTML e
+  a estrutura da referência fornecida (capa escura, cartões e comparativo), com
+  a paleta VIVOX da capa: preto quente, dourado e superfícies neutras/bege,
+  com edição visual dos textos e opção de editar o código da seção. Seções novas
+  de texto usam Markdown. Prévia e página pública usam o mesmo renderer.
+- O HTML fica no JSON de seções e no DTO, sem alteração adicional de schema.
+  No navegador, DOMPurify permite só tags de estrutura e atributos de classe e
+  tabela; não aceita scripts, eventos, estilos arbitrários, URLs nem embeds.
+  O documento e o editor ficam em iframes com sandbox sem scripts e CSP sem
+  recursos externos, isolando o CSS original dos estilos do sistema.
+- Documentos antigos ainda idênticos ao modelo recuperam o HTML original ao
+  abrir/visualizar. Texto personalizado nunca é substituído. Na gravação, a
+  estrutura recuperada passa a fazer parte do documento.
+- O antigo destaque magenta padrão (`#b90679`) é normalizado para dourado
+  (`#91672b`) também nas propostas já salvas, no editor e no documento público.
+  Cartões, indicadores, comparativos, fundos e bordas usam os tons da capa;
+  cores personalizadas diferentes do antigo padrão continuam editáveis.
+- Após alterar o schema no Docker local, é necessário regenerar o Prisma Client
+  e aplicar migrations também no container (o `node_modules` dele é um volume
+  diferente do Windows). Reiniciar `vivox-backend` executa os dois comandos no
+  boot. Em 2026-10-19, a ausência dessa atualização causou erros de compilação
+  (`PropostaSelect`/`prisma.proposta`) e falha no salvamento; corrigido localmente.
+- A proposta começa sem link. Salvar uma proposta já compartilhada atualiza o
+  documento visto no mesmo link. Não há aprovação/assinatura ou conversão em
+  contrato. A validade é informativa; a equipe desativa o acesso pelo botão.
+- O token original só aparece ao gerar o link e não é guardado no navegador.
+  Depois de sair do editor, é necessário gerar outro link para compartilhar
+  novamente; isso revoga o anterior. O campo do link permite copiar manualmente.
+- A listagem mostra um ícone de compartilhar por proposta. Ele gera o link da
+  proposta salva e abre um diálogo para copiar ou visualizar, sem abrir o editor.
+  O destinatário acessa apenas `/proposta/:token`, sem login nem controles de
+  edição. Se já houver link ativo, a interface confirma a substituição.
+- Nome do destinatário é próprio do documento; editar não altera o cadastro.
+  O modelo de ensino contém condições e estimativas de referência, editáveis.
+- Validação em 2026-10-19: navegador com ADMIN, COLABORADOR só com CLIENTES,
+  COLABORADOR só com EDUCACIONAL (redirecionado ao tentar acessar propostas),
+  CLIENTE (restrito ao portal) e visitante sem sessão (vê apenas o documento
+  compartilhado). Dados fictícios em PostgreSQL isolado, migrações aplicadas
+  do zero. Build do backend e build/lint do frontend passaram; testes novos
+  de propostas: 18/18. A suíte completa mantém duas falhas anteriores nos
+  testes gerados de Planejamento, que não injetam PrismaService/JwtAuthGuard.
 
 ### 5.1 Comportamento que confunde
 
@@ -279,8 +351,24 @@ antes de editar.
 
 ## 9. Registro de mudanças
 
+- 2026-10-19 · `feat/propostas-clientes` · Propostas com rolagem contínua única, barra lateral com criação/validade e download em PDF; removido rodapé textual antes da imagem final · `PropostaDocumento`, `documentoHtml`, `baixarProposta`, `propostas.css`, seleção pública de `createdAt` · sem push/PR.
+
 Uma linha por PR, mais recente no topo. Formato:
 `AAAA-MM-DD · branch/PR · o que mudou para quem usa · arquivos ou módulos principais · pendências`.
+
+- 2026-10-19 · `feat/propostas-clientes` · Ícone de compartilhar na listagem de propostas abre diálogo com link exclusivo de visualização, botão de copiar e prévia pública; mantém aviso ao substituir link ativo · `PropostasTab.tsx` · usa os endpoints e as permissões existentes, sem mudança no backend.
+
+- 2026-10-19 · `feat/propostas-clientes` · Paleta da capa aplicada ao restante da proposta: dourado, preto quente e neutros/bege substituem magenta, lilás e cinzas roxos em cartões, textos, tabelas e destaques; propostas já salvas com a cor antiga também recebem o dourado · `referencia.css`, `propostas.css`, `modeloLegado.ts`, defaults e render do documento · sem mudança de API ou conteúdo.
+
+- 2026-10-19 · `feat/propostas-clientes` · Capa ajustada à imagem de referência: cliente em branco acima de “Proposta Comercial” e “2026” em dourado, alinhados à esquerda, com escala proporcional à largura da imagem · `documentoHtml.tsx`, `referencia.css` · destinatário continua editável no formulário.
+
+- 2026-10-19 · `feat/propostas-clientes` · Nome do cliente e “Proposta Comercial 2026” sobre a capa; título e apresentação incorporados à subcapa, com adaptação para celular · `documentoHtml.tsx`, `referencia.css` · dados vêm de `destinatario`, `titulo` e `apresentacao`, sem novo campo ou endpoint.
+
+- 2026-10-19 · `feat/propostas-clientes` · Incluídas as imagens fornecidas pelo usuário como capa, subcapa imediatamente após a capa e encerramento, na prévia e no compartilhamento · `documentoHtml.tsx`, `referencia.css`, `assets/capaProposta.webp`, `assets/subCapa.webp`, `assets/propostaFinal.webp` · sem mudança de API ou dados; imagens responsivas e empacotadas inline para respeitar a CSP.
+
+- 2026-10-19 · `feat/propostas-clientes` · Corrigido salvamento no Docker local: Prisma Client regenerado e migration aplicada no serviço usado pelo sistema. Propostas passam a conservar HTML/CSS da referência, com edição visual de cartões/tabelas, compatibilidade com textos antigos e mensagens de erro específicas · `features/propostas`, `SecaoPropostaDto`, `PropostasService`, DOMPurify · 19 testes de propostas, teste HTTP no backend local :3000, verificação do render/isolamento, builds e lint passaram; publicação em produção continua pendente. Browser não pôde ser revalidado nesta correção por bloqueio de protocolo na ferramenta.
+
+- 2026-10-19 · `feat/propostas-clientes` · Propostas por cliente para ADMIN e colaboradores com CLIENTES, edição completa por seções, modelo de ensino sem Kemax e visualização por link exclusivo revogável · `backend/src/propostas`, model/migration `Proposta`, `features/propostas`, lista/perfil de clientes · migration validada em banco isolado; aplicar via deploy no ambiente alvo. Builds e lint do front passaram (avisos anteriores); 18 testes novos e integração HTTP/PostgreSQL passaram; suíte geral: 214 passaram e 2 testes antigos de Planejamento falharam por providers ausentes. Implementação autorizada pelo usuário após referência e prévia nesta conversa; sem push/PR.
 
 - 2026-10-19 · `feat/demandas-gerais` · VVOX Sync passa a se chamar Demandas gerais no menu, no título e nas mensagens; endereço novo `/demandasgerais/(nome-do-quadro)`; `/vvoxsync/...` e `/gp` redirecionam para ele · `App.tsx`, `Layout.tsx`, `features/kanban/*`, `public/kanban/index.html`, mensagens em `backend/src/kanban` · nomes internos (código, `VVOX_SYNC.md`, mensagens `vvox-sync:*`) mantidos.
 - 2026-10-19 · `feat/kanban-equipe-backend` · VVOX Sync sincronizado com o Quadro de Demandas (Artifact): o administrador muda cargo, função (Proprietário(a)/Supervisor(a)/Responsável/Visualizador(a)) e a matriz de permissões no painel de colaboradores, e isso fica salvo na conta da pessoa; o servidor passa a aplicar a matriz (criar, editar, mover, excluir, aprovar, comentar, quadros e colunas, dias de postagem); foto e nome do perfil, logo do cliente e dias de postagem por cliente saem do navegador e vão para a API · migração `20261019120000_kanban_equipe` (User.cargo/funcaoKanban/fotoUrl + KanbanConfig), `backend/src/kanban/kanban-equipe.*`, `kanban.service.ts`, `public/kanban/js/app.js`, `backend.js` · adicionar e remover pessoas continua em Configurações; "Ver como" segue desligado no sistema.

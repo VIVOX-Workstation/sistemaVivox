@@ -64,6 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
+    // O link de proposta é independente da sessão interna, inclusive se ela expirou.
+    if (window.location.pathname.startsWith('/proposta/')) return;
     const storedToken = localStorage.getItem('@Vivox:token');
     if (storedToken && user && user.role !== 'CLIENTE') {
       refreshUser();

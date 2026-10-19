@@ -12,16 +12,18 @@ import { AcessoPortalModal } from '../components/portal/AcessoPortalModal';
 import { VxDialog } from '../components/clean/VxDialog';
 import { ClienteMono } from '../components/ClienteMono';
 import { STATUS_CLIENTE } from '../utils/clean';
+import { PropostasTab } from '../features/propostas/PropostasTab';
 
 // Perfil do cliente no layout clean (canvas › Perfil).
 // GET/PATCH /clientes/:id, uploads de logo e capa; abas em components/ClientTabs.
 
-type Tab = 'overview' | 'services' | 'notes';
-const VALID_TABS: Tab[] = ['overview', 'services', 'notes'];
+type Tab = 'overview' | 'services' | 'notes' | 'propostas';
+const VALID_TABS: Tab[] = ['overview', 'services', 'notes', 'propostas'];
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Visão geral' },
   { id: 'services', label: 'Serviços' },
   { id: 'notes', label: 'Anotações' },
+  { id: 'propostas', label: 'Propostas' },
 ];
 
 const mesAno = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' });
@@ -48,6 +50,7 @@ export function ClientProfile() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [erroCarga, setErroCarga] = useState(false);
   const [erro, setErro] = useState('');
+  const [propostaAlterada, setPropostaAlterada] = useState(false);
   const raw = searchParams.get('tab') as Tab;
   const activeTab: Tab = raw && VALID_TABS.includes(raw) ? raw : 'overview';
 
@@ -67,7 +70,11 @@ export function ClientProfile() {
   const fileLogo = useRef<HTMLInputElement>(null);
   const fileBanner = useRef<HTMLInputElement>(null);
 
-  const selectTab = (tab: string) => setSearchParams({ tab: VALID_TABS.includes(tab as Tab) ? tab : 'overview' });
+  const selectTab = (tab: string) => {
+    if (tab === activeTab) return;
+    if (propostaAlterada && !confirm('Descartar as alterações não salvas da proposta?')) return;
+    setSearchParams({ tab: VALID_TABS.includes(tab as Tab) ? tab : 'overview' });
+  };
 
   const loadCliente = useCallback(async (clienteId: string) => {
     try {
@@ -255,6 +262,7 @@ export function ClientProfile() {
             </div>
           </div>
           <div className="acts">
+            <Link className="btn sec" to={`/cliente/${cliente.id}?tab=propostas`}>Propostas</Link>
             {site && (
               <a className="ib" href={site.startsWith('http') ? site : `https://${site}`} target="_blank" rel="noreferrer" aria-label="Abrir site" title="Site">
                 <Globe className="i" aria-hidden="true" />
@@ -291,6 +299,7 @@ export function ClientProfile() {
           ))}
         </div>
 
+        {activeTab === 'propostas' && <PropostasTab key={cliente.id} clienteId={cliente.id} nomeCliente={cliente.nomeFantasia} onDirtyChange={setPropostaAlterada} />}
         {activeTab === 'overview' && (
           <OverviewTab
             key={recarga}

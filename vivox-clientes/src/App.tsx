@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams 
 import { Layout } from './components/Layout';
 import { MainDashboard } from './pages/MainDashboard';
 import { ClientList } from './pages/ClientList';
+import { PropostaPublica } from './features/propostas/PropostaPublica';
 import { ClientForm } from './pages/ClientForm';
 import { ClientProfile } from './pages/ClientProfile';
 import { AnalyticsIndex } from './pages/AnalyticsIndex';
@@ -130,6 +131,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/proposta/:token" element={<PropostaPublica />} />
           
           {/* Portal do Cliente: fora do Layout interno, protegido somente para CLIENTE */}
           <Route path="/portal" element={<PortalRoute />} />

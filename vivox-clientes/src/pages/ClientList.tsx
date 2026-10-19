@@ -166,6 +166,7 @@ export function ClientList() {
                               <td className="mut">{c.responsavel?.nome || 'Equipe'}</td>
                               <td className="mut">{formatDate(c.dataInicioContrato || c.createdAt) ?? '—'}</td>
                               <td className="r">
+                                <Link className="btn sec sm" to={`/cliente/${c.id}?tab=propostas`} aria-label={`Propostas de ${c.nomeFantasia}`}>Propostas</Link>
                                 <Link className="ib sm" to={`/cliente/${c.id}`} aria-label={`Abrir perfil de ${c.nomeFantasia}`}>
                                   <ChevronRight className="i" aria-hidden="true" />
                                 </Link>

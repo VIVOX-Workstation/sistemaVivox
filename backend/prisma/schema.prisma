@@ -270,6 +270,7 @@ model Cliente {
   usuarioPortal       User?               @relation("UsuarioPortal")
   cronogramas         CronogramaCliente[]
   interessesServico   InteresseServico[]
+  propostas           Proposta[]
 
   // Relações Analytics
   analyticsSnapshots         AnalyticsSnapshot[]
@@ -284,6 +285,24 @@ model Cliente {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Documento comercial editável da equipe; acesso externo somente pelo segredo do link.
+model Proposta {
+  id             String   @id @default(uuid())
+  clienteId      String
+  cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  titulo         String
+  destinatario   String
+  apresentacao   String   @db.Text
+  validade       DateTime? @db.Date
+  corDestaque    String   @default("#91672b")
+  secoes         Json
+  linkHash       String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([clienteId, createdAt])
 }
 
 // Cronogramas em PDF enviados pela equipe na aba Acompanhamento; o cliente vê no portal.
