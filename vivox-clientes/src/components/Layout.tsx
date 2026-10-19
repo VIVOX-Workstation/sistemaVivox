@@ -1,26 +1,25 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { SistemaVivoxLogo, VivoxMark } from './brand/SistemaVivoxLogo';
+import { VivoxLogo } from './brand/VivoxLogo';
+import { VivoxMark } from './brand/SistemaVivoxLogo';
 import { useSidebarPrefs } from '../utils/sidebarPrefs';
 import VivoxIntro from './VivoxIntro';
 import { FloatingAssistant } from './FloatingAssistant';
-import marcaImg from '../assets/marca.webp';
-import { 
+import {
   LayoutDashboard,
-  Users, 
-  BarChart2, 
-  CheckSquare, 
-  GraduationCap, 
-  PenTool, 
-  Palette, 
-  Film, 
-  Kanban, 
+  Users,
+  BarChart2,
+  GraduationCap,
+  Kanban,
   LogOut,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
   Globe,
-  ClipboardList
+  ClipboardList,
+  ListChecks,
+  LifeBuoy,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,21 +30,19 @@ function SideLink({
   end,
   icon: Icon,
   label,
-  title,
   collapsed,
 }: {
   to: string;
   end?: boolean;
   icon: IconType;
   label: string;
-  title?: string;
   collapsed: boolean;
 }) {
   return (
     <NavLink
       to={to}
       end={end}
-      title={collapsed ? title || label : undefined}
+      title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
       className={({ isActive }) => `vsb-item ${collapsed ? 'is-collapsed' : ''} ${isActive ? 'is-active' : ''}`}
     >
@@ -55,55 +52,86 @@ function SideLink({
   );
 }
 
-function SoonItem({ icon: Icon, label, collapsed }: { icon: IconType; label: string; collapsed: boolean }) {
-  return (
-    <div
-      title={collapsed ? label : undefined}
-      aria-disabled="true"
-      className={`vsb-item vsb-soon ${collapsed ? 'is-collapsed' : ''}`}
-    >
-      <Icon className="vsb-ic" />
-      {!collapsed && <span className="truncate">{label}</span>}
-    </div>
-  );
+/** Nome da tela na barra superior, a partir da rota. */
+function tituloDaRota(pathname: string): string {
+  if (pathname === '/') return 'Dashboard';
+  if (/^\/cliente\/novo/.test(pathname)) return 'Novo cliente';
+  if (/^\/cliente\/[^/]+\/servicos\/[^/]+\/planejamento/.test(pathname)) return 'Planejamento do serviço';
+  if (/^\/cliente\/[^/]+\/servicos\/[^/]+\/devboard/.test(pathname)) return 'DevBoard';
+  if (/^\/clientes?\/[^/]+/.test(pathname)) return 'Perfil do cliente';
+  if (pathname.startsWith('/clientes')) return 'Clientes';
+  if (pathname.startsWith('/hospedagens') || pathname.startsWith('/renovacoes')) return 'Hospedagens';
+  if (/^\/analytics\/[^/]+/.test(pathname)) return 'Painel de métricas';
+  if (pathname.startsWith('/analytics')) return 'Analytics';
+  if (pathname.startsWith('/acompanhamento')) return 'Acompanhamento';
+  if (pathname.startsWith('/gp/minhas-tarefas')) return 'Minhas tarefas';
+  if (pathname.startsWith('/gp/workspace/all')) return 'Chamados';
+  if (pathname.startsWith('/gp')) return 'Tarefas';
+  if (pathname.startsWith('/educacional/admin')) return 'Gerenciar cursos';
+  if (pathname.startsWith('/educacional/curso')) return 'Curso';
+  if (pathname.startsWith('/educacional')) return 'Educacional';
+  if (pathname.startsWith('/configuracoes')) return 'Configurações';
+  if (pathname.startsWith('/sem-acesso')) return 'Sem acesso';
+  return '';
 }
 
-/* Barra lateral: preto, grade fina e uma luz dourada que respira (a mesma da tela de entrada) */
-const SIDEBAR_CSS = `
-.vsb{position:relative;overflow:hidden;background:#080706;border-right:1px solid rgba(204,182,145,.14);box-shadow:20px 0 60px -30px rgba(0,0,0,.8);isolation:isolate}
-.vsb-grid{position:absolute;inset:0;z-index:-2;pointer-events:none;background-image:linear-gradient(to right,rgba(204,182,145,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(204,182,145,.05) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(to bottom,#000,transparent 70%);mask-image:linear-gradient(to bottom,#000,transparent 70%)}
-.vsb-light{position:absolute;left:50%;top:-90px;width:340px;aspect-ratio:1;z-index:-1;pointer-events:none;transform:translateX(-50%);display:none}
-.vsb-glow .vsb-light{display:block}
-.vsb-light i{position:absolute;inset:0;border-radius:50%;background:radial-gradient(closest-side,rgba(204,182,145,.30),rgba(204,182,145,.08) 55%,transparent 75%);filter:blur(22px);animation:vsb-breathe 7s ease-in-out infinite}
-.vsb-light i+i{inset:26%;background:radial-gradient(closest-side,rgba(255,226,170,.30),transparent 72%);animation-delay:-3.5s}
-@keyframes vsb-breathe{0%,100%{opacity:.5;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
-.vsb-head{height:72px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px 0 18px;border-bottom:1px solid rgba(204,182,145,.12);flex:none}
-.vsb-head.is-collapsed{flex-direction:column;justify-content:center;gap:6px;height:84px;padding:0}
-.vsb-logo{display:block;height:auto;width:min(176px,100%);color:#f4efe6;filter:drop-shadow(0 0 16px rgba(204,182,145,.22))}
-.vsb-mark{display:block;height:26px;width:auto;filter:drop-shadow(0 0 14px rgba(204,182,145,.35))}
-.vsb-toggle{flex:none;width:30px;height:30px;display:grid;place-items:center;border-radius:9px;border:1px solid transparent;background:transparent;color:#8f8677;cursor:pointer;transition:color .2s,background .2s,border-color .2s}
-.vsb-toggle:hover{color:#f4efe6;background:rgba(204,182,145,.1);border-color:rgba(204,182,145,.2)}
-.vsb-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px 12px;display:flex;flex-direction:column;gap:4px}
-.vsb-label{padding:6px 10px 8px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#7d7566}
-.vsb-label-soon{margin-top:14px}
-.vsb-sep{height:1px;margin:10px 8px;background:rgba(204,182,145,.12)}
-.vsb-item{position:relative;display:flex;align-items:center;gap:12px;width:100%;height:42px;padding:0 12px;border-radius:12px;border:1px solid transparent;background:transparent;color:#bdb3a2;font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer;text-decoration:none;transition:background .2s,color .2s,border-color .2s,box-shadow .25s}
+/** Em telas estreitas a barra lateral fica sempre recolhida (só ícones). */
+function useTelaEstreita() {
+  const consulta = '(max-width: 767px)';
+  const [estreita, setEstreita] = useState(() => typeof window !== 'undefined' && window.matchMedia(consulta).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(consulta);
+    const sync = () => setEstreita(mq.matches);
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+  return estreita;
+}
+
+/* Estrutura base clean (docs/DESIGN_SYSTEM.md › 5): menu branco, barra superior e assistente em painel lateral. */
+const LAYOUT_CSS = `
+.vsb{background:var(--vx-surface);border-right:1px solid var(--vx-line);font-family:var(--vx-font)}
+.vsb-head{height:64px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px 0 20px;border-bottom:1px solid var(--vx-line);flex:none}
+.vsb-head.is-collapsed{justify-content:center;padding:0}
+.vsb-brand{display:flex;align-items:center;gap:10px;color:var(--vx-ink);text-decoration:none;min-width:0}
+.vsb-logo{display:block;width:84px;height:auto}
+.vsb-mark{display:block;height:22px;width:auto}
+.vsb-tag{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--vx-ink-3);padding-top:2px}
+.vsb-toggle{flex:none;width:30px;height:30px;display:grid;place-items:center;border-radius:8px;border:0;background:transparent;color:var(--vx-ink-3);cursor:pointer;transition:background .15s var(--vx-ease),color .15s var(--vx-ease)}
+.vsb-toggle:hover{background:var(--vx-sunken);color:var(--vx-ink)}
+.vsb-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.vsb-label{padding:4px 10px 8px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--vx-ink-3)}
+.vsb-item{display:flex;align-items:center;gap:11px;width:100%;height:38px;padding:0 10px;border-radius:9px;border:0;background:transparent;color:var(--vx-ink-2);font:inherit;font-size:13.5px;font-weight:520;text-align:left;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s var(--vx-ease),color .15s var(--vx-ease)}
 .vsb-item.is-collapsed{justify-content:center;padding:0}
-.vsb-ic{width:18px;height:18px;flex:none;color:#ccb691;transition:transform .2s,filter .25s}
-.vsb-item:hover{background:rgba(204,182,145,.08);color:#f4efe6;border-color:rgba(204,182,145,.12)}
-.vsb-item:hover .vsb-ic{transform:scale(1.08)}
-.vsb-item:focus-visible,.vsb-toggle:focus-visible{outline:2px solid rgba(204,182,145,.75);outline-offset:2px}
-.vsb-item.is-active{color:#f6e9cf;background:linear-gradient(180deg,rgba(204,182,145,.16),rgba(204,182,145,.07));border-color:rgba(204,182,145,.38);box-shadow:0 0 28px -10px rgba(204,182,145,.55),inset 0 1px 0 rgba(255,255,255,.06)}
-.vsb-item.is-active .vsb-ic{filter:drop-shadow(0 0 6px rgba(204,182,145,.6))}
-.vsb-soon{color:#5f584c;cursor:not-allowed;font-weight:500}
-.vsb-soon .vsb-ic{color:#5f584c}
-.vsb-soon:hover{background:transparent;border-color:transparent;color:#5f584c}
-.vsb-soon:hover .vsb-ic{transform:none}
-.vsb-foot{flex:none;padding:12px;display:flex;flex-direction:column;gap:4px;border-top:1px solid rgba(204,182,145,.12);background:linear-gradient(180deg,transparent,rgba(0,0,0,.35))}
-.vsb-out .vsb-ic{color:#d9695e}
-.vsb-out:hover{background:rgba(217,105,94,.1);border-color:rgba(217,105,94,.25)}
-@media (prefers-reduced-motion:reduce){.vsb-light i{animation:none;opacity:.7}.vsb,.vsb-item,.vsb-ic{transition:none}}
+.vsb-ic{width:17px;height:17px;flex:none;color:var(--vx-ink-3)}
+.vsb-item:hover{background:var(--vx-sunken);color:var(--vx-ink)}
+.vsb-item.is-active{background:var(--vx-accent-soft);color:var(--vx-accent-ink);font-weight:600}
+.vsb-item.is-active .vsb-ic{color:var(--vx-accent)}
+.vsb-item:focus-visible,.vsb-toggle:focus-visible,.vtop-ia:focus-visible{outline:none;box-shadow:0 0 0 2px var(--vx-surface),0 0 0 4px var(--vx-ring)}
+.vsb-foot{flex:none;padding:12px;display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--vx-line)}
+.vsb-me{display:flex;align-items:center;gap:10px;padding:8px 6px 4px 10px}
+.vsb-me.is-collapsed{flex-direction:column;padding:8px 0 0}
+.vsb-av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--vx-sunken);color:var(--vx-ink-2);font-size:12px;font-weight:650}
+.vsb-me b{display:block;font-size:13px;font-weight:600;color:var(--vx-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vsb-me small{display:block;font-size:11.5px;color:var(--vx-ink-3)}
+.vsb-out{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:8px;border:0;background:transparent;color:var(--vx-ink-3);cursor:pointer}
+.vsb-out:hover{background:var(--vx-bad-soft);color:var(--vx-bad)}
+.vsb-out:focus-visible{outline:none;box-shadow:0 0 0 2px var(--vx-surface),0 0 0 4px var(--vx-ring)}
+.vtop{height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--vx-surface);border-bottom:1px solid var(--vx-line);font-family:var(--vx-font)}
+.vtop-title{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--vx-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vtop-ia{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:9px;border:0;background:transparent;color:var(--vx-ink-2);font:inherit;font-size:13px;font-weight:560;cursor:pointer;transition:background .15s var(--vx-ease),color .15s var(--vx-ease)}
+.vtop-ia svg{width:16px;height:16px;color:var(--vx-accent)}
+.vtop-ia:hover{background:var(--vx-sunken);color:var(--vx-ink)}
+.vtop-ia.is-on{background:var(--vx-accent-soft);color:var(--vx-accent-ink)}
+@media (max-width:767px){.vtop{padding:0 16px}.vtop-ia span{display:none}}
+@media (prefers-reduced-motion:reduce){.vsb,.vsb-item,.vsb-toggle,.vtop-ia{transition:none}}
 `;
+
+function iniciais(nome?: string) {
+  if (!nome) return '?';
+  const partes = nome.trim().split(/\s+/);
+  return ((partes[0]?.[0] ?? '') + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
+}
 
 export function Layout() {
   const { signOut, podeAcessar, user } = useAuth();
@@ -119,25 +147,20 @@ export function Layout() {
     location.pathname === '/' ||
     location.pathname.startsWith('/gp') ||
     location.pathname.startsWith('/vvoxsync') ||
-    location.pathname.startsWith('/cliente') || 
+    location.pathname.startsWith('/cliente') ||
     location.pathname.startsWith('/analytics') ||
     location.pathname.startsWith('/acompanhamento') ||
     location.pathname === '/hospedagens' ||
     location.pathname === '/renovacoes' ||
     location.pathname === '/configuracoes';
 
-  const isMarcaVisible =
-    location.pathname === '/' ||
-    location.pathname.startsWith('/cliente') ||
-    location.pathname.startsWith('/analytics') ||
-    location.pathname.startsWith('/vvoxsync') ||
-    location.pathname.startsWith('/gp');
-
   const [showIntro, setShowIntro] = useState(false);
+  const [iaAberta, setIaAberta] = useState(false);
 
-  // Preferências da barra lateral (recolher e luz dourada), salvas neste navegador
+  // Recolher fica salvo neste navegador; em tela estreita a barra fica sempre recolhida
   const { prefs, update } = useSidebarPrefs();
-  const isSidebarCollapsed = prefs.collapsed;
+  const telaEstreita = useTelaEstreita();
+  const recolhida = prefs.collapsed || telaEstreita;
   const toggleSidebar = () => update({ collapsed: !prefs.collapsed });
 
   useEffect(() => {
@@ -147,106 +170,87 @@ export function Layout() {
     }
   }, []);
 
+  const titulo = tituloDaRota(location.pathname);
+  const papel = isAdmin ? 'Administrador' : 'Colaborador';
+
   return (
     <>
       {showIntro && <VivoxIntro onComplete={() => setShowIntro(false)} />}
-      <div className="flex min-h-screen bg-[#FAF7F2] text-[#1E1A16] relative overflow-hidden">
-        {/* Barra lateral: preta, com a luz dourada da tela de entrada */}
+      <style>{LAYOUT_CSS}</style>
+      <div className="flex min-h-screen bg-[var(--vx-bg)] text-[var(--vx-ink)] relative overflow-hidden">
         <aside
-          className={`vsb ${prefs.glow ? 'vsb-glow' : ''} flex flex-col z-20 select-none transition-[width] duration-300 ease-in-out shrink-0 ${
-            isSyncCanvas ? 'hidden' : isSidebarCollapsed ? 'w-[76px]' : 'w-64'
+          className={`vsb flex flex-col z-20 select-none transition-[width] duration-300 ease-in-out shrink-0 ${
+            isSyncCanvas ? 'hidden' : recolhida ? 'w-[68px]' : 'w-60'
           }`}
         >
-          <style>{SIDEBAR_CSS}</style>
-          <div className="vsb-light" aria-hidden="true">
-            <i />
-            <i />
-          </div>
-          <div className="vsb-grid" aria-hidden="true" />
-
           {/* Logo + recolher */}
-          <div className={`vsb-head ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
-            {!isSidebarCollapsed ? <SistemaVivoxLogo className="vsb-logo" /> : <VivoxMark className="vsb-mark" />}
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              title={isSidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-              aria-label={isSidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-              className="vsb-toggle"
-            >
-              {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-            </button>
+          <div className={`vsb-head ${recolhida ? 'is-collapsed' : ''}`}>
+            {!recolhida && (
+              <NavLink to="/" className="vsb-brand" aria-label="Sistema VIVOX, ir para o início">
+                <VivoxLogo className="vsb-logo" />
+                <span className="vsb-tag">Sistema</span>
+              </NavLink>
+            )}
+            {recolhida && telaEstreita && <VivoxMark className="vsb-mark" />}
+            {!telaEstreita && (
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                title={recolhida ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+                aria-label={recolhida ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+                className="vsb-toggle"
+              >
+                {recolhida ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+              </button>
+            )}
           </div>
 
-          {/* Navegação de módulos */}
+          {/* Módulos que a pessoa pode abrir */}
           <nav className="vsb-nav" aria-label="Módulos">
-            {!isSidebarCollapsed && <div className="vsb-label">Módulos ativos</div>}
-
-            {podeAcessar('DASHBOARD') && (
-              <SideLink to="/" end icon={LayoutDashboard} label="Dashboard" title="Dashboard Executivo" collapsed={isSidebarCollapsed} />
-            )}
-            {podeAcessar('CLIENTES') && (
-              <SideLink to="/clientes" icon={Users} label="Vivox Clientes" collapsed={isSidebarCollapsed} />
-            )}
-            {podeAcessar('HOSPEDAGENS') && (
-              <SideLink to="/hospedagens" icon={Globe} label="Hospedagens" collapsed={isSidebarCollapsed} />
-            )}
-            {podeAcessar('ANALYTICS') && (
-              <SideLink to="/analytics" icon={BarChart2} label="Vivox Analytics" collapsed={isSidebarCollapsed} />
-            )}
-            {podeAcessar('ACOMPANHAMENTO') && (
-              <SideLink to="/acompanhamento" icon={ClipboardList} label="Acompanhamento" collapsed={isSidebarCollapsed} />
-            )}
-            {podeAcessar('GP') && (
-              <SideLink to="/vvoxsync" icon={Kanban} label="VVOX Sync" collapsed={isSidebarCollapsed} />
-            )}
-            {podeAcessar('EDUCACIONAL') && (
-              <SideLink to="/educacional" icon={GraduationCap} label="Vivox Educacional" collapsed={isSidebarCollapsed} />
-            )}
-
-            {/* Em breve: visível só para administradores */}
-            {isAdmin && (
-              <>
-                {!isSidebarCollapsed && <div className="vsb-label vsb-label-soon">Em breve</div>}
-                {isSidebarCollapsed && <div className="vsb-sep" aria-hidden="true" />}
-                <SoonItem icon={CheckSquare} label="Vivox Revisão" collapsed={isSidebarCollapsed} />
-                <SoonItem icon={PenTool} label="Vivox Analista" collapsed={isSidebarCollapsed} />
-                <SoonItem icon={Palette} label="Vivox Studio" collapsed={isSidebarCollapsed} />
-                <SoonItem icon={Film} label="Vivox Film" collapsed={isSidebarCollapsed} />
-              </>
-            )}
+            {!recolhida && <div className="vsb-label">Módulos</div>}
+            {podeAcessar('DASHBOARD') && <SideLink to="/" end icon={LayoutDashboard} label="Dashboard" collapsed={recolhida} />}
+            {podeAcessar('CLIENTES') && <SideLink to="/clientes" icon={Users} label="Clientes" collapsed={recolhida} />}
+            {podeAcessar('HOSPEDAGENS') && <SideLink to="/hospedagens" icon={Globe} label="Hospedagens" collapsed={recolhida} />}
+            {podeAcessar('ANALYTICS') && <SideLink to="/analytics" icon={BarChart2} label="Analytics" collapsed={recolhida} />}
+            {podeAcessar('ACOMPANHAMENTO') && <SideLink to="/acompanhamento" icon={ClipboardList} label="Acompanhamento" collapsed={recolhida} />}
+            {podeAcessar('GP') && <SideLink to="/vvoxsync" icon={Kanban} label="VVOX Sync" collapsed={recolhida} />}
+            {podeAcessar('GP') && <SideLink to="/gp/minhas-tarefas" icon={ListChecks} label="Minhas tarefas" collapsed={recolhida} />}
+            {podeAcessar('GP') && <SideLink to="/gp/workspace/all" icon={LifeBuoy} label="Chamados" collapsed={recolhida} />}
+            {podeAcessar('EDUCACIONAL') && <SideLink to="/educacional" icon={GraduationCap} label="Educacional" collapsed={recolhida} />}
           </nav>
 
-          {/* Rodapé: Configurações + Sair */}
+          {/* Configurações (admin) + pessoa conectada */}
           <div className="vsb-foot">
-            {isAdmin && (
-              <SideLink to="/configuracoes" icon={Settings} label="Configurações" title="Configurações do Sistema" collapsed={isSidebarCollapsed} />
-            )}
-            <button
-              type="button"
-              onClick={signOut}
-              title={isSidebarCollapsed ? 'Sair da conta' : undefined}
-              aria-label={isSidebarCollapsed ? 'Sair da conta' : undefined}
-              className={`vsb-item vsb-out ${isSidebarCollapsed ? 'is-collapsed' : ''}`}
-            >
-              <LogOut className="vsb-ic" />
-              {!isSidebarCollapsed && <span className="truncate">Sair</span>}
-            </button>
+            {isAdmin && <SideLink to="/configuracoes" icon={Settings} label="Configurações" collapsed={recolhida} />}
+            <div className={`vsb-me ${recolhida ? 'is-collapsed' : ''}`}>
+              <span className="vsb-av" title={recolhida ? `${user?.nome ?? ''} · ${papel}` : undefined}>{iniciais(user?.nome)}</span>
+              {!recolhida && (
+                <div className="flex-1 min-w-0">
+                  <b>{user?.nome}</b>
+                  <small>{papel}</small>
+                </div>
+              )}
+              <button type="button" onClick={signOut} className="vsb-out" title="Sair da conta" aria-label="Sair da conta">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </aside>
 
-        {/* Conteúdo Principal (Expande para preencher o espaço restante) */}
-        <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#FAF7F2] min-w-0 relative">
-          {/* Marca D'água Vivox no canto inferior direito - camada de fundo z-0 */}
-          {isMarcaVisible && !isSyncCanvas && (
-            <div className="fixed -bottom-2 -right-2 pointer-events-none select-none z-0 overflow-hidden leading-none">
-              <img
-                src={marcaImg}
-                alt=""
-                aria-hidden="true"
-                className="w-56 sm:w-72 md:w-[360px] lg:w-[440px] xl:w-[500px] max-w-none object-contain opacity-[0.07] md:opacity-[0.09] pointer-events-none"
-              />
-            </div>
+        <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[var(--vx-bg)] min-w-0 relative">
+          {!isSyncCanvas && (
+            <header className="vtop">
+              <p className="vtop-title">{titulo}</p>
+              <button
+                type="button"
+                className={`vtop-ia ${iaAberta ? 'is-on' : ''}`}
+                aria-pressed={iaAberta}
+                onClick={() => setIaAberta((v) => !v)}
+              >
+                <Sparkles aria-hidden="true" />
+                <span>Assistente</span>
+              </button>
+            </header>
           )}
 
           <div className={`flex-1 overflow-auto relative z-10 ${isFullBleed ? 'p-0 flex flex-col' : 'p-8'}`}>
@@ -254,8 +258,8 @@ export function Layout() {
           </div>
         </main>
 
-        {/* Assistente IA Flutuante Global */}
-        {!isSyncCanvas && <FloatingAssistant />}
+        {/* Assistente IA: painel lateral aberto pela barra superior */}
+        {!isSyncCanvas && <FloatingAssistant open={iaAberta} onClose={() => setIaAberta(false)} />}
       </div>
     </>
   );

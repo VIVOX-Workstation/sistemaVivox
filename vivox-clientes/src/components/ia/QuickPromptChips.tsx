@@ -61,14 +61,14 @@ export const QuickPromptChips: React.FC<QuickPromptChipsProps> = ({
   const prompts = isClientMode ? clientPrompts : masterPrompts;
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 no-scrollbar px-1">
+    <div className="flex flex-wrap items-center gap-1.5 pb-1 pt-1">
       {prompts.map((item, index) => (
         <button
           key={index}
           type="button"
           disabled={disabled}
           onClick={() => onSelectPrompt(item.prompt)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#24201A] hover:bg-[#2F2922] border border-[#3E3529] hover:border-[#C7A15F]/40 text-[#D8CFBF] hover:text-[#F6F0E7] text-xs whitespace-nowrap transition-all duration-150 shadow-2xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[var(--vx-surface)] hover:bg-[var(--vx-soft)] border border-[var(--vx-line-strong)] text-[var(--vx-ink-2)] hover:text-[var(--vx-ink)] text-xs font-medium whitespace-nowrap transition-colors duration-150 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {item.icon}
           <span>{item.label}</span>
