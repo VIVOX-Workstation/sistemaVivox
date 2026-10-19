@@ -102,18 +102,10 @@ const CFG_CSS = `
 .cfg-seg{display:inline-flex;padding:4px;gap:4px;border-radius:12px;background:#F1EADC;border:1px solid #E8DCC8;flex:none}
 .cfg-seg button{height:34px;padding:0 14px;border:0;border-radius:9px;background:transparent;color:#5E574C;font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
 .cfg-seg button[aria-pressed="true"]{background:#fff;color:#1E1A16;box-shadow:0 2px 8px -3px rgba(60,45,20,.35)}
-.cfg-switch{position:relative;display:inline-flex;flex:none;cursor:pointer}
-.cfg-switch input{position:absolute;opacity:0;width:1px;height:1px}
-.cfg-track{width:46px;height:26px;border-radius:999px;background:#E3D9C6;border:1px solid #D6C8AE;position:relative;transition:background .2s,border-color .2s}
-.cfg-track::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
-.cfg-switch input:checked+.cfg-track{background:#C7A15F;border-color:#B8945A}
-.cfg-switch input:checked+.cfg-track::after{transform:translateX(20px)}
-.cfg-switch input:focus-visible+.cfg-track{outline:2px solid #B8945A;outline-offset:2px}
 .cfg-prev{display:grid;grid-template-columns:96px minmax(0,1fr);height:150px;margin-top:18px;border-radius:16px;overflow:hidden;border:1px solid #E1D4BC}
-.cfg-prev-side{position:relative;display:grid;align-content:start;gap:8px;padding:12px;background:#080706;color:#8f8677;overflow:hidden}
-.cfg-prev-side.has-glow::before{content:"";position:absolute;left:50%;top:-60px;width:150px;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(204,182,145,.55),transparent 72%);filter:blur(10px)}
-.cfg-prev-side i{display:block;height:14px;border-radius:7px;background:rgba(204,182,145,.12);position:relative}
-.cfg-prev-side i.on{background:rgba(204,182,145,.28);box-shadow:0 0 14px -4px rgba(204,182,145,.7)}
+.cfg-prev-side{position:relative;display:grid;align-content:start;gap:8px;padding:12px;background:#fff;border-right:1px solid rgba(80,58,30,.1);color:#6B5F52;overflow:hidden}
+.cfg-prev-side i{display:block;height:14px;border-radius:7px;background:#F1EBE2;position:relative}
+.cfg-prev-side i.on{background:#F4EDE3;box-shadow:inset 0 0 0 1px rgba(145,103,43,.35)}
 .cfg-prev-main{display:grid;place-items:center;background:#FAF7F2;color:#8A7F6A;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
 @media (max-width:760px){.cfg-grid{grid-template-columns:minmax(0,1fr)}.cfg-nav{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;position:static}.cfg-opt{flex-direction:column;align-items:flex-start}}
 `;
@@ -593,27 +585,10 @@ export function Configuracoes() {
                 </button>
               </div>
             </div>
-
-            <div className="cfg-opt">
-              <div className="cfg-opt-t">
-                <b>Luz dourada do menu</b>
-                <small>Uma luz suave que pulsa no topo da barra lateral. Desligue se preferir o menu fixo.</small>
-              </div>
-              <label className="cfg-switch">
-                <input
-                  type="checkbox"
-                  role="switch"
-                  checked={sidebarPrefs.glow}
-                  onChange={(e) => updateSidebar({ glow: e.target.checked })}
-                />
-                <span className="cfg-track" aria-hidden="true" />
-                <span className="sr-only">Luz dourada do menu</span>
-              </label>
-            </div>
           </div>
 
           <div className="cfg-prev" aria-hidden="true">
-            <div className={`cfg-prev-side ${sidebarPrefs.glow ? 'has-glow' : ''}`}>
+            <div className="cfg-prev-side">
               <PanelLeftClose className="w-4 h-4" />
               <i className="on" />
               <i />

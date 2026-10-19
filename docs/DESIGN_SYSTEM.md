@@ -273,15 +273,16 @@ Toda tela que busca dados precisa de:
 
 ## 13. Migração do visual atual
 
-| Hoje | Clean |
-|---|---|
-| Menu preto com grade e luz dourada (`Layout.tsx`, `SIDEBAR_CSS`) | Menu branco `.sb` |
-| Painéis `pw-glass-panel` e `useLiquidGlass` | `.card` sem efeito |
-| Marca d'água `marca.webp` no canto | Removida |
-| Assistente flutuante (`FloatingAssistant`) | Botão na barra superior + painel lateral |
-| Seção "Em breve" no menu | Removida ou linha discreta só para ADMIN |
-| Hexadecimais soltos no Tailwind | Tokens da seção 3 |
-| Manrope + Archivo | Geist |
+| Hoje | Clean | Situação |
+|---|---|---|
+| Menu preto com grade e luz dourada | Menu branco (`Layout.tsx`, `LAYOUT_CSS`) | Feito em `style/layout-clean` |
+| Marca d'água `marca.webp` no canto | Removida | Feito em `style/layout-clean` |
+| Assistente flutuante (`FloatingAssistant`) | Botão na barra superior + painel lateral | Feito em `style/layout-clean` |
+| Seção "Em breve" no menu | Removida | Feito em `style/layout-clean` |
+| Fonte do corpo Inter | Geist (`--vx-font`) | Feito em `style/layout-clean` |
+| Painéis `pw-glass-panel` e `useLiquidGlass` | `.card` sem efeito | Pendente, tela a tela |
+| Hexadecimais soltos no Tailwind | Tokens da seção 3 (`--vx-*` em `vivox-tokens.css`) | Pendente, tela a tela |
+| Manrope + Archivo nas telas liquid glass | Geist | Pendente, tela a tela |
 
 Migre uma tela por PR, começando pelas de maior uso (Dashboard, Clientes,
 Perfil). Registre cada tela migrada na memória do sistema.
