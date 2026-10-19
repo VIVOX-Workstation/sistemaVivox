@@ -206,3 +206,22 @@
 .vxp .int.off{background:var(--sk);color:var(--ink3);text-decoration:line-through}
 /* Conteúdo legado (glass) embutido numa página clean, sem fundo nem respiro próprios */
 .vxp .planning-workspace.pw-embed{padding:0;background:transparent;min-height:0;font-family:inherit;isolation:auto}
+/* Minhas tarefas */
+.vxp .tr{appearance:none;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:inherit;display:flex;flex-direction:column;gap:2px;padding:0}
+.vxp .tr b{font-weight:600}
+.vxp .tr small{font-size:12px;color:var(--ink3)}
+.vxp .tr:hover b{text-decoration:underline;text-underline-offset:3px}
+.vxp .late{color:var(--bad);font-weight:600}
+.vxp .grp-t{display:flex;align-items:center;gap:8px;padding:12px 20px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);background:var(--soft);border-bottom:1px solid var(--ln)}
+/* Central de chamados */
+.vxp .cols{display:grid;gap:14px;overflow-x:auto;align-items:start}
+.vxp .cc{display:flex;flex-direction:column;gap:8px;min-width:0}
+.vxp .cc-h{display:flex;align-items:center;gap:8px;padding:4px 4px 8px;font-weight:620;font-size:13px}
+.vxp .cc-h em{font-style:normal;font-weight:500;color:var(--ink3)}
+.vxp .cc-vazio{padding:18px;border:1px dashed var(--ln2);border-radius:11px;text-align:center;font-size:12.5px;color:var(--ink3)}
+.vxp .ck{display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--sf);border:1px solid var(--ln);border-radius:11px}
+.vxp .ck:hover{border-color:var(--ln2)}
+.vxp .ck-b{appearance:none;border:0;background:transparent;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.vxp .ck-b b{font-weight:580;font-size:13.5px;line-height:1.35}
+.vxp .ck-b small{font-size:12px;color:var(--ink3)}
+.vxp .ck-f{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
