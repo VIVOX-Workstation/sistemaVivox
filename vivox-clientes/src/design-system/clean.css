@@ -195,3 +195,14 @@
 .vxp .cover img{width:100%;height:100%;object-fit:cover;display:block}
 .vxp .vxp-14-1{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
 @media (max-width:1024px){.vxp .vxp-14-1{grid-template-columns:minmax(0,1fr)}}
+/* Analytics: cards de cliente e integrações */
+.vxp .ac{display:flex;flex-direction:column;gap:14px;padding:18px}
+.vxp a.ac:hover{border-color:var(--ln2)}
+.vxp .ac-h{display:flex;align-items:center;gap:12px}
+.vxp .ac-h b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vxp .ac-h small{display:block;font-size:12px;color:var(--ink3)}
+.vxp .ints{display:flex;gap:6px;flex-wrap:wrap}
+.vxp .int{font-size:11.5px;font-weight:580;padding:3px 8px;border-radius:6px;background:var(--ok-s);color:var(--ok)}
+.vxp .int.off{background:var(--sk);color:var(--ink3);text-decoration:line-through}
+/* Conteúdo legado (glass) embutido numa página clean, sem fundo nem respiro próprios */
+.vxp .planning-workspace.pw-embed{padding:0;background:transparent;min-height:0;font-family:inherit;isolation:auto}
