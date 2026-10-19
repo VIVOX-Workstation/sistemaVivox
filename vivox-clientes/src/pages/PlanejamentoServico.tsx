@@ -706,7 +706,7 @@ Escreva a Copy completa (Headline, Subheadline, Argumentos de Venda, Benefícios
             <div>
               <span className="kick">{nomeFormatadoServico.toLowerCase().replace(/^./, (c) => c.toUpperCase())} · {servico.cliente?.nomeFantasia || 'Cliente'}</span>
               <h1 style={{ marginTop: 6 }}>{getNomeItemPlural()}</h1>
-              <p>Cada entrega tem briefing, conteúdo e tarefas no VVOX Sync.</p>
+              <p>Cada entrega tem briefing, conteúdo e tarefas em Demandas gerais.</p>
             </div>
             <div className="acts">
               <Link className="btn gh" to={`/cliente/${clienteId}?tab=services`}>Voltar ao cliente</Link>

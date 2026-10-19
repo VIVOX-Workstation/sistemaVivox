@@ -80,8 +80,8 @@ Validação da integração: schema Prisma válido, builds de backend e frontend
 
 ## Endereço do Kanban e pessoas
 
-- O Kanban abre em `/vvoxsync` e cada quadro tem o seu endereço: `/vvoxsync/operacaodiaria`, `/vvoxsync/kanbandecampanhas`. O nome do quadro vira o endereço sem acento, espaço ou símbolo; se dois quadros tiverem o mesmo nome o segundo recebe `-2`. Tarefa aberta: `/vvoxsync/operacaodiaria/tarefa/ID`.
-- Endereços antigos continuam funcionando e são levados para o novo: `/gp`, `/gp/tarefa/ID` e `/gp/projetos`.
+- No menu o Kanban se chama **Demandas gerais** e abre em `/demandasgerais`; cada quadro tem o seu endereço: `/demandasgerais/operacaodiaria`, `/demandasgerais/kanbandecampanhas`. O nome do quadro vira o endereço sem acento, espaço ou símbolo; se dois quadros tiverem o mesmo nome o segundo recebe `-2`. Tarefa aberta: `/demandasgerais/operacaodiaria/tarefa/ID`.
+- Endereços antigos continuam funcionando e são levados para o novo: `/vvoxsync/...` (mesmo quadro e tarefa), `/gp`, `/gp/tarefa/ID` e `/gp/projetos`.
 - As pessoas, os e-mails e o acesso (ADMIN ou COLABORADOR) vêm das contas do Sistema VIVOX. Adicionar ou remover pessoas continua em Configurações do sistema.
 - Cargo, função no Kanban (Proprietário(a), Supervisor(a), Responsável, Visualizador(a)) e foto ficam na conta (`User.cargo`, `User.funcaoKanban`, `User.fotoUrl`). Sem função salva, ADMIN conta como Proprietário(a) e COLABORADOR como Responsável.
 - A matriz de permissões por função, os cargos extras e os dias de postagem por cliente ficam em `KanbanConfig` (registro `global`).

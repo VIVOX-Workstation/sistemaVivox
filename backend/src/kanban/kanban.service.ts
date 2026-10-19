@@ -357,7 +357,7 @@ export class KanbanService {
     const statusChamado = status === 'CONCLUIDA' || status === 'CANCELADA' ? 'RESOLVIDO' : ['A_FAZER', 'BACKLOG'].includes(status) ? 'ABERTO' : 'EM_ANDAMENTO';
     await tx.chamado.updateMany({ where: { tarefaId: task.id }, data: { status: statusChamado, resolvidoEm: statusChamado === 'RESOLVIDO' ? now : null } });
     if (status === 'CONCLUIDA' && task.servicoId) {
-      await tx.servicoHistorico.create({ data: { servicoId: task.servicoId, usuarioId: actor.id, acao: 'Demanda "' + task.titulo + '" aprovada e concluída no VVOX Sync.' } });
+      await tx.servicoHistorico.create({ data: { servicoId: task.servicoId, usuarioId: actor.id, acao: 'Demanda "' + task.titulo + '" aprovada e concluída em Demandas gerais.' } });
     }
   }
 
