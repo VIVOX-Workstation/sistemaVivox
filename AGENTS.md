@@ -5,10 +5,12 @@ ler ou mudar este repositório.
 
 ## 1. Leia antes de começar
 
-1. [`docs/MEMORIA_DO_SISTEMA.md`](docs/MEMORIA_DO_SISTEMA.md): como o sistema funciona hoje, permissões, onde mora cada dado, armadilhas e o que mudou.
-2. [`docs/CRUZAMENTO_TELAS_DADOS.md`](docs/CRUZAMENTO_TELAS_DADOS.md): cada tela, o que ela mostra e o que já existe no backend.
-3. [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md): visual, componentes e o fluxo interface → Artifacts → git.
-4. Para o VVOX Sync (`vivox-clientes/public/kanban/`): [`DESIGN.md`](DESIGN.md) e [`VVOX_SYNC.md`](VVOX_SYNC.md).
+1. [`docs/CEREBRO.md`](docs/CEREBRO.md): o mapa. Quais seções existem, que dados compartilham e como uma alimenta a outra.
+2. A ficha da seção que você vai mexer, em [`docs/secoes/`](docs/secoes/README.md): como ela funciona, com quem conversa, pendências e o registro de mudanças.
+3. [`docs/MEMORIA_DO_SISTEMA.md`](docs/MEMORIA_DO_SISTEMA.md): permissões, onde mora cada dado, armadilhas.
+4. [`docs/CRUZAMENTO_TELAS_DADOS.md`](docs/CRUZAMENTO_TELAS_DADOS.md): cada tela, campo a campo, e o que já existe no backend.
+5. [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md): visual, componentes e o fluxo interface → Artifacts → git.
+6. Para Demandas gerais (Kanban em `vivox-clientes/public/kanban/`, antigo VVOX Sync): [`DESIGN.md`](DESIGN.md) e [`VVOX_SYNC.md`](VVOX_SYNC.md).
 
 `docs/CONTEXT.md`, `docs/ARCHITECTURE.md` e `docs/TASKS.md` são de 2026-08-18 e
 estão desatualizados; servem como histórico.
@@ -18,9 +20,9 @@ estão desatualizados; servem como histórico.
 - **O código é a verdade.** Antes de afirmar que algo existe, abra o arquivo. Se a memória estiver errada, corrija-a no mesmo PR.
 - **Não crie dado que o backend não tem.** Todo campo de tela precisa de endpoint + campo no Prisma + campo no DTO (o `ValidationPipe` descarta campo não declarado sem avisar). Se faltar, diga "precisa de backend" e pare.
 - **Não crie rota, tela, módulo ou permissão que não foram pedidos.**
-- **Não confunda os dois quadros de tarefas.** VVOX Sync (`quadroId`/`colunaId`, iframe) e GP legado (`status`/`projetoId`, React) usam a mesma tabela `Tarefa`.
+- **Não confunda os dois quadros de tarefas.** Demandas gerais (`quadroId`/`colunaId`, iframe) e Minhas tarefas/GP legado (`status`/`projetoId`, React) usam a mesma tabela `Tarefa`.
 - **Não guarde dado de negócio no `localStorage`.**
-- **Não reescreva o VVOX Sync em React** nem aplique `DESIGN.md` a outras telas.
+- **Não reescreva Demandas gerais em React** nem aplique `DESIGN.md` a outras telas.
 - Quando não souber, pergunte. Quando supuser algo, diga que é suposição.
 
 ## 3. Fluxo de uma mudança
@@ -30,7 +32,7 @@ estão desatualizados; servem como histórico.
 3. **Tela nova ou redesenho:** protótipo no canvas do Artifacts antes do código (passo a passo em `docs/DESIGN_SYSTEM.md › 1`).
 4. **Implementar** numa branch `<tipo>/<descricao>` (`feat/`, `fix/`, `style/`, `refactor/`, `docs/`, `chore/`). Nunca direto na `main`.
 5. **Validar:** `npm run build` e `npm run lint` em `vivox-clientes`; `npm test` em `backend` quando mexer na API; teste no navegador como ADMIN, COLABORADOR com módulos limitados e CLIENTE quando for portal.
-6. **Registrar:** uma linha em `docs/MEMORIA_DO_SISTEMA.md › Registro de mudanças` e atualização das seções afetadas.
+6. **Registrar:** uma linha no registro da ficha da seção (`docs/secoes/<secao>.md`) e atualização do que mudou nela. Se a mudança cruza seções: linha em cada ficha afetada e em `docs/CEREBRO.md › Mudanças que cruzam seções`. Permissão, model ou armadilha nova: também em `docs/MEMORIA_DO_SISTEMA.md`.
 7. **PR:** skill `.claude/skills/create-pr`. Push e PR só com confirmação de quem pediu.
 
 ## 4. Segurança

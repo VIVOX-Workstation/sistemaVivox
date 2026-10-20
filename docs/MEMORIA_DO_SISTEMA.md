@@ -1,9 +1,12 @@
 # Memória do Sistema VIVOX
 
-> Fonte de contexto para quem vai mexer no projeto: pessoa ou IA.
+> Referência técnica geral: papéis e permissões, modelo de dados, armadilhas e
+> linha do tempo. O mapa das seções e de como elas se cruzam está em
+> [`CEREBRO.md`](CEREBRO.md); o funcionamento e o registro de cada seção, em
+> [`secoes/`](secoes/README.md).
 > Validado contra o código da `main` em **2026-10-16** (commit `38b1d16`).
-> Ao revalidar, troque a data e o commit. Ao terminar uma mudança, adicione uma
-> linha em [Registro de mudanças](#9-registro-de-mudanças).
+> Ao revalidar, troque a data e o commit. Ao terminar uma mudança, registre-a na
+> ficha da seção (`docs/secoes/<secao>.md`) e, se cruzar seções, no `CEREBRO.md`.
 
 **Regra de ouro:** se algo aqui contradiz o código, o código vence. Corrija este
 arquivo no mesmo PR.
@@ -24,7 +27,7 @@ tarefas, suporte, hospedagens, métricas, treinamento e um portal para o cliente
 |---|---|---|
 | API | `backend/` | NestJS 11, Prisma 5, PostgreSQL 16 + pgvector |
 | Front da equipe e do portal | `vivox-clientes/` | React 19, Vite, Tailwind 4, React Router 7, axios |
-| VVOX Sync (quadro de tarefas) | `vivox-clientes/public/kanban/` | HTML + JS sem framework, aberto em iframe por `features/kanban/KanbanPage.tsx` |
+| Demandas gerais (Kanban, antigo VVOX Sync) | `vivox-clientes/public/kanban/` | HTML + JS sem framework, aberto em iframe por `features/kanban/KanbanPage.tsx` |
 | Arquivos | MinIO (S3) | `StorageService`; URL pública via `S3_PUBLIC_URL` |
 | IA | `backend/src/ia` | Groq (chat), OpenAI (embeddings), Tavily (pesquisa) |
 | Integrações | `backend/src/analytics`, `devboard`, `github` | GA4 + Search Console (service account), OpenPanel, Meta/Instagram (OAuth), GitHub App |
@@ -127,7 +130,7 @@ Rotas reais do front e o que cada uma consome. O detalhe campo a campo está em
 | `/analytics` | `AnalyticsIndex.tsx` | `GET /clientes`, `GET /analytics/sparklines` |
 | `/analytics/:id` | `AnalyticsDashboard.tsx` (abas Site e Instagram) | `/analytics/openpanel/:id`, `/analytics/instagram/*` |
 | `/acompanhamento[/:clienteId]` | `Acompanhamento.tsx` (abas Publicações, Cronogramas) | `/acompanhamento/*` |
-| `/vvoxsync[/:quadro[/tarefa/:id]]`, `/gp`, `/gp/tarefa/:id` | `features/kanban/*` (iframe) | `/kanban/*`, `/tarefas/*`, `/users` |
+| `/demandasgerais[/:quadro[/tarefa/:id]]` (`/vvoxsync`, `/gp` e `/gp/tarefa/:id` redirecionam) | `features/kanban/*` (iframe) | `/kanban/*`, `/tarefas/*`, `/users` |
 | `/gp/minhas-tarefas`, `/gp/workspace/:id` | `VivoxGP.tsx` (Kanban legado, Lista, Prazos, Chamados) | `/projetos`, `/tarefas/*`, `/chamados/*` |
 | `/educacional`, `/educacional/curso/:id` | `EducacionalHome.tsx`, `EducacionalCurso.tsx` | `/educacional/*` |
 | `/educacional/admin[/:cursoId]` | `EducacionalAdmin.tsx`, `EducacionalCursoEditor.tsx` | `/cursos/*` |
@@ -149,9 +152,9 @@ Schema: `backend/prisma/schema.prisma` (40 models). Os que mais aparecem na inte
 | Serviço contratado | `ServicoContratado` (+ `ServicoHistorico`) | `tipoServico`: GERENCIAMENTO_REDES, FOLDER, REVISTA, LANDING_PAGE, APP, FOTOGRAFIA, VIDEO, TRAFEGO_PAGO, IDENTIDADE_VISUAL |
 | Planejamento | `PlanejamentoServico` | **Os itens/entregas ficam no JSON `flowNodes`** (ver armadilhas) |
 | Hospedagem | `AtivoHospedagem` | Domínio, VPS, SSL (booleano), ciclo, custo e valor cobrado |
-| Tarefas | `Tarefa`, `TarefaChecklist`, `TarefaComentario`, `TarefaSessao` | Servem ao GP **e** ao VVOX Sync |
+| Tarefas | `Tarefa`, `TarefaChecklist`, `TarefaComentario`, `TarefaSessao` | Servem ao GP legado (Minhas tarefas) **e** a Demandas gerais |
 | Workspaces do GP | `Projeto` | Na interface o nome é "workspace" |
-| Quadros do Sync | `KanbanQuadro`, `KanbanColuna` | Colunas com `papel` (fila, revisão…) e `planoPublicacao` |
+| Quadros de Demandas gerais | `KanbanQuadro`, `KanbanColuna`, `KanbanConfig` | Colunas com `papel` (fila, revisão…) e `planoPublicacao`; `KanbanConfig` guarda matriz de permissões, cargos extras e dias de postagem |
 | Chamados | `Chamado`, `ChamadoComentario` | SLA calculado pela urgência; cria uma `Tarefa` junto |
 | Publicações | `Publicacao` | Planilha do Acompanhamento; `compartilhamentos` = "Envios" |
 | Cronogramas | `CronogramaCliente` | PDF no MinIO |
@@ -362,11 +365,15 @@ antes de editar.
 - [ ] Migration gerada para mudança de schema.
 - [ ] `npm run build` e `npm run lint` passam em `vivox-clientes`; testes do backend passam.
 - [ ] Testei como ADMIN, como COLABORADOR com módulos limitados e, se for portal, como CLIENTE.
-- [ ] Atualizei este arquivo (seções afetadas + Registro de mudanças).
+- [ ] Atualizei a ficha da seção em `docs/secoes/` (e o `CEREBRO.md` se a mudança cruza seções); este arquivo só se mudou permissão, model ou armadilha.
 
 ---
 
-## 9. Registro de mudanças
+## 9. Registro de mudanças (arquivo até 2026-10-20)
+
+> **A partir de 2026-10-20 o registro é por seção**, em `docs/secoes/<secao>.md`,
+> e as mudanças que cruzam seções vão em `docs/CEREBRO.md`. As linhas abaixo
+> ficam como histórico e já foram copiadas para as fichas.
 
 - 2026-10-20 · `fix/excluir-proposta-listagem` · Exclusão pela listagem (validada pelo usuário), consulta do link ativo sem renovação, token criptografado e prévia Open Graph com a capa JPEG no HTML público via Nginx · `PropostasService/Controller`, `proposta-link.crypto`, migration `20261020120000_proposta_link_recuperavel`, `PropostasTab`, `nginx.conf` · migration aplicada localmente; builds e lint passaram; 228 testes backend passaram e 2 falhas anteriores de Planejamento permanecem; smoke HTTP de links/permissões e Nginx passaram; navegador indisponível para revalidar o compartilhamento por papel; publicação e conferência da prévia no WhatsApp pendentes.
 

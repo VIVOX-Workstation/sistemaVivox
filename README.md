@@ -1,50 +1,73 @@
-# Sistema VIVOX
+# Sistema VIVOX (VIVOX Flow)
 
-Sistema interno da VIVOX: clientes, hospedagens, analytics e o **Vivox GP**
-(gestão de projetos com quadro **Kanban** de tarefas e chamados).
+Sistema interno da agência VIVOX: clientes, propostas, serviços e planejamento,
+**Demandas gerais** (Kanban da equipe), Minhas tarefas, Chamados, Acompanhamento
+de publicações, Analytics, Hospedagens, Educacional, portal do cliente e
+assistente com IA.
 
 Este README foi escrito para quem **não é programador** e vai fazer alterações
 no sistema com ajuda do Claude (Claude Code). Siga os passos na ordem.
 
 ---
 
-## 1. Como o projeto está organizado
+## 1. Por onde entender o sistema
 
-O projeto tem duas partes principais, cada uma em uma pasta:
+| Leia | Para saber |
+|---|---|
+| [`docs/CEREBRO.md`](docs/CEREBRO.md) | **Comece aqui.** Todas as seções, os dados que elas compartilham e como uma alimenta a outra |
+| [`docs/secoes/`](docs/secoes/README.md) | Uma ficha por seção: como funciona, onde está o código, com quem conversa, o que falta e o histórico de mudanças |
+| [`docs/MEMORIA_DO_SISTEMA.md`](docs/MEMORIA_DO_SISTEMA.md) | Papéis e permissões, onde mora cada dado, armadilhas conhecidas |
+| [`docs/CRUZAMENTO_TELAS_DADOS.md`](docs/CRUZAMENTO_TELAS_DADOS.md) | Cada tela, campo a campo, e de onde vem o dado |
+| [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) | Visual e componentes |
+| [`AGENTS.md`](AGENTS.md) | Regras de trabalho para pessoas e IAs |
+| [`VVOX_SYNC.md`](VVOX_SYNC.md) | Detalhes técnicos do Kanban de Demandas gerais |
+
+**Toda mudança termina com uma linha no registro da ficha da seção.** Se mexe em
+mais de uma seção, vale para cada uma e para o cérebro.
+
+---
+
+## 2. Como o projeto está organizado
 
 ```
 SistemaVivox/                  ← pasta principal do projeto
-├── backend/                   ← o "servidor" (API + banco de dados)
+├── backend/                   ← o "servidor" (API NestJS + banco PostgreSQL via Prisma)
+│   └── src/<modulo>/          ← um módulo por assunto (clientes, kanban, chamados…)
 ├── vivox-clientes/            ← o "front": as telas que você vê no navegador
-│   └── src/
-│       ├── pages/             ← páginas inteiras (ex.: VivoxGP.tsx = tela do GP)
-│       └── components/
-│           ├── gp/            ← peças do Kanban do Vivox GP (colunas, cartões, modais)
-│           └── Kanban/        ← Kanban de escopo usado no planejamento de serviços
+│   ├── src/pages/             ← páginas inteiras
+│   ├── src/components/        ← peças das telas
+│   ├── src/features/          ← seções maiores (kanban, propostas)
+│   └── public/kanban/         ← o Kanban de Demandas gerais (HTML/JS, aberto dentro da página)
+├── docs/                      ← documentação (cérebro, fichas das seções, memória)
 ├── docker-compose.yml         ← liga o backend, banco de dados etc.
 └── README.md                  ← este arquivo
 ```
 
-**Regra prática:** mudança visual / de tela do Kanban = pasta `vivox-clientes`.
+**Regra prática:** mudança visual / de tela = pasta `vivox-clientes`.
 Mudança em regra de negócio ou no que é salvo no banco = pasta `backend`.
-Se não souber, peça ao Claude: *"onde fica isso?"* — ele encontra.
+Se não souber, peça ao Claude: *"onde fica isso?"*, ou abra a ficha da seção em
+`docs/secoes/`: a tabela "Onde fica" lista os arquivos.
 
-### Onde fica o Kanban
+### Seções e endereços
 
-| O que | Arquivo |
-|---|---|
-| Página do Vivox GP | `vivox-clientes/src/pages/VivoxGP.tsx` |
-| Quadro Kanban de tarefas | `vivox-clientes/src/components/gp/KanbanBoard.tsx` |
-| Cartão de tarefa | `vivox-clientes/src/components/gp/TaskCard.tsx` |
-| Janela (modal) da tarefa | `vivox-clientes/src/components/gp/TaskModal.tsx` |
-| Quadro de chamados | `vivox-clientes/src/components/gp/ChamadosBoard.tsx` |
-| Barra lateral de workspaces | `vivox-clientes/src/components/gp/WorkspaceSidebar.tsx` |
-| Kanban do planejamento de serviço | `vivox-clientes/src/components/Kanban/` |
-| Backend das tarefas | `backend/src/tarefas/` |
+| Seção | Endereço | Ficha |
+|---|---|---|
+| Dashboard | `/` | [dashboard](docs/secoes/dashboard.md) |
+| Clientes e Propostas | `/clientes`, `/cliente/:id` | [clientes](docs/secoes/clientes.md), [propostas](docs/secoes/propostas.md) |
+| Serviços e Planejamento | `/cliente/:id/servicos/:sid/planejamento` | [servicos-e-planejamento](docs/secoes/servicos-e-planejamento.md) |
+| Hospedagens | `/hospedagens` | [hospedagens](docs/secoes/hospedagens.md) |
+| Analytics | `/analytics` | [analytics](docs/secoes/analytics.md) |
+| Acompanhamento | `/acompanhamento` | [acompanhamento](docs/secoes/acompanhamento.md) |
+| Demandas gerais | `/demandasgerais/(nome-do-quadro)` | [demandas-gerais](docs/secoes/demandas-gerais.md) |
+| Minhas tarefas | `/gp/minhas-tarefas` | [minhas-tarefas](docs/secoes/minhas-tarefas.md) |
+| Chamados | `/gp/workspace/all` | [chamados](docs/secoes/chamados.md) |
+| Educacional | `/educacional` | [educacional](docs/secoes/educacional.md) |
+| Configurações | `/configuracoes` | [acesso-e-equipe](docs/secoes/acesso-e-equipe.md) |
+| Portal do cliente | `/portal` | [portal-do-cliente](docs/secoes/portal-do-cliente.md) |
 
 ---
 
-## 2. Programas que precisam estar instalados (uma vez só)
+## 3. Programas que precisam estar instalados (uma vez só)
 
 1. **Node.js** (versão 20 ou mais nova) — https://nodejs.org (baixe a versão "LTS")
 2. **Docker Desktop** — https://www.docker.com/products/docker-desktop
@@ -57,7 +80,7 @@ Deve aparecer algo como `v20.x.x`.
 
 ---
 
-## 3. Subir o sistema para testar (todo dia)
+## 4. Subir o sistema para testar (todo dia)
 
 São **dois terminais** abertos ao mesmo tempo: um para o backend e outro para o front.
 
@@ -103,13 +126,13 @@ reiniciar nada).
 
 ---
 
-## 4. Como pedir alterações ao Claude
+## 5. Como pedir alterações ao Claude
 
 Abra o Claude Code **na pasta principal `SistemaVivox`** (não dentro de `vivox-clientes`).
 
 Dicas para pedidos que dão certo:
 
-- **Seja específico sobre a tela:** *"No Kanban do Vivox GP, quero que o cartão
+- **Seja específico sobre a tela:** *"Em Demandas gerais, quero que o cartão
   da tarefa mostre a data de entrega em vermelho quando estiver atrasada."*
 - **Uma mudança por vez.** Teste no navegador antes de pedir a próxima.
 - **Mande print** da tela quando for algo visual (pode arrastar a imagem para o Claude).
@@ -122,8 +145,8 @@ Dicas para pedidos que dão certo:
 
 Nunca trabalhe direto na branch `main`. Peça ao Claude:
 
-1. Antes de começar: *"Cria uma branch nova para essa alteração do Kanban."*
-2. Quando terminar e testar: *"Faz o commit dessas mudanças."*
+1. Antes de começar: *"Cria uma branch nova para essa alteração em Demandas gerais."*
+2. Quando terminar e testar: *"Registra na ficha da seção e faz o commit dessas mudanças."*
 3. Para enviar para revisão: *"Abre um PR."*
 
 O responsável técnico revisa o PR antes de ir para o ar. **Nada vai para
@@ -131,7 +154,7 @@ produção sozinho** — então pode testar sem medo.
 
 ---
 
-## 5. Problemas comuns
+## 6. Problemas comuns
 
 | Problema | Solução |
 |---|---|
@@ -143,13 +166,13 @@ produção sozinho** — então pode testar sem medo.
 
 ---
 
-## 6. Referência técnica (para desenvolvedores)
+## 7. Referência técnica (para desenvolvedores)
 
 ### Serviços do `docker compose up -d`
 
 - **backend** — API NestJS com hot-reload (`npm run start:dev`)
 - **postgres** — banco de dados
-- **redis** — cache e filas (BullMQ)
+- **redis** — está no Docker, mas o sistema ainda não usa
 - **minio** — storage local compatível com S3 (substitui S3/R2 no dev)
 
 | Serviço | URL |
