@@ -299,6 +299,7 @@ model Proposta {
   corDestaque    String   @default("#91672b")
   secoes         Json
   linkHash       String?  @unique
+  linkTokenCriptografado String? @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

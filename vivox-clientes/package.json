@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "verify:propostas": "node scripts/verify-propostas.mjs",
+    "verify:proposta-preview": "node scripts/verify-proposta-preview.mjs",
     "preview": "vite preview",
     "dev:sync": "node scripts/dev-sync.cjs"
   },

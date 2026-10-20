@@ -112,8 +112,9 @@ do cliente e Portal. Há **2 defeitos** que valem corrigir antes do redesign
 | Aba Propostas: criar, editar tudo, excluir | Existe (2026-10-19) | `GET/POST /clientes/:id/propostas`, `PATCH/DELETE /clientes/:id/propostas/:pid`; model `Proposta`, `SalvarPropostaDto` + `SecaoPropostaDto` |
 | Modelo de plataforma de ensino | Existe (2026-10-19) | Referência fornecida pelo usuário, sem Kemax; HTML e CSS originais preservados, seis seções, modalidades, comparativo e condições, todos editáveis visualmente ou pelo código HTML; `Proposta.secoes[].html` + `SecaoPropostaDto.html` |
 | Capa, subcapa e encerramento da proposta | Existe (2026-10-19) | Assets locais `capaProposta.webp`, `subCapa.webp` e `propostaFinal.webp`, nessa ordem, na prévia e no documento público; não exige campo no backend |
-| Compartilhar e revogar | Existe (2026-10-19) | `POST/DELETE /clientes/:id/propostas/:pid/compartilhar`; `Proposta.linkHash`, token aleatório de uso como link |
-| Ícone de compartilhar na lista de propostas | Existe (2026-10-19) | Usa `POST /clientes/:id/propostas/:pid/compartilhar` e abre diálogo com copiar/visualizar; link `/proposta/:token` é somente leitura |
+| Compartilhar, consultar link ativo e revogar | Existe (2026-10-20) | `GET/POST/DELETE /clientes/:id/propostas/:pid/compartilhar`; `Proposta.linkHash` e `linkTokenCriptografado` (AES-256-GCM); GET recupera sem substituir; campos internos não são editáveis pelo DTO |
+| Compartilhar na lista de propostas | Existe (2026-10-20) | “Ver link ativo” consulta o mesmo link e abre diálogo com copiar/visualizar; gerar outro link exige confirmação; links antigos só com hash precisam de substituição uma vez |
+| Prévia da capa ao compartilhar | Existe (2026-10-20) | Nginx injeta Open Graph em `/proposta/:token`, com capa JPEG pública `/proposta-capa.jpg` (mesma imagem de `capaProposta.webp`), título/descrição genéricos; não depende de executar React; requer publicação pública para WhatsApp |
 | Acesso ao portal: URL, login, senha, gerar nova, copiar para WhatsApp, interesses | Existe | `/clientes/:id/acesso-portal`, `/redefinir-senha`, `/interesses` |
 
 ---

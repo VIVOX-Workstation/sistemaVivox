@@ -3,6 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalvarPropostaDto } from './proposta.dto';
+import { criptografarLink, decifrarLink } from './proposta-link.crypto';
 
 // Allowlist compartilhada: nunca incluir a relação Cliente no documento público.
 const documentoSelect = {
@@ -99,9 +100,21 @@ export class PropostasService {
     const token = randomBytes(32).toString('hex');
     await this.prisma.proposta.update({
       where: { id, clienteId },
-      data: { linkHash: this.hash(token) },
+      data: { linkHash: this.hash(token), linkTokenCriptografado: criptografarLink(token) },
       select: { id: true },
     });
+    return { token };
+  }
+
+  async linkAtivo(clienteId: string, id: string) {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id, clienteId },
+      select: { linkHash: true, linkTokenCriptografado: true },
+    });
+    if (!proposta) throw new NotFoundException('Proposta não encontrada.');
+    if (!proposta.linkHash || !proposta.linkTokenCriptografado) return { token: null };
+    const token = decifrarLink(proposta.linkTokenCriptografado);
+    if (this.hash(token) !== proposta.linkHash) throw new NotFoundException('Link indisponível. Gere um novo link para esta proposta.');
     return { token };
   }
 
@@ -109,7 +122,7 @@ export class PropostasService {
     await this.existe(clienteId, id);
     await this.prisma.proposta.update({
       where: { id, clienteId },
-      data: { linkHash: null },
+      data: { linkHash: null, linkTokenCriptografado: null },
       select: { id: true },
     });
     return { compartilhada: false };
