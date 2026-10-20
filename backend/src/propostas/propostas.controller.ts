@@ -48,6 +48,11 @@ export class PropostasController {
   compartilhar(@Param('clienteId') clienteId: string, @Param('id') id: string) {
     return this.service.compartilhar(clienteId, id);
   }
+  @Get(':id/compartilhar')
+  @Header('Cache-Control', 'no-store')
+  linkAtivo(@Param('clienteId') clienteId: string, @Param('id') id: string) {
+    return this.service.linkAtivo(clienteId, id);
+  }
   @Delete(':id/compartilhar')
   revogar(@Param('clienteId') clienteId: string, @Param('id') id: string) {
     return this.service.revogar(clienteId, id);

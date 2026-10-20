@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalvarPropostaDto } from './proposta.dto';
 import { PropostasController } from './propostas.controller';
 import { PropostasService } from './propostas.service';
+import { criptografarLink, decifrarLink } from './proposta-link.crypto';
 
 describe('Propostas: documento, validação e compartilhamento', () => {
   const prisma = {
@@ -39,6 +40,12 @@ describe('Propostas: documento, validação e compartilhamento', () => {
     jest.resetAllMocks();
     prisma.cliente.findUnique.mockResolvedValue({ id: 'c1' });
     prisma.proposta.findFirst.mockResolvedValue({ id: 'p1' });
+  });
+  const segredoOriginal = process.env.JWT_SECRET;
+  beforeAll(() => { process.env.JWT_SECRET = 'segredo-exclusivo-dos-testes'; });
+  afterAll(() => {
+    if (segredoOriginal === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoOriginal;
   });
 
   it('cria o documento e persiste todos os campos editáveis', async () => {
@@ -73,7 +80,7 @@ describe('Propostas: documento, validação e compartilhamento', () => {
       html,
     );
   });
-  it('gera segredo aleatório e persiste somente o hash; novo link tem outro segredo', async () => {
+  it('gera segredo aleatório, persiste hash e token criptografado; novo link tem outro segredo', async () => {
     const a = await service.compartilhar('c1', 'p1');
     const b = await service.compartilhar('c1', 'p1');
     expect(a.token).toMatch(/^[a-f0-9]{64}$/);
@@ -81,6 +88,54 @@ describe('Propostas: documento, validação e compartilhamento', () => {
     expect(prisma.proposta.update.mock.calls[0][0].data.linkHash).toBe(
       createHash('sha256').update(a.token).digest('hex'),
     );
+    const guardado = prisma.proposta.update.mock.calls[0][0].data.linkTokenCriptografado;
+    expect(guardado).not.toContain(a.token);
+    expect(decifrarLink(guardado)).toBe(a.token);
+  });
+  it('consulta repetidamente o mesmo link ativo sem gravar ou substituir o token', async () => {
+    const token = 'a'.repeat(64);
+    prisma.proposta.findFirst.mockResolvedValue({
+      linkHash: createHash('sha256').update(token).digest('hex'),
+      linkTokenCriptografado: criptografarLink(token),
+    });
+    expect(await service.linkAtivo('c1', 'p1')).toEqual({ token });
+    expect(await service.linkAtivo('c1', 'p1')).toEqual({ token });
+    expect(prisma.proposta.findFirst).toHaveBeenCalledWith({
+      where: { id: 'p1', clienteId: 'c1' },
+      select: { linkHash: true, linkTokenCriptografado: true },
+    });
+    expect(prisma.proposta.update).not.toHaveBeenCalled();
+  });
+  it('não recupera o link de outro cliente', async () => {
+    prisma.proposta.findFirst.mockResolvedValue(null);
+    await expect(service.linkAtivo('outro', 'p1')).rejects.toThrow(NotFoundException);
+  });
+  it.each([
+    { linkHash: null, linkTokenCriptografado: null },
+    { linkHash: 'antigo', linkTokenCriptografado: null },
+    { linkHash: null, linkTokenCriptografado: 'token-revogado' },
+  ])('não recria automaticamente link legado ou revogado: %j', async (registro) => {
+    prisma.proposta.findFirst.mockResolvedValue(registro);
+    expect(await service.linkAtivo('c1', 'p1')).toEqual({ token: null });
+    expect(prisma.proposta.update).not.toHaveBeenCalled();
+  });
+  it('rejeita token criptografado que não corresponde ao hash ativo', async () => {
+    prisma.proposta.findFirst.mockResolvedValue({ linkHash: 'outro', linkTokenCriptografado: criptografarLink('a'.repeat(64)) });
+    await expect(service.linkAtivo('c1', 'p1')).rejects.toThrow(NotFoundException);
+  });
+  it('usa IVs diferentes e rejeita tokens adulterados ou uma chave diferente', () => {
+    const token = 'c'.repeat(64);
+    const cifrado = criptografarLink(token);
+    expect(criptografarLink(token)).not.toBe(cifrado);
+    const adulterado = (cifrado[0] === '0' ? '1' : '0') + cifrado.slice(1);
+    expect(() => decifrarLink(adulterado)).toThrow();
+    const segredo = process.env.JWT_SECRET;
+    try {
+      process.env.JWT_SECRET = 'chave-rotacionada';
+      expect(() => decifrarLink(cifrado)).toThrow();
+      delete process.env.JWT_SECRET;
+      expect(() => criptografarLink(token)).toThrow(/JWT_SECRET/);
+    } finally { process.env.JWT_SECRET = segredo; }
   });
   it('busca documento público com allowlist sem relação ou segredo do cliente', async () => {
     prisma.proposta.findUnique.mockResolvedValue(documento);
@@ -91,13 +146,14 @@ describe('Propostas: documento, validação e compartilhamento', () => {
     );
     expect(consulta.select).not.toHaveProperty('cliente');
     expect(consulta.select).not.toHaveProperty('linkHash');
+    expect(consulta.select).not.toHaveProperty('linkTokenCriptografado');
     expect(consulta.select).not.toHaveProperty('clienteId');
     expect(consulta.select.createdAt).toBe(true);
   });
   it('revoga link e rejeita links inexistentes ou inválidos', async () => {
     await service.revogar('c1', 'p1');
     expect(prisma.proposta.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { linkHash: null } }),
+      expect.objectContaining({ data: { linkHash: null, linkTokenCriptografado: null } }),
     );
     prisma.proposta.findUnique.mockResolvedValue(null);
     await expect(service.publica('b'.repeat(64))).rejects.toThrow(
@@ -113,11 +169,13 @@ describe('Propostas: documento, validação e compartilhamento', () => {
       {
         ...documento,
         linkHash: 'injetado',
+        linkTokenCriptografado: 'injetado',
         secoes: [{ titulo: 'Escopo', texto: '', token: 'injetado' }],
       },
       { type: 'body', metatype: SalvarPropostaDto },
     );
     expect(dto).not.toHaveProperty('linkHash');
+    expect(dto).not.toHaveProperty('linkTokenCriptografado');
     expect(dto.secoes[0]).not.toHaveProperty('token');
     expect(dto.secoes[0]).toEqual({ titulo: 'Escopo', texto: '' });
   });

@@ -95,18 +95,28 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
     }
     finally { setOcupado(false); }
   };
-  const compartilhar = async (proposta = atual) => {
+  const compartilhar = async (proposta = atual, renovar = false) => {
     if (!proposta || ocupado || (documento && alterado)) return;
-    if (proposta.compartilhada && !confirm('Gerar um novo link de visualização? O link anterior deixará de funcionar.')) return;
+    if (renovar && proposta.compartilhada && !confirm('Gerar um novo link de visualização? O link anterior deixará de funcionar.')) return;
     setOcupado(true); setErro(''); setAviso('');
     try {
-      const { data } = await api.post(`${base}/${proposta.id}/compartilhar`);
-      setLink(`${window.location.origin}/proposta/${data.token}`);
+      const endpoint = `${base}/${proposta.id}/compartilhar`;
+      let token: string | null = null;
+      if (proposta.compartilhada && !renovar) {
+        const { data } = await api.get(endpoint);
+        token = data.token;
+        if (!token && !confirm('Este link foi criado antes da recuperação de links. Gerar um novo link para poder consultá-lo depois? O anterior deixará de funcionar.')) return;
+      }
+      if (!token) token = (await api.post(endpoint)).data.token;
+      setLink(`${window.location.origin}/proposta/${token}`);
       setFeedbackLink('');
       setLista(ls => ls.map(p => p.id === proposta.id ? { ...p, compartilhada: true } : p));
       if (!documento) setCompartilhadaLista(proposta);
-      setAviso('Link de visualização gerado. Quem receber poderá ver a proposta sem login, sem acesso à edição.');
-    } catch { setErro('Não foi possível gerar o link.'); }
+      setAviso('Link disponível para copiar ou visualizar. Quem receber poderá ver a proposta sem login, sem acesso à edição.');
+    } catch (error) {
+      const mensagem = axios.isAxiosError(error) ? error.response?.data?.message : null;
+      setErro(typeof mensagem === 'string' ? mensagem : 'Não foi possível obter o link da proposta. Tente novamente.');
+    }
     finally { setOcupado(false); }
   };
   const copiarLink = async () => {
@@ -123,12 +133,13 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
     } catch { setErro('Não foi possível desativar o link.'); }
     finally { setOcupado(false); }
   };
-  const excluir = async () => {
-    if (!id || ocupado || !confirm('Excluir esta proposta definitivamente? O link também deixará de funcionar.')) return;
-    setOcupado(true); setErro('');
+  const excluir = async (proposta = atual) => {
+    if (!proposta || ocupado || !confirm(`Excluir a proposta “${proposta.titulo}” definitivamente? O link também deixará de funcionar.`)) return;
+    setOcupado(true); setErro(''); setAviso('');
     try {
-      await api.delete(`${base}/${id}`); setLista(ls => ls.filter(p => p.id !== id));
-      setDocumento(null); setId(null); setLink(''); setAviso('Proposta excluída.');
+      await api.delete(`${base}/${proposta.id}`); setLista(ls => ls.filter(p => p.id !== proposta.id));
+      if (id === proposta.id) { setDocumento(null); setId(null); setLink(''); }
+      setAviso('Proposta excluída.');
     } catch { setErro('Não foi possível excluir a proposta.'); }
     finally { setOcupado(false); }
   };
@@ -147,7 +158,7 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
       {carregando ? <div className="card animate-pulse" aria-busy="true" aria-label="Carregando propostas" style={{ height: 160, background: 'var(--sk)' }} />
         : erroCarga ? <div className="card empty"><p>Não foi possível carregar as propostas.</p><button className="btn sec" onClick={carregar}>Tentar de novo</button></div>
           : lista.length === 0 ? <div className="card empty"><b>Nenhuma proposta criada</b><p>Comece em branco ou use o modelo da plataforma de ensino.</p></div>
-            : <section className="card"><div className="tw"><table className="tbl"><thead><tr><th>Proposta</th><th>Compartilhamento</th><th>Atualizada</th><th>Ações</th></tr></thead><tbody>{lista.map(p => <tr key={p.id}><td>{p.titulo}</td><td>{p.compartilhada ? 'Link ativo' : 'Não compartilhada'}</td><td>{new Date(p.updatedAt).toLocaleDateString('pt-BR')}</td><td><div className="acts"><button className="btn sec sm" disabled={ocupado} onClick={() => abrir(p)}>Editar proposta</button><button className="ib sm" type="button" disabled={ocupado} aria-label={`Compartilhar ${p.titulo} — somente visualização`} title="Compartilhar proposta — somente visualização" onClick={() => compartilhar(p)}><Share2 className="i" aria-hidden="true" /></button></div></td></tr>)}</tbody></table></div></section>}
+            : <section className="card"><div className="tw"><table className="tbl"><thead><tr><th>Proposta</th><th>Compartilhamento</th><th>Atualizada</th><th>Ações</th></tr></thead><tbody>{lista.map(p => <tr key={p.id}><td>{p.titulo}</td><td>{p.compartilhada ? 'Link ativo' : 'Não compartilhada'}</td><td>{new Date(p.updatedAt).toLocaleDateString('pt-BR')}</td><td><div className="acts"><button className="btn sec sm" disabled={ocupado} onClick={() => abrir(p)}>Editar proposta</button><button className="btn sec sm" type="button" disabled={ocupado} aria-label={`${p.compartilhada ? 'Ver link ativo de' : 'Compartilhar'} ${p.titulo}`} onClick={() => compartilhar(p)}><Share2 className="i" aria-hidden="true" />{p.compartilhada ? 'Ver link ativo' : 'Compartilhar'}</button><button className="btn dg sm" type="button" disabled={ocupado} aria-label={`Excluir proposta ${p.titulo}`} onClick={() => excluir(p)}>Excluir proposta</button></div></td></tr>)}</tbody></table></div></section>}
     </> : <>
       <div className="acts">
         <button className="btn sec" disabled={ocupado} onClick={fechar}>Voltar às propostas</button>
@@ -180,7 +191,7 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
       </form>}
       <div className="acts">
         {!preview && <button className="btn pri" form="proposta-form" type="submit" disabled={ocupado}>{ocupado ? 'Aguarde…' : 'Salvar proposta'}</button>}
-        {id && <><button className="btn sec" disabled={ocupado || alterado} onClick={() => compartilhar()}>{atual?.compartilhada ? 'Gerar novo link' : 'Gerar link para o cliente'}</button>{atual?.compartilhada && <button className="btn sec" disabled={ocupado} onClick={revogar}>Desativar link</button>}<button className="btn dg" disabled={ocupado} onClick={excluir}>Excluir proposta</button></>}
+        {id && <><button className="btn sec" disabled={ocupado || alterado} onClick={() => compartilhar()}>{atual?.compartilhada ? 'Ver link ativo' : 'Gerar link para o cliente'}</button>{atual?.compartilhada && <><button className="btn sec" disabled={ocupado || alterado} onClick={() => compartilhar(atual, true)}>Gerar novo link</button><button className="btn sec" disabled={ocupado} onClick={revogar}>Desativar link</button></>}<button className="btn dg" disabled={ocupado} onClick={() => excluir()}>Excluir proposta</button></>}
       </div>
       {atual?.compartilhada && <p className="mut">As alterações salvas também aparecem no link compartilhado. Gerar um novo link invalida o anterior.</p>}
       {link && <section className="card" style={{ padding: 20, display: 'grid', gap: 12 }}>
@@ -194,7 +205,7 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
       <div style={{ display: 'grid', gap: 16 }}>
         <p>Este link permite somente visualizar esta proposta, sem login e sem acesso à edição ou aos dados internos do cliente.</p>
         <div className="fld"><label htmlFor="proposta-link-lista">Link de visualização</label><input id="proposta-link-lista" className="inp" readOnly value={link} onFocus={e => e.target.select()} /></div>
-        <div className="acts"><button className="btn pri" type="button" onClick={copiarLink}>Copiar link</button><a className="btn sec" href={link} target="_blank" rel="noreferrer">Visualizar proposta</a></div>
+        <div className="acts"><button className="btn pri" type="button" onClick={copiarLink}>Copiar link</button><a className="btn sec" href={link} target="_blank" rel="noreferrer">Visualizar proposta</a><button className="btn sec" type="button" disabled={ocupado} onClick={() => { if (compartilhadaLista) void compartilhar({ ...compartilhadaLista, compartilhada: true }, true); }}>Gerar novo link</button></div>
         {feedbackLink && <p role="status">{feedbackLink}</p>}
       </div>
     </VxDialog>

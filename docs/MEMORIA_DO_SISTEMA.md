@@ -99,7 +99,8 @@ Não existe guard global.
 
 Exceção autorizada para propostas: `GET /propostas-publicas/:token` usa
 `PropostaLinkGuard`, sem JWT. O segredo aleatório do link tem 256 bits; o banco
-guarda só SHA-256. A resposta usa uma lista explícita de campos do documento,
+guarda SHA-256 para validar o acesso público e o token criptografado com AES-256-GCM
+para recuperação pela equipe. A resposta pública usa uma lista explícita de campos do documento,
 sem relação com o cadastro do cliente. Gerar outro link invalida o anterior;
 revogar ou excluir a proposta impede novas consultas. Não há cache da resposta.
 
@@ -118,7 +119,7 @@ Rotas reais do front e o que cada uma consome. O detalhe campo a campo está em
 | `/clientes` | `ClientList.tsx` | `GET /clientes` |
 | `/cliente/novo` | `ClientForm.tsx` | `POST /clientes` |
 | `/cliente/:id` | `ClientProfile.tsx` (abas Visão geral, Mapa de serviços, Anotações) | `GET/PATCH /clientes/:id`, uploads de logo/banner, `/servicos/cliente/:id`, `/hospedagens/cliente/:id`, `/tarefas`, `/clientes/:id/acesso-portal`, `/chamados` |
-| `/cliente/:id?tab=propostas` | `features/propostas/PropostasTab.tsx` | `GET/POST /clientes/:id/propostas`, `PATCH/DELETE /clientes/:id/propostas/:pid`, `POST/DELETE /clientes/:id/propostas/:pid/compartilhar` |
+| `/cliente/:id?tab=propostas` | `features/propostas/PropostasTab.tsx` | `GET/POST /clientes/:id/propostas`, `PATCH/DELETE /clientes/:id/propostas/:pid`, `GET/POST/DELETE /clientes/:id/propostas/:pid/compartilhar` |
 | `/proposta/:token` | `features/propostas/PropostaPublica.tsx` (sem login) | `GET /propostas-publicas/:token` |
 | `/cliente/:id/servicos/:sid/planejamento[/:itemId]` | `PlanejamentoServico.tsx` | `/planejamento-servico/servico/:sid`, `/servicos/:sid`, `/hospedagens`, `/ia/chat`, `/tarefas` |
 | `/cliente/:id/servicos/:sid/devboard` | `DevBoard.tsx` (só serviço `APP`) | `/devboard/*`, `/devboard/servico/:sid/github/*` |
@@ -143,7 +144,7 @@ Schema: `backend/prisma/schema.prisma` (40 models). Os que mais aparecem na inte
 | Assunto | Model | Observação |
 |---|---|---|
 | Cliente | `Cliente` | `contatos` é JSON; `loginsSenhas` é texto livre; tokens da Meta ficam aqui |
-| Proposta comercial | `Proposta` | Cliente, título, destinatário, apresentação, validade opcional, cor e seções em JSON (`titulo`, `texto` em Markdown e `html` opcional para preservar o modelo visual). `linkHash` habilita compartilhamento; nunca sai na API |
+| Proposta comercial | `Proposta` | Cliente, título, destinatário, apresentação, validade opcional, cor e seções em JSON (`titulo`, `texto` em Markdown e `html` opcional para preservar o modelo visual). `linkHash` habilita compartilhamento; `linkTokenCriptografado` permite recuperar o link pela equipe; os dois campos são omitidos das respostas |
 | Usuário | `User` | `modulos[]`, `clienteId` (portal), `senhaPortalCriptografada` (AES, para reexibir a senha do portal) |
 | Serviço contratado | `ServicoContratado` (+ `ServicoHistorico`) | `tipoServico`: GERENCIAMENTO_REDES, FOLDER, REVISTA, LANDING_PAGE, APP, FOTOGRAFIA, VIDEO, TRAFEGO_PAGO, IDENTIDADE_VISUAL |
 | Planejamento | `PlanejamentoServico` | **Os itens/entregas ficam no JSON `flowNodes`** (ver armadilhas) |
@@ -169,6 +170,10 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 ## 5. Armadilhas conhecidas (leia antes de mudar algo)
 
 ### Propostas comerciais
+
+- A listagem permite excluir propostas diretamente, com confirmação que identifica
+  o título e avisa que o link compartilhado deixará de funcionar. A ação também
+  permanece no editor e usa o DELETE existente, para ADMIN e colaboradores com CLIENTES.
 
 - A visualização usa rolagem contínua da página, sem navegação por slides ou
   rolagem interna no iframe. No desktop, a barra à direita acompanha a leitura
@@ -213,13 +218,25 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 - A proposta começa sem link. Salvar uma proposta já compartilhada atualiza o
   documento visto no mesmo link. Não há aprovação/assinatura ou conversão em
   contrato. A validade é informativa; a equipe desativa o acesso pelo botão.
-- O token original só aparece ao gerar o link e não é guardado no navegador.
-  Depois de sair do editor, é necessário gerar outro link para compartilhar
-  novamente; isso revoga o anterior. O campo do link permite copiar manualmente.
-- A listagem mostra um ícone de compartilhar por proposta. Ele gera o link da
-  proposta salva e abre um diálogo para copiar ou visualizar, sem abrir o editor.
-  O destinatário acessa apenas `/proposta/:token`, sem login nem controles de
-  edição. Se já houver link ativo, a interface confirma a substituição.
+- O token não é guardado no navegador. `GET .../:pid/compartilhar` recupera o
+  mesmo link ativo para ADMIN e COLABORADOR com CLIENTES, com `Cache-Control:
+  no-store`. A lista e o editor oferecem “Ver link ativo”; “Gerar novo link” é
+  uma ação separada e confirma a substituição. Links antigos, que só têm hash,
+  continuam funcionando, mas precisam ser substituídos uma vez para recuperação.
+- O token recuperável fica em `linkTokenCriptografado`, com AES-256-GCM e chave
+  derivada de `JWT_SECRET`, exclusiva dessa finalidade. Rotacionar JWT_SECRET
+  exige gerar novos links para recuperá-los; a validação pública dos antigos
+  continua pelo hash. Revogar apaga hash e token criptografado. O campo interno
+  não entra no DTO de edição nem nas listagens/documentos públicos.
+- Compartilhar na lista abre um diálogo para copiar ou visualizar sem abrir o
+  editor. O destinatário acessa apenas `/proposta/:token`, sem login nem edição.
+- O Nginx injeta Open Graph no HTML inicial de `/proposta/:token`: título e
+  descrição genéricos da proposta e `og:image` com `public/proposta-capa.jpg`,
+  conversão JPEG da capa original (1920×1080). Funciona sem executar React;
+  preserva HTTPS informado pelo proxy. A imagem é pública e não contém dados
+  do destinatário. A disponibilidade do documento continua validada pela API.
+  A prévia efetiva no WhatsApp requer deploy público e pode manter cache próprio.
+  O Vite de desenvolvimento não executa a configuração Nginx.
 - Nome do destinatário é próprio do documento; editar não altera o cadastro.
   O modelo de ensino contém condições e estimativas de referência, editáveis.
 - Validação em 2026-10-19: navegador com ADMIN, COLABORADOR só com CLIENTES,
@@ -350,6 +367,8 @@ antes de editar.
 ---
 
 ## 9. Registro de mudanças
+
+- 2026-10-20 · `fix/excluir-proposta-listagem` · Exclusão pela listagem (validada pelo usuário), consulta do link ativo sem renovação, token criptografado e prévia Open Graph com a capa JPEG no HTML público via Nginx · `PropostasService/Controller`, `proposta-link.crypto`, migration `20261020120000_proposta_link_recuperavel`, `PropostasTab`, `nginx.conf` · migration aplicada localmente; builds e lint passaram; 228 testes backend passaram e 2 falhas anteriores de Planejamento permanecem; smoke HTTP de links/permissões e Nginx passaram; navegador indisponível para revalidar o compartilhamento por papel; publicação e conferência da prévia no WhatsApp pendentes.
 
 - 2026-10-19 · `feat/propostas-clientes` · Propostas com rolagem contínua única, barra lateral com criação/validade e download em PDF; removido rodapé textual antes da imagem final · `PropostaDocumento`, `documentoHtml`, `baixarProposta`, `propostas.css`, seleção pública de `createdAt` · sem push/PR.
 
