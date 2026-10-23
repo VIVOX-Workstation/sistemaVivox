@@ -11,13 +11,19 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ModuloSistema } from '@prisma/client';
+import { respostaPdf } from '../acompanhamento/cronogramas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequerModulo } from '../auth/modulos.decorator';
-import { SalvarPropostaDto } from './proposta.dto';
-import { PropostasService } from './propostas.service';
+import { SalvarPropostaDto, SalvarPropostaPdfDto } from './proposta.dto';
+import { PROPOSTA_PDF_MAX_BYTES, PropostasService } from './propostas.service';
+
+const UPLOAD_PDF = FileInterceptor('arquivo', { limits: { fileSize: PROPOSTA_PDF_MAX_BYTES, files: 1 } });
 
 @Controller('clientes/:clienteId/propostas')
 @UseGuards(JwtAuthGuard)
@@ -29,8 +35,37 @@ export class PropostasController {
     return this.service.listar(clienteId);
   }
   @Post()
-  criar(@Param('clienteId') clienteId: string, @Body() dto: SalvarPropostaDto) {
-    return this.service.criar(clienteId, dto);
+  criar(
+    @Param('clienteId') clienteId: string,
+    @Body() dto: SalvarPropostaDto,
+    @Req() req: { user: { userId: string } },
+  ) {
+    return this.service.criar(clienteId, dto, req.user.userId);
+  }
+  @Post('pdf')
+  @UseInterceptors(UPLOAD_PDF)
+  criarPdf(
+    @Param('clienteId') clienteId: string,
+    @UploadedFile() arquivo: Express.Multer.File | undefined,
+    @Body() dto: SalvarPropostaPdfDto,
+    @Req() req: { user: { userId: string } },
+  ) {
+    return this.service.criarPdf(clienteId, arquivo, dto, req.user.userId);
+  }
+  @Patch(':id/pdf')
+  @UseInterceptors(UPLOAD_PDF)
+  editarPdf(
+    @Param('clienteId') clienteId: string,
+    @Param('id') id: string,
+    @UploadedFile() arquivo: Express.Multer.File | undefined,
+    @Body() dto: SalvarPropostaPdfDto,
+  ) {
+    return this.service.editarPdf(clienteId, id, arquivo, dto);
+  }
+  @Get(':id/arquivo')
+  @Header('Cache-Control', 'no-store')
+  async arquivo(@Param('clienteId') clienteId: string, @Param('id') id: string) {
+    return respostaPdf(await this.service.arquivo(clienteId, id));
   }
   @Patch(':id')
   editar(
@@ -74,6 +109,14 @@ export class PropostaLinkGuard implements CanActivate {
 @Controller('propostas-publicas')
 @UseGuards(PropostaLinkGuard)
 export class PropostasPublicasController {
+  constructor(private readonly service: PropostasService) {}
+  @Get(':token/arquivo')
+  @Header('Cache-Control', 'no-store')
+  @Header('Referrer-Policy', 'no-referrer')
+  @Header('X-Robots-Tag', 'noindex, nofollow')
+  async arquivo(@Param('token') token: string) {
+    return respostaPdf(await this.service.arquivoPublico(token));
+  }
   @Get(':token')
   @Header('Cache-Control', 'no-store')
   @Header('Referrer-Policy', 'no-referrer')

@@ -204,6 +204,7 @@ model User {
   // Relações
   clientes              Cliente[]             @relation("ResponsavelInterno")
   cronogramasEnviados   CronogramaCliente[]   @relation("CronogramasEnviados")
+  propostasCriadas      Proposta[]            @relation("PropostasCriadas")
   producoes             Producao[]            @relation("ProdutorResponsavel")
   historicoAcoes        ServicoHistorico[]
   reunioes              Reuniao[]             @relation("ReuniaoParticipantes")
@@ -299,6 +300,14 @@ model Proposta {
   corDestaque    String   @default("#91672b")
   // Demo interativa exibida no link público; hoje só "ensino".
   demo           String?
+  // "documento" (seções editáveis) ou "pdf" (arquivo enviado pela equipe; secoes fica vazio).
+  formato        String   @default("documento")
+  // PDF guardado no storage e servido só pelo backend; a chave nunca vai ao frontend.
+  arquivoKey     String?
+  nomeArquivo    String?
+  tamanho        Int?
+  criadoPorId    String?
+  criadoPor      User?    @relation("PropostasCriadas", fields: [criadoPorId], references: [id], onDelete: SetNull)
   secoes         Json
   linkHash       String?  @unique
   linkTokenCriptografado String? @db.Text

@@ -6,6 +6,7 @@ import { Compass } from 'lucide-react';
 import { VivoxLogo } from '../../components/brand/VivoxLogo';
 import { PropostaDocumento } from './PropostaDocumento';
 import { PropostaLanding } from './PropostaLanding';
+import { PropostaPdfPublica } from './PropostaPdfPublica';
 import type { DocumentoProposta } from './types';
 import './propostas.css';
 
@@ -128,7 +129,12 @@ export function PropostaPublica() {
           </button>
         </div>
       ) : documento ? (
-        documento.demo ? (
+        documento.formato === 'pdf' ? (
+          <PropostaPdfPublica
+            documento={documento}
+            arquivoUrl={`${getApiBaseUrl().replace(/\/$/, '')}/propostas-publicas/${encodeURIComponent(token || '')}/arquivo`}
+          />
+        ) : documento.demo ? (
           <>
             {/* Barra fixa no topo com as duas abas */}
             <header className="vxp-demo-topbar">

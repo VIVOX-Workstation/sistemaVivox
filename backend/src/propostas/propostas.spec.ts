@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ExecutionContext,
   ForbiddenException,
   NotFoundException,
@@ -10,10 +11,14 @@ import { ModuloSistema, Role } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
-import { SalvarPropostaDto } from './proposta.dto';
+import { StorageService } from '../storage/storage.service';
+import { SalvarPropostaDto, SalvarPropostaPdfDto } from './proposta.dto';
 import { PropostasController } from './propostas.controller';
 import { PropostasService } from './propostas.service';
 import { criptografarLink, decifrarLink } from './proposta-link.crypto';
+
+// O StorageService importa o uuid em ESM, que o Jest não transforma; aqui ele é sempre mock.
+jest.mock('uuid', () => ({ v4: () => 'test-uuid' }));
 
 describe('Propostas: documento, validação e compartilhamento', () => {
   const prisma = {
@@ -27,7 +32,8 @@ describe('Propostas: documento, validação e compartilhamento', () => {
       delete: jest.fn(),
     },
   };
-  const service = new PropostasService(prisma as unknown as PrismaService);
+  const storage = { uploadRawFile: jest.fn(), deleteFile: jest.fn(), getFileStream: jest.fn() };
+  const service = new PropostasService(prisma as unknown as PrismaService, storage as unknown as StorageService);
   const documento: SalvarPropostaDto = {
     titulo: 'Plataforma',
     destinatario: 'Cliente',
@@ -253,5 +259,99 @@ describe('Permissões das propostas pelo guard real', () => {
       await expect(guard.canActivate(context)).rejects.toThrow(
         ForbiddenException,
       );
+  });
+});
+
+describe('Propostas em PDF', () => {
+  const prisma = {
+    cliente: { findUnique: jest.fn() },
+    proposta: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+  };
+  const storage = { uploadRawFile: jest.fn(), deleteFile: jest.fn(), getFileStream: jest.fn() };
+  const service = new PropostasService(prisma as unknown as PrismaService, storage as unknown as StorageService);
+  const pdf = (conteudo = '%PDF-1.7 corpo') =>
+    ({ buffer: Buffer.from(conteudo), size: conteudo.length, originalname: Buffer.from('Proposta Clínica.pdf', 'utf8').toString('latin1') }) as Express.Multer.File;
+  const dto: SalvarPropostaPdfDto = { titulo: 'Site institucional', destinatario: 'Dra. Ana', validade: '2026-12-01' };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    prisma.cliente.findUnique.mockResolvedValue({ id: 'c1' });
+    storage.deleteFile.mockResolvedValue(undefined);
+  });
+
+  it('guarda o PDF no storage e registra arquivo, tamanho e quem criou', async () => {
+    await service.criarPdf('c1', pdf(), dto, 'u1');
+    const key = storage.uploadRawFile.mock.calls[0][0];
+    expect(key).toMatch(/^propostas\/c1\/[0-9a-f-]{36}\.pdf$/);
+    const { data, select } = prisma.proposta.create.mock.calls[0][0];
+    expect(data).toEqual(expect.objectContaining({
+      clienteId: 'c1', formato: 'pdf', arquivoKey: key, nomeArquivo: 'Proposta Clínica.pdf',
+      tamanho: 14, criadoPorId: 'u1', secoes: [], apresentacao: '', validade: new Date('2026-12-01T00:00:00Z'),
+    }));
+    expect(select).not.toHaveProperty('arquivoKey');
+  });
+
+  it.each([
+    ['sem arquivo', undefined],
+    ['arquivo que não é PDF', pdf('<html>')],
+  ])('rejeita %s sem gravar nada', async (_caso, arquivo) => {
+    await expect(service.criarPdf('c1', arquivo, dto)).rejects.toThrow(BadRequestException);
+    expect(storage.uploadRawFile).not.toHaveBeenCalled();
+    expect(prisma.proposta.create).not.toHaveBeenCalled();
+  });
+
+  it('apaga o arquivo enviado se o registro falhar', async () => {
+    prisma.proposta.create.mockRejectedValue(new Error('banco'));
+    await expect(service.criarPdf('c1', pdf(), dto)).rejects.toThrow('banco');
+    expect(storage.deleteFile).toHaveBeenCalledWith(storage.uploadRawFile.mock.calls[0][0]);
+  });
+
+  it('troca o PDF e apaga o anterior; sem arquivo novo só atualiza os dados', async () => {
+    prisma.proposta.findFirst.mockResolvedValue({ id: 'p1', formato: 'pdf', arquivoKey: 'propostas/c1/antigo.pdf' });
+    await service.editarPdf('c1', 'p1', pdf(), dto);
+    expect(storage.deleteFile).toHaveBeenCalledWith('propostas/c1/antigo.pdf');
+    jest.clearAllMocks();
+    await service.editarPdf('c1', 'p1', undefined, dto);
+    expect(storage.uploadRawFile).not.toHaveBeenCalled();
+    expect(storage.deleteFile).not.toHaveBeenCalled();
+    expect(prisma.proposta.update.mock.calls[0][0].data).not.toHaveProperty('arquivoKey');
+  });
+
+  it('não mistura os formatos ao editar', async () => {
+    prisma.proposta.findFirst.mockResolvedValue({ id: 'p1', formato: 'documento', arquivoKey: null });
+    await expect(service.editarPdf('c1', 'p1', pdf(), dto)).rejects.toThrow(BadRequestException);
+    prisma.proposta.findFirst.mockResolvedValue({ id: 'p1', formato: 'pdf', arquivoKey: 'k' });
+    await expect(
+      service.editar('c1', 'p1', { ...dto, apresentacao: '', corDestaque: '#91672b', secoes: [] }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.proposta.update).not.toHaveBeenCalled();
+  });
+
+  it('excluir apaga o arquivo do storage', async () => {
+    prisma.proposta.findFirst.mockResolvedValue({ id: 'p1', formato: 'pdf', arquivoKey: 'propostas/c1/x.pdf' });
+    await service.excluir('c1', 'p1');
+    expect(storage.deleteFile).toHaveBeenCalledWith('propostas/c1/x.pdf');
+  });
+
+  it('serve o PDF só da proposta do cliente e pelo hash do link público', async () => {
+    prisma.proposta.findFirst.mockResolvedValue(null);
+    await expect(service.arquivo('outro', 'p1')).rejects.toThrow(NotFoundException);
+    expect(prisma.proposta.findFirst.mock.calls[0][0].where).toEqual({ id: 'p1', clienteId: 'outro' });
+    prisma.proposta.findUnique.mockResolvedValue({ arquivoKey: 'k', nomeArquivo: 'a.pdf' });
+    storage.getFileStream.mockResolvedValue({ stream: 's', contentLength: 3 });
+    expect(await service.arquivoPublico('a'.repeat(64))).toEqual({ stream: 's', contentLength: 3, nomeArquivo: 'a.pdf' });
+    expect(prisma.proposta.findUnique.mock.calls[0][0].where.linkHash).toBe(createHash('sha256').update('a'.repeat(64)).digest('hex'));
+  });
+
+  it.each([{ titulo: '  ' }, { validade: '01/12/2026' }, { corDestaque: 'red' }])('DTO rejeita %j', async (alteracao) => {
+    const pipe = new ValidationPipe({ whitelist: true, transform: true });
+    await expect(pipe.transform({ ...dto, ...alteracao }, { type: 'body', metatype: SalvarPropostaPdfDto })).rejects.toThrow();
+  });
+
+  it('DTO aceita validade em branco do formulário', async () => {
+    const pipe = new ValidationPipe({ whitelist: true, transform: true });
+    const lido = await pipe.transform({ ...dto, validade: '', arquivoKey: 'injetado' }, { type: 'body', metatype: SalvarPropostaPdfDto });
+    expect(lido.validade).toBeNull();
+    expect(lido).not.toHaveProperty('arquivoKey');
   });
 });

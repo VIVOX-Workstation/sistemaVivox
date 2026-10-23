@@ -1,0 +1,163 @@
+/* Proposta em PDF: link público (.ppdf) e formulário da equipe (.ppdf-form).
+   Link público: o PDF ocupa a esquerda (palco escuro, rola sozinho) e a barra da direita
+   traz os dados e o histórico, na mesma paleta da barra lateral das propostas de documento. */
+
+.ppdf {
+  --ppdf-palco: #28271f;
+  --ppdf-lateral: #fbf8f2;
+  --ppdf-cartao: #f7f1e5;
+  --ppdf-cartao-linha: #e5d8be;
+  --ppdf-tinta: #2a2116;
+  --ppdf-suave: #6b5e48;
+  --ppdf-ouro: color-mix(in srgb, var(--ppdf-acento) 75%, #2a2116);
+  display: grid; grid-template-columns: minmax(0, 1fr) 380px;
+  height: 100vh; height: 100dvh;
+  background: var(--ppdf-palco); color: var(--ppdf-tinta);
+  font-family: var(--vx-font, 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+:where(.ppdf) *, :where(.ppdf) *::before, :where(.ppdf) *::after { box-sizing: border-box; }
+:where(.ppdf) :where(h1, h2, p, ol) { margin: 0; }
+
+/* ---------- PDF ---------- */
+.ppdf-palco { min-width: 0; overflow-y: auto; padding: 0 32px 40px; scrollbar-color: #5b5546 transparent; }
+.ppdf-barra {
+  position: sticky; top: 0; z-index: 5; margin: 0 auto 20px; max-width: 1040px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 4px;
+  background: linear-gradient(var(--ppdf-palco) 70%, transparent); color: #c9c3b6; font-size: 13px;
+}
+.ppdf-barra-nome { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ppdf-barra-pagina {
+  flex: none; padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, .08);
+  color: #f4f2ee; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.ppdf-paginas { display: grid; gap: 20px; max-width: 1040px; margin: 0 auto; }
+.ppdf-pagina {
+  position: relative; width: 100%; overflow: hidden; border-radius: 4px; background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .3);
+}
+.ppdf-pagina canvas { display: block; width: 100%; height: 100%; }
+.ppdf-carregando, .ppdf-erro {
+  display: grid; place-items: center; gap: 16px; min-height: 60vh; max-width: 1040px; margin: 0 auto; padding: 32px;
+  text-align: center; border-radius: 8px; border: 1px dashed rgba(255, 255, 255, .14); color: #c9c3b6;
+}
+.ppdf-carregando { animation: ppdf-pulso 1.6s ease-in-out infinite; }
+@keyframes ppdf-pulso { 50% { opacity: .55; } }
+
+/* ---------- Barra da direita ---------- */
+.ppdf-lateral {
+  min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 24px;
+  padding: 28px 24px; background: var(--ppdf-lateral); border-left: 1px solid var(--ppdf-cartao-linha);
+}
+.ppdf-logo { display: block; align-self: flex-start; height: 18px; width: auto; color: var(--ppdf-tinta); }
+.ppdf .ppdf-sobretitulo {
+  display: flex; align-items: center; gap: 8px; color: var(--ppdf-ouro);
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+}
+.ppdf .ppdf-sobretitulo::before { content: ''; width: 20px; height: 1px; background: currentColor; }
+/* .ppdf na frente: o .vxp p/h1 do sistema zera margens com mais especificidade. */
+.ppdf .ppdf-cabeca h1 { margin-top: 10px; font-size: 26px; line-height: 1.15; letter-spacing: -.02em; font-weight: 700; overflow-wrap: anywhere; }
+.ppdf .ppdf-para { margin-top: 8px; color: var(--ppdf-suave); font-size: 14px; }
+.ppdf .ppdf-para strong { color: var(--ppdf-tinta); font-weight: 600; }
+.ppdf .ppdf-apresentacao {
+  padding: 14px 16px; border-radius: 10px; background: #fff; border: 1px solid var(--ppdf-cartao-linha);
+  border-left: 3px solid var(--ppdf-acento); color: #4a3d2c; font-size: 14px; white-space: pre-line;
+}
+
+.ppdf .ppdf-historico h2 { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; font-weight: 650; }
+.ppdf-historico h2 svg { color: var(--ppdf-ouro); }
+.ppdf-historico ol { list-style: none; padding: 0; display: grid; gap: 10px; }
+.ppdf-historico li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-radius: 10px; background: var(--ppdf-cartao); border: 1px solid var(--ppdf-cartao-linha);
+  font-size: 13px;
+}
+.ppdf-historico li > span:first-child { display: inline-flex; align-items: center; gap: 8px; color: var(--ppdf-suave); }
+.ppdf-historico li svg { flex: none; color: var(--ppdf-ouro); }
+.ppdf-historico time, .ppdf-valor { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.ppdf-historico li.ppdf-vencida { background: #fbecea; border-color: #f0c9c2; }
+.ppdf-historico li.ppdf-vencida, .ppdf-historico li.ppdf-vencida svg, .ppdf-historico li.ppdf-vencida span { color: #9b3b2a; }
+
+.ppdf-botao {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; padding: 0 20px;
+  border: 0; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ppdf-acento) 55%, #f3d9a4), var(--ppdf-acento)); color: #140d05;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ppdf-acento) 30%, transparent); transition: transform .2s, filter .2s;
+}
+.ppdf-botao:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.ppdf-botao:focus-visible { outline: 2px solid var(--ppdf-acento); outline-offset: 3px; }
+.ppdf-botao:disabled { opacity: .6; cursor: progress; transform: none; }
+.ppdf-erro .ppdf-botao { width: auto; }
+.ppdf .ppdf-rodape { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--ppdf-cartao-linha); color: var(--ppdf-suave); font-size: 12px; }
+
+.ppdf-lateral-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ppdf-icone {
+  flex: none; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer;
+}
+.ppdf-icone:hover { background: rgba(127, 127, 127, .14); }
+.ppdf-icone:focus-visible { outline: 2px solid var(--ppdf-acento); outline-offset: 2px; }
+.ppdf-so-celular, .ppdf-fundo { display: none; }
+
+/* Celular e tablet: o PDF ocupa a tela e os dados viram gaveta à esquerda (botão de menu na barra). */
+@media (max-width: 900px) {
+  .ppdf { grid-template-columns: minmax(0, 1fr); }
+  .ppdf-palco { padding: 0 10px 24px; }
+  .ppdf-barra { gap: 8px; padding: 8px 0; margin-bottom: 12px; color: #f4f2ee; }
+  .ppdf-barra-nome { flex: 1; color: #c9c3b6; }
+  .ppdf-so-celular { display: inline-flex; }
+  .ppdf-paginas { gap: 12px; }
+
+  .ppdf-lateral {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(340px, 86vw);
+    padding: 16px 18px 24px; gap: 20px; border-left: 0; border-right: 1px solid var(--ppdf-cartao-linha);
+    transform: translateX(-100%); visibility: hidden;
+    transition: transform .25s ease, visibility 0s linear .25s;
+  }
+  .ppdf-gaveta-aberta .ppdf-lateral {
+    transform: none; visibility: visible; box-shadow: 0 0 40px rgba(0, 0, 0, .35); transition: transform .25s ease;
+  }
+  .ppdf-gaveta-aberta .ppdf-fundo { display: block; position: fixed; inset: 0; z-index: 30; background: rgba(20, 13, 6, .55); }
+  .ppdf .ppdf-cabeca h1 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ppdf-carregando { animation: none; }
+  .ppdf-botao, .ppdf-lateral { transition: none !important; }
+}
+
+/* ---------- Formulário da equipe (dentro da aba Propostas, tema do sistema) ---------- */
+.ppdf-form { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.ppdf-form-campos { display: grid; gap: 16px; padding: 24px; }
+.ppdf-solta {
+  position: relative; display: grid; place-items: center; gap: 8px; padding: 28px 20px; text-align: center;
+  border: 1.5px dashed var(--ln2); border-radius: 14px; background: var(--sf); cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.ppdf-solta:hover, .ppdf-solta.arrastando { border-color: #91672b; background: #fbf6ec; }
+.ppdf-solta:focus-within { outline: 2px solid #91672b; outline-offset: 2px; }
+.ppdf-solta input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ppdf-solta-icone { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: #f7f1e5; color: #91672b; }
+.ppdf-arquivo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #e5d8be; border-radius: 12px; background: #f7f1e5; }
+.ppdf-arquivo > div { min-width: 0; flex: 1; }
+.ppdf-arquivo b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.ppdf-arquivo small { color: var(--ink2); font-size: 12px; }
+.ppdf-lado { display: grid; gap: 14px; position: sticky; top: 16px; }
+.ppdf-miniatura { padding: 14px; border-radius: 14px; background: #28271f; }
+.ppdf-miniatura .ppdf-pagina { border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.ppdf-miniatura p { color: #c9c3b6; font-size: 12px; text-align: center; padding: 40px 8px; }
+.ppdf-ficha { padding: 16px 18px; display: grid; gap: 12px; margin: 0; }
+.ppdf-ficha div { display: grid; gap: 2px; }
+.ppdf-ficha dt { color: var(--ink2); font-size: 12px; }
+.ppdf-ficha dd { margin: 0; font-size: 13.5px; font-weight: 580; overflow-wrap: anywhere; }
+.ppdf-progresso { height: 6px; border-radius: 999px; background: var(--ln); overflow: hidden; }
+.ppdf-progresso div { height: 100%; background: #91672b; transition: width .2s; }
+.ppdf-tipo {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 650; letter-spacing: .02em; vertical-align: 1px;
+  background: #f7f1e5; color: #7a5822; box-shadow: inset 0 0 0 1px #e5d8be;
+}
+.ppdf-sub { display: block; color: var(--ink2); font-size: 12.5px; }
+@media (max-width: 900px) {
+  .ppdf-form { grid-template-columns: 1fr; }
+  .ppdf-lado { position: static; }
+}
