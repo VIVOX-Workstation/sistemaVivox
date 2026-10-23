@@ -150,6 +150,8 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
   font-size: 11px; color: #e8e5df;
 }
+.vxl-tela-print { box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .06); }
+.vxl-tela-print img { display: block; width: 100%; height: auto; }
 .vxl-tela-barra { display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: #15151c; border-bottom: 1px solid var(--vxl-linha); }
 .vxl-tela-barra i { width: 9px; height: 9px; border-radius: 50%; background: #34343f; }
 .vxl-tela-barra span { margin-left: 10px; color: var(--vxl-apagado); font-size: 10.5px; }

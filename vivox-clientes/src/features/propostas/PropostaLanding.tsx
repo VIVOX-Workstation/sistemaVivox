@@ -113,9 +113,24 @@ function TelaAdmin() {
   );
 }
 
-function telaDaSecao(titulo: string): ReactNode {
-  if (/administrativ/i.test(titulo)) return <TelaAdmin />;
-  if (/aluno/i.test(titulo)) return <TelaPortal />;
+// Print real da demo nas seções do painel e do portal; sem prints, ficam as telas em CSS.
+const PRINTS_SECAO: Record<string, { admin: string; aluno: string }> = {
+  ensino: { admin: '06-painel-dashboard', aluno: '02-aluno-curso' },
+};
+
+function TelaPrint({ demo, arquivo, rotulo }: { demo: string; arquivo: string; rotulo: string }) {
+  return (
+    <div className="vxl-tela vxl-tela-print">
+      <div className="vxl-tela-barra" aria-hidden="true"><i /><i /><i /><span>{rotulo}</span></div>
+      <img src={`/demos/${demo}/prints/${arquivo}.jpg`} alt={`Print da plataforma: ${rotulo}`} loading="lazy" decoding="async" />
+    </div>
+  );
+}
+
+function telaDaSecao(titulo: string, demo?: string | null): ReactNode {
+  const prints = demo ? PRINTS_SECAO[demo] : undefined;
+  if (/administrativ/i.test(titulo)) return prints && demo ? <TelaPrint demo={demo} arquivo={prints.admin} rotulo="Painel Administrativo" /> : <TelaAdmin />;
+  if (/aluno/i.test(titulo)) return prints && demo ? <TelaPrint demo={demo} arquivo={prints.aluno} rotulo="Portal do Aluno" /> : <TelaPortal />;
   return null;
 }
 
@@ -266,9 +281,9 @@ function BlocoLanding({ bloco }: { bloco: Bloco }) {
   }
 }
 
-function SecaoDaLanding({ secao, indice }: { secao: SecaoLanding; indice: number }) {
+function SecaoDaLanding({ secao, indice, demo }: { secao: SecaoLanding; indice: number; demo?: string | null }) {
   const faixa = secao.blocos.find(b => b.tipo === 'faixa');
-  const tela = telaDaSecao(secao.titulo);
+  const tela = telaDaSecao(secao.titulo, demo);
   const [cabecalho, ...resto] = secao.blocos.filter(b => b.tipo !== 'faixa');
   const lado = indice % 2 === 0 ? 'vxl-lado-dir' : 'vxl-lado-esq';
 
@@ -407,7 +422,7 @@ export function PropostaLanding({ documento, onVerDemo }: PropostaLandingProps) 
         </div>
       </nav>
 
-      {secoesExibidas.map((s, i) => <SecaoDaLanding key={i} secao={s} indice={i} />)}
+      {secoesExibidas.map((s, i) => <SecaoDaLanding key={i} secao={s} indice={i} demo={documento.demo} />)}
 
       <section className="vxl-cta">
         <div className="vxl-cta-arco" aria-hidden="true" />
