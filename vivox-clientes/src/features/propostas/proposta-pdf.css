@@ -49,7 +49,7 @@
   min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 24px;
   padding: 28px 24px; background: var(--ppdf-lateral); border-left: 1px solid var(--ppdf-cartao-linha);
 }
-.ppdf-logo { display: block; height: 18px; width: auto; color: var(--ppdf-tinta); }
+.ppdf-logo { display: block; align-self: flex-start; height: 18px; width: auto; color: var(--ppdf-tinta); }
 .ppdf .ppdf-sobretitulo {
   display: flex; align-items: center; gap: 8px; color: var(--ppdf-ouro);
   font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
