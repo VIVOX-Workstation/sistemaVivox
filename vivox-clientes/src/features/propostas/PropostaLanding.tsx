@@ -115,7 +115,7 @@ function TelaAdmin() {
 
 // Print real da demo nas seções do painel e do portal; sem prints, ficam as telas em CSS.
 const PRINTS_SECAO: Record<string, { admin: string; aluno: string }> = {
-  ensino: { admin: '06-painel-dashboard', aluno: '02-aluno-curso' },
+  ensino: { admin: '06-painel-dashboard', aluno: '01-aluno-inicio' },
 };
 
 function TelaPrint({ demo, arquivo, rotulo }: { demo: string; arquivo: string; rotulo: string }) {
