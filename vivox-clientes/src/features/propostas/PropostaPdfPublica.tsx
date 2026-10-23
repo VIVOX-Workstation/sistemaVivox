@@ -1,5 +1,5 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
-import { CalendarClock, Download, FilePen, FileText, History, Send } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { CalendarClock, Download, FilePen, FileText, History, Menu, Send, X } from 'lucide-react';
 import { VivoxLogo } from '../../components/brand/VivoxLogo';
 import { formatarTamanhoBytes } from '../../api/cronogramas';
 import type { DocumentoProposta } from './types';
@@ -17,6 +17,14 @@ export function PropostaPdfPublica({ documento, arquivoUrl }: { documento: Docum
   const [atual, setAtual] = useState(1);
   const [erro, setErro] = useState(false);
   const [baixando, setBaixando] = useState(false);
+  // No celular os dados ficam numa gaveta à esquerda, aberta pelo botão da barra do PDF.
+  const [gaveta, setGaveta] = useState(false);
+  useEffect(() => {
+    if (!gaveta) return;
+    const fechar = (e: KeyboardEvent) => { if (e.key === 'Escape') setGaveta(false); };
+    document.addEventListener('keydown', fechar);
+    return () => document.removeEventListener('keydown', fechar);
+  }, [gaveta]);
   const nome = documento.nomeArquivo || `${documento.titulo}.pdf`;
   const acento = /^#[0-9a-f]{6}$/i.test(documento.corDestaque) ? documento.corDestaque : '#91672b';
   const aoVerPagina = useCallback((n: number) => setAtual(n), []);
@@ -42,11 +50,17 @@ export function PropostaPdfPublica({ documento, arquivoUrl }: { documento: Docum
   };
 
   return (
-    <div className="ppdf" style={{ ['--ppdf-acento' as string]: acento }}>
+    <div className={`ppdf${gaveta ? " ppdf-gaveta-aberta" : ""}`} style={{ ['--ppdf-acento' as string]: acento }}>
       <section className="ppdf-palco" aria-label="Proposta em PDF">
         <div className="ppdf-barra" aria-live="polite">
+          <button type="button" className="ppdf-icone ppdf-so-celular" onClick={() => setGaveta(true)} aria-label="Dados da proposta" aria-expanded={gaveta} aria-controls="ppdf-lateral">
+            <Menu size={20} aria-hidden="true" />
+          </button>
           <span className="ppdf-barra-nome" title={nome}><FileText size={14} aria-hidden="true" /> {nome}</span>
           {paginas && <span className="ppdf-barra-pagina">Página {atual} de {paginas}</span>}
+          <button type="button" className="ppdf-icone ppdf-so-celular" onClick={baixar} disabled={baixando} aria-label="Baixar proposta">
+            <Download size={18} aria-hidden="true" />
+          </button>
         </div>
         {erro ? (
           <div className="ppdf-erro">
@@ -61,8 +75,14 @@ export function PropostaPdfPublica({ documento, arquivoUrl }: { documento: Docum
         )}
       </section>
 
-      <aside className="ppdf-lateral" aria-label="Dados da proposta">
-        <VivoxLogo className="ppdf-logo" />
+      <div className="ppdf-fundo" onClick={() => setGaveta(false)} aria-hidden="true" />
+      <aside id="ppdf-lateral" className="ppdf-lateral" aria-label="Dados da proposta">
+        <div className="ppdf-lateral-topo">
+          <VivoxLogo className="ppdf-logo" />
+          <button type="button" className="ppdf-icone ppdf-so-celular" onClick={() => setGaveta(false)} aria-label="Fechar">
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
 
         <div className="ppdf-cabeca">
           <p className="ppdf-sobretitulo">Proposta comercial</p>

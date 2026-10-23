@@ -90,21 +90,39 @@
 .ppdf-erro .ppdf-botao { width: auto; }
 .ppdf .ppdf-rodape { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--ppdf-cartao-linha); color: var(--ppdf-suave); font-size: 12px; }
 
-/* Celular e tablet: rolagem única, dados primeiro (curtos) e o PDF logo abaixo. */
+.ppdf-lateral-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ppdf-icone {
+  flex: none; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer;
+}
+.ppdf-icone:hover { background: rgba(127, 127, 127, .14); }
+.ppdf-icone:focus-visible { outline: 2px solid var(--ppdf-acento); outline-offset: 2px; }
+.ppdf-so-celular, .ppdf-fundo { display: none; }
+
+/* Celular e tablet: o PDF ocupa a tela e os dados viram gaveta à esquerda (botão de menu na barra). */
 @media (max-width: 900px) {
-  .ppdf { display: flex; flex-direction: column-reverse; height: auto; min-height: 100vh; }
-  .ppdf-palco { overflow: visible; padding: 0 12px 32px; }
-  .ppdf-lateral { overflow: visible; border-left: 0; border-bottom: 1px solid var(--ppdf-cartao-linha); padding: 20px 16px 24px; gap: 18px; }
-  .ppdf .ppdf-cabeca h1 { font-size: 24px; }
-  .ppdf-historico ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .ppdf-historico li { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; }
-  .ppdf-historico time, .ppdf-valor { text-align: left; }
-  .ppdf .ppdf-rodape { display: none; }
+  .ppdf { grid-template-columns: minmax(0, 1fr); }
+  .ppdf-palco { padding: 0 10px 24px; }
+  .ppdf-barra { gap: 8px; padding: 8px 0; margin-bottom: 12px; color: #f4f2ee; }
+  .ppdf-barra-nome { flex: 1; color: #c9c3b6; }
+  .ppdf-so-celular { display: inline-flex; }
   .ppdf-paginas { gap: 12px; }
+
+  .ppdf-lateral {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(340px, 86vw);
+    padding: 16px 18px 24px; gap: 20px; border-left: 0; border-right: 1px solid var(--ppdf-cartao-linha);
+    transform: translateX(-100%); visibility: hidden;
+    transition: transform .25s ease, visibility 0s linear .25s;
+  }
+  .ppdf-gaveta-aberta .ppdf-lateral {
+    transform: none; visibility: visible; box-shadow: 0 0 40px rgba(0, 0, 0, .35); transition: transform .25s ease;
+  }
+  .ppdf-gaveta-aberta .ppdf-fundo { display: block; position: fixed; inset: 0; z-index: 30; background: rgba(20, 13, 6, .55); }
+  .ppdf .ppdf-cabeca h1 { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ppdf-carregando { animation: none; }
-  .ppdf-botao { transition: none; }
+  .ppdf-botao, .ppdf-lateral { transition: none !important; }
 }
 
 /* ---------- Formulário da equipe (dentro da aba Propostas, tema do sistema) ---------- */
