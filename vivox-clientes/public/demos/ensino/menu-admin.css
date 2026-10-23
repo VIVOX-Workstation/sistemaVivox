@@ -1,0 +1,37 @@
+/* Painel no celular: a leftbar vira gaveta, aberta pelo botão de menu da barra do topo. */
+.vx-menu-topo, .vx-menu-fundo { display: none; }
+
+@media (max-width: 760px) {
+  .vx-menu-topo {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 40; height: 56px;
+    display: flex; align-items: center; gap: 12px; padding: 0 12px;
+    background: #2B1D0E; color: #FFFBF5; box-shadow: 0 1px 0 rgba(255, 251, 245, .1);
+    font-family: 'Figtree', system-ui, sans-serif;
+  }
+  .vx-menu-topo button {
+    flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer;
+  }
+  .vx-menu-topo button:hover { background: rgba(255, 251, 245, .1); }
+  .vx-menu-topo button:focus-visible { outline: 2px solid #E49F47; outline-offset: 2px; }
+  .vx-menu-topo img { height: 30px; width: auto; display: block; }
+  .vx-menu-topo span { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #C9B598; }
+
+  aside.side {
+    position: fixed !important; top: 0; bottom: 0; left: 0; z-index: 60;
+    width: min(280px, 84vw) !important; max-width: none !important; flex: none !important;
+    overflow-y: auto; transform: translateX(-100%); visibility: hidden;
+    transition: transform .25s ease, visibility 0s linear .25s;
+  }
+  html.vx-menu-aberto aside.side {
+    transform: none; visibility: visible; box-shadow: 0 0 40px rgba(0, 0, 0, .35);
+    transition: transform .25s ease;
+  }
+  /* Durante o tour a gaveta abre na hora, para o destaque cair no lugar certo. */
+  .driver-active aside.side { transition: none !important; }
+
+  .vx-menu-fundo { position: fixed; inset: 0; z-index: 50; background: rgba(20, 13, 6, .5); }
+  html.vx-menu-aberto .vx-menu-fundo { display: block; }
+
+  aside.side ~ main { padding: 84px 16px 40px !important; }
+}

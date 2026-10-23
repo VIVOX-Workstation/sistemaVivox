@@ -106,6 +106,10 @@
       stageRadius: 14,
       smoothScroll: true,
       steps: passos.map(function (p) { return p.element ? p : { popover: p.popover }; }),
+      // No celular a leftbar do painel é gaveta (menu-admin.js): abre só no passo que aponta para ela.
+      onHighlightStarted: function (alvo) {
+        if (window.vxMenuAdmin) window.vxMenuAdmin(!!(alvo && alvo.closest && alvo.closest('aside.side')));
+      },
       onDestroyStarted: function () {
         // Fechar no × ou no último passo encerra o tour; os "ir" já gravaram a próxima tela.
         if (ler(CHAVE) === tela) gravar(CHAVE, null);
