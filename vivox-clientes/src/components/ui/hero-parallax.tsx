@@ -107,7 +107,8 @@ export const ProductCard = ({
         <img
           src={product.thumbnail}
           alt=""
-          loading="lazy"
+          // As telas começam deslocadas por transform; com lazy o navegador as julga fora da tela.
+          loading="eager"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover object-left-top"
         />
