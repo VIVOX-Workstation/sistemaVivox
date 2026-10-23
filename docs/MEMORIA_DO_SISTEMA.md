@@ -177,9 +177,9 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 - `Proposta.demo` (texto, opcional; hoje só `"ensino"`) liga uma demo interativa ao
   link público. Com demo, `/proposta/:token` abre em duas abas: **Proposta** (a
   mesma proposta em layout de landing page, `PropostaLanding.tsx`) e **Demo da
-  plataforma** (`?aba=demo`, `features/propostas/demos/ensino/`, carregada sob
-  demanda). A demo usa só dados fictícios em memória do React: nada vai ao
-  backend nem ao `localStorage`, e tudo reinicia ao recarregar. Sem demo, o link
+  plataforma** (`?aba=demo`): um iframe de `vivox-clientes/public/demos/<demo>.html`,
+  página única exportada (fontes e scripts embutidos, ~3,5 MB, só baixada ao abrir
+  a aba). A demo usa só dados fictícios e não fala com o backend. Sem demo, o link
   continua exatamente como antes. PDF segue no layout documento.
 
 - A listagem permite excluir propostas diretamente, com confirmação que identifica

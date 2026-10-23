@@ -46,7 +46,9 @@
 .vxp-demo-tab-btn:hover { color: #fff; }
 .vxp-demo-tab-btn:focus-visible { outline: 2px solid #d7b776; outline-offset: 2px; }
 .vxp-demo-tab-active { background: linear-gradient(180deg, #e4c78f, #91672b); color: #120d05 !important; }
+.vxp-demo-frame { display: block; width: 100%; height: calc(100dvh - 52px); border: 0; background: #07070a; }
 @media (max-width: 640px) {
+  .vxp-demo-frame { height: calc(100dvh - 48px); }
   .vxp-demo-topbar { height: 48px; padding: 0 12px; }
   .vxp-demo-title { display: none; }
   .vxp-demo-tab-btn { padding: 6px 12px; }

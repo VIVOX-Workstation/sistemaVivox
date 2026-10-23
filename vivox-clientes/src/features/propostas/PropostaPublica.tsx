@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { getApiBaseUrl } from '../../api/client';
@@ -6,8 +6,6 @@ import { PropostaDocumento } from './PropostaDocumento';
 import { PropostaLanding } from './PropostaLanding';
 import type { DocumentoProposta } from './types';
 import './propostas.css';
-
-const DemoEnsino = lazy(() => import('./demos/ensino/DemoEnsino'));
 
 export function PropostaPublica() {
   const { token } = useParams();
@@ -100,18 +98,8 @@ export function PropostaPublica() {
             </header>
 
             {abaAtiva === 'demo' ? (
-              <Suspense
-                fallback={
-                  <div
-                    className="card animate-pulse"
-                    aria-busy="true"
-                    aria-label="Carregando demonstração"
-                    style={{ minHeight: '80vh', background: '#0f1015' }}
-                  />
-                }
-              >
-                <DemoEnsino documento={documento} />
-              </Suspense>
+              // Demo completa exportada como página única em public/demos/<demo>.html.
+              <iframe className="vxp-demo-frame" src={`/demos/${documento.demo}.html`} title={`Demo — ${documento.titulo}`} />
             ) : (
               <PropostaLanding documento={documento} onVerDemo={() => mudarAba('demo')} />
             )}
