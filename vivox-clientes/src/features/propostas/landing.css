@@ -79,6 +79,10 @@
     linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px) 0 0 / 56px 56px;
   mask-image: linear-gradient(to bottom, #000 60%, transparent);
 }
+/* Hero com prints em parallax: o componente cuida do espaçamento e da altura (300vh). */
+.vxl-hero-parallax { padding: 0 0 56px; }
+.vxl-hero-parallax .vxl-hero-texto { max-width: 760px; padding-top: 24px; }
+.vxl-hero-parallax .vxl-hero-texto h1 { font-size: clamp(40px, 6vw, 76px); }
 .vxl-hero-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 56px; align-items: center; }
 .vxl-hero-texto h1 {
   margin-top: 22px;

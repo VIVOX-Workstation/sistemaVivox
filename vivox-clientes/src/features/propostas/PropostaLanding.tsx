@@ -4,6 +4,8 @@ import {
   ArrowRight, BarChart3, BookOpen, Check, CheckCircle2, ClipboardCheck, Download, Gift, GraduationCap, Handshake,
   LayoutDashboard, LayoutGrid, Minus, Play, PlayCircle, Server, Sparkles, Trophy, Users,
 } from 'lucide-react';
+import { HeroParallax } from '../../components/ui/hero-parallax';
+import type { ItemParallax } from '../../components/ui/hero-parallax';
 import type { DocumentoProposta } from './types';
 import { secaoParaLanding } from './landingBlocos';
 import type { Bloco, SecaoLanding } from './landingBlocos';
@@ -31,6 +33,27 @@ const ICONES: [RegExp, typeof Sparkles][] = [
 const iconeDe = (titulo: string) => ICONES.find(([re]) => re.test(titulo))?.[1] ?? Sparkles;
 
 const formatarData = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : null);
+
+// Prints da demo (public/demos/<demo>/prints) para o hero em parallax: 3 fileiras de 5.
+const PRINTS_DEMO: Record<string, ItemParallax[]> = {
+  ensino: [
+    ['01-aluno-inicio', 'Portal do aluno · Início'],
+    ['02-aluno-curso', 'Portal do aluno · Curso'],
+    ['03-aluno-recompensas', 'Portal do aluno · Recompensas'],
+    ['04-aluno-avaliacao', 'Portal do aluno · Avaliação'],
+    ['05-aluno-login', 'Portal do aluno · Login'],
+    ['06-painel-dashboard', 'Painel · Dashboard'],
+    ['07-painel-cursos', 'Painel · Cursos e aulas'],
+    ['08-painel-videos', 'Painel · Vídeos'],
+    ['09-painel-alunos', 'Painel · Alunos'],
+    ['10-painel-premios', 'Painel · Prêmios e resgates'],
+    ['11-aluno-inicio-claro', 'Portal do aluno · Tema claro'],
+    ['12-aluno-curso-claro', 'Portal do aluno · Curso, tema claro'],
+    ['13-aluno-recompensas-claro', 'Portal do aluno · Recompensas, tema claro'],
+    ['14-aluno-avaliacao-claro', 'Portal do aluno · Avaliação, tema claro'],
+    ['15-painel-avaliacoes', 'Painel · Avaliações'],
+  ].map(([arquivo, title]) => ({ title, thumbnail: `/demos/ensino/prints/${arquivo}.jpg` })),
+};
 
 // Telas desenhadas em CSS: ilustram a plataforma sem depender de imagens externas.
 function TelaPortal() {
@@ -317,41 +340,50 @@ export function PropostaLanding({ documento, onVerDemo }: PropostaLandingProps) 
     }
   };
 
+  const prints = documento.demo ? PRINTS_DEMO[documento.demo] : undefined;
+  const textoHero = (
+    <div className="vxl-hero-texto">
+      <span className="vxl-pilula">
+        <Sparkles size={13} />
+        Proposta comercial{documento.destinatario ? ` · ${documento.destinatario}` : ''}
+      </span>
+      <h1>{documento.titulo}</h1>
+      <p className="vxl-hero-sub">{documento.apresentacao}</p>
+      <div className="vxl-hero-acoes">
+        <button type="button" className="vxl-botao vxl-botao-primario" onClick={onVerDemo}>
+          <Play size={15} fill="currentColor" /> Experimentar a demo
+        </button>
+        <button type="button" className="vxl-botao vxl-botao-fantasma" disabled={baixando} onClick={baixar}>
+          <Download size={15} /> {baixando ? progresso || 'Gerando PDF…' : 'Baixar PDF'}
+        </button>
+      </div>
+      {erroDownload && <p className="vxl-erro" role="alert">{erroDownload}</p>}
+      {frentes && frentes.tipo === 'cartoes' && (
+        <ul className="vxl-hero-lista">
+          {frentes.cartoes.map(c => <li key={c.titulo}><CheckCircle2 size={15} />{c.titulo}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+
   return (
     <div ref={raiz} className="vxl-landing" style={{ '--vxl-marca': documento.corDestaque || '#91672b' } as CSSProperties}>
-      <section className="vxl-hero">
+      <section className={`vxl-hero ${prints ? 'vxl-hero-parallax' : ''}`}>
         <div className="vxl-hero-brilho" aria-hidden="true" />
-        <div className="vxl-container vxl-hero-grade">
-          <div className="vxl-hero-texto">
-            <span className="vxl-pilula">
-              <Sparkles size={13} />
-              Proposta comercial{documento.destinatario ? ` · ${documento.destinatario}` : ''}
-            </span>
-            <h1>{documento.titulo}</h1>
-            <p className="vxl-hero-sub">{documento.apresentacao}</p>
-            <div className="vxl-hero-acoes">
-              <button type="button" className="vxl-botao vxl-botao-primario" onClick={onVerDemo}>
-                <Play size={15} fill="currentColor" /> Experimentar a demo
+        {prints ? (
+          <HeroParallax products={prints} onSelect={onVerDemo} header={<div className="vxl-container">{textoHero}</div>} />
+        ) : (
+          <div className="vxl-container vxl-hero-grade">
+            {textoHero}
+            <div className="vxl-hero-telas">
+              <button type="button" className="vxl-hero-tela-principal" onClick={onVerDemo} aria-label="Abrir a demo da plataforma">
+                <TelaPortal />
+                <span className="vxl-hero-play"><Play size={22} fill="currentColor" /></span>
               </button>
-              <button type="button" className="vxl-botao vxl-botao-fantasma" disabled={baixando} onClick={baixar}>
-                <Download size={15} /> {baixando ? progresso || 'Gerando PDF…' : 'Baixar PDF'}
-              </button>
+              <div className="vxl-hero-tela-secundaria"><TelaAdmin /></div>
             </div>
-            {erroDownload && <p className="vxl-erro" role="alert">{erroDownload}</p>}
-            {frentes && frentes.tipo === 'cartoes' && (
-              <ul className="vxl-hero-lista">
-                {frentes.cartoes.map(c => <li key={c.titulo}><CheckCircle2 size={15} />{c.titulo}</li>)}
-              </ul>
-            )}
           </div>
-          <div className="vxl-hero-telas">
-            <button type="button" className="vxl-hero-tela-principal" onClick={onVerDemo} aria-label="Abrir a demo da plataforma">
-              <TelaPortal />
-              <span className="vxl-hero-play"><Play size={22} fill="currentColor" /></span>
-            </button>
-            <div className="vxl-hero-tela-secundaria"><TelaAdmin /></div>
-          </div>
-        </div>
+        )}
         {(numeros?.tipo === 'numeros' || validade) && (
           <div className="vxl-container">
             <div className="vxl-faixa-numeros">
