@@ -51,7 +51,7 @@
       passo(el('section[aria-label="Continuar assistindo"]'), 'Continuar assistindo', 'As aulas começadas, com a barra de progresso de cada uma.', 'top'),
       passo(el('section[aria-label="Aulas em vídeo"]'), 'Aulas em vídeo', 'Todas as videoaulas do curso, com a duração. Rola para o lado.', 'top'),
       passo(el('section[aria-label="Todos os cursos"]'), 'Todos os cursos', 'O catálogo completo, com o progresso de cada curso.', 'top'),
-      passo(el('header a[href="Recompensas.dc.html"]'), 'Pontos do aluno', 'O saldo de pontos fica sempre à vista. Cada acerto nas avaliações vira ponto.'),
+      passo(el('header a[href="Recompensas.dc.html"]:not(.hnav)'), 'Pontos do aluno', 'O saldo de pontos fica sempre à vista. Cada acerto nas avaliações vira ponto.'),
       ir(el('.slide[aria-hidden="false"] .hbtn'), 'Continuar a aula', 'Vamos abrir a aula em andamento.', 'Aula', 'Abrir a aula'),
     ],
     Aula: [
@@ -106,6 +106,10 @@
       stageRadius: 14,
       smoothScroll: true,
       steps: passos.map(function (p) { return p.element ? p : { popover: p.popover }; }),
+      // No celular a leftbar do painel é gaveta (menu-admin.js): abre só no passo que aponta para ela.
+      onHighlightStarted: function (alvo) {
+        if (window.vxMenuAdmin) window.vxMenuAdmin(!!(alvo && alvo.closest && alvo.closest('aside.side')));
+      },
       onDestroyStarted: function () {
         // Fechar no × ou no último passo encerra o tour; os "ir" já gravaram a próxima tela.
         if (ler(CHAVE) === tela) gravar(CHAVE, null);

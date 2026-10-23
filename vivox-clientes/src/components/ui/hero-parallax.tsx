@@ -12,6 +12,20 @@ export interface ItemParallax {
   thumbnail: string;
 }
 
+// No celular as fileiras 3D ficam largas demais e somem na rolagem: lá usamos faixas que deslizam.
+const CONSULTA_CELULAR = '(max-width: 767px)';
+function useCelular() {
+  return React.useSyncExternalStore(
+    aviso => {
+      const mq = window.matchMedia(CONSULTA_CELULAR);
+      mq.addEventListener('change', aviso);
+      return () => mq.removeEventListener('change', aviso);
+    },
+    () => window.matchMedia(CONSULTA_CELULAR).matches,
+    () => false,
+  );
+}
+
 export const HeroParallax = ({
   products,
   header,
@@ -26,6 +40,7 @@ export const HeroParallax = ({
   const thirdRow = products.slice(10, 15);
   const ref = React.useRef(null);
   const reduzir = useReducedMotion();
+  const celular = useCelular();
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start start', 'end start'],
@@ -50,6 +65,19 @@ export const HeroParallax = ({
           {products.map(product => (
             <ProductCard product={product} onSelect={onSelect} key={product.title} />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (celular) {
+    const metade = Math.ceil(products.length / 2);
+    return (
+      <div ref={ref} className="relative flex flex-col overflow-hidden pt-16 pb-20 antialiased">
+        {header}
+        <div className="mt-10 flex flex-col gap-4">
+          <FaixaCelular itens={products.slice(0, metade)} onSelect={onSelect} duracao={38} />
+          <FaixaCelular itens={products.slice(metade)} onSelect={onSelect} duracao={44} reversa />
         </div>
       </div>
     );
@@ -82,6 +110,48 @@ export const HeroParallax = ({
     </div>
   );
 };
+
+// Itens repetidos duas vezes: deslizar até -50% emenda a volta sem salto.
+function FaixaCelular({
+  itens,
+  onSelect,
+  duracao,
+  reversa = false,
+}: {
+  itens: ItemParallax[];
+  onSelect?: (product: ItemParallax) => void;
+  duracao: number;
+  reversa?: boolean;
+}) {
+  return (
+    <div className="overflow-hidden">
+      <motion.div
+        className="flex w-max gap-4"
+        animate={{ x: reversa ? ['-50%', '0%'] : ['0%', '-50%'] }}
+        transition={{ duration: duracao, ease: 'linear', repeat: Infinity }}
+      >
+        {[...itens, ...itens].map((item, i) => (
+          <button
+            key={`${item.title}-${i}`}
+            type="button"
+            onClick={() => onSelect?.(item)}
+            aria-label={`Abrir a demo: ${item.title}`}
+            tabIndex={i < itens.length ? 0 : -1}
+            className="relative aspect-[16/10] w-64 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border-0 bg-transparent p-0 ring-1 ring-white/10"
+          >
+            <img
+              src={item.thumbnail}
+              alt=""
+              loading="eager"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover object-left-top"
+            />
+          </button>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
 
 export const ProductCard = ({
   product,

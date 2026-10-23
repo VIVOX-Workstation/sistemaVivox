@@ -410,6 +410,13 @@
   .vxl-faixa-numeros > div:nth-child(-n+2) { border-top: 0; }
   .vxl-faixa-numeros > div:nth-child(even) { border-left: 1px solid var(--vxl-linha); }
   .vxl-faixa-numeros strong { font-size: 32px; }
+  /* Número ímpar de itens: o último ocupa a linha inteira em vez de deixar um buraco. */
+  .vxl-faixa-numeros > div:last-child:nth-child(odd) { grid-column: 1 / -1; border-left: 0; }
+  .vxl-passos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+  .vxl-passos h4 { margin-top: 14px; font-size: 16px; }
+  .vxl-passos p { font-size: 13.5px; }
+  .vxl-valor { padding: 22px 20px; }
+  .vxl-valor strong { font-size: 24px; }
   .vxl-ambientes-grade, .vxl-cartoes-2, .vxl-cartoes-3, .vxl-cartoes-4 { grid-template-columns: 1fr; }
   .vxl-ambiente, .vxl-cartao, .vxl-preco { padding: 24px; }
   .vxl-tela-corpo { grid-template-columns: 40px 1fr; min-height: 0; }
