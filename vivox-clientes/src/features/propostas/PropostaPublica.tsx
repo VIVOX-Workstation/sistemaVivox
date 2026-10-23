@@ -2,6 +2,7 @@ import { useEffect, useState, type SyntheticEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { getApiBaseUrl } from '../../api/client';
+import { Compass } from 'lucide-react';
 import { VivoxLogo } from '../../components/brand/VivoxLogo';
 import { PropostaDocumento } from './PropostaDocumento';
 import { PropostaLanding } from './PropostaLanding';
@@ -52,6 +53,10 @@ function DemoNavegavel({ demo, titulo }: { demo: string; titulo: string }) {
             {a.rotulo}
           </button>
         ))}
+        {/* O tour (Driver.js) roda dentro das telas: public/demos/<demo>/tour.js. */}
+        <button type="button" className="vxp-demo-tour" onClick={() => abrir('Login.dc.html?tour=1')} aria-label="Tour guiado">
+          <Compass size={14} /> <span>Tour guiado</span>
+        </button>
         <span className="vxp-demo-dica">Dados fictícios · clique à vontade</span>
       </div>
       <iframe
