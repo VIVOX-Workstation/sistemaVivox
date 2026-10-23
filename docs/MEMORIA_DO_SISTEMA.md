@@ -196,7 +196,7 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
   `GET /propostas-publicas/:token/arquivo` (mesmo guard do token). `criadoPorId` registra quem
   criou (também nas propostas de documento novas); aparece só na listagem da equipe, nunca no
   link público. Excluir a proposta apaga o arquivo. O PATCH de documento recusa proposta PDF e
-  vice-versa. O link público mostra capa com os dados e o PDF desenhado com pdf.js
+  vice-versa. O link público mostra o PDF desenhado com pdf.js à esquerda e a barra de dados e histórico à direita (gaveta no celular)
   (`PdfPaginas.tsx`, carregado sob demanda), porque `<iframe>` de PDF não abre no Android.
   **Armadilha:** o worker do pdf.js é `.mjs` e o `mime.types` do `nginx:alpine` não conhece
   essa extensão; o `nginx.conf` tem um `location` que serve `.mjs` como JavaScript. Sem ele o
