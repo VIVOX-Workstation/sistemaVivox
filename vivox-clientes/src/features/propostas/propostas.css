@@ -57,6 +57,16 @@
 .vxp-demo-ambientes button:hover { color: #2a2116; background: rgba(145, 103, 43, .08); }
 .vxp-demo-ambientes button.ativo { background: #fff; color: #2a2116; box-shadow: 0 1px 3px rgba(42, 33, 22, .14); }
 .vxp-demo-dica { position: absolute; right: 24px; font-size: 12px; color: #9a8c74; }
+.vxp-demo-ambientes .vxp-demo-tour {
+  position: absolute; left: 24px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border: 1px solid rgba(145, 103, 43, .35); background: #fff; color: #7a5822;
+}
+.vxp-demo-ambientes .vxp-demo-tour:hover { background: #fbf3e8; color: #2a2116; }
+@media (max-width: 640px) {
+  .vxp-demo-ambientes { justify-content: flex-end; }
+  .vxp-demo-ambientes .vxp-demo-tour { left: 12px; padding: 6px 10px; }
+  .vxp-demo-tour span { display: none; }
+}
 .vxp-demo-frame { display: block; width: 100%; height: calc(100dvh - 52px - 44px); border: 0; background: #faf9f5; }
 @media (max-width: 900px) { .vxp-demo-dica { display: none; } }
 @media (max-width: 640px) {
