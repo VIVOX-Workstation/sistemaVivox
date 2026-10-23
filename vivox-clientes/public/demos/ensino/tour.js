@@ -51,7 +51,7 @@
       passo(el('section[aria-label="Continuar assistindo"]'), 'Continuar assistindo', 'As aulas começadas, com a barra de progresso de cada uma.', 'top'),
       passo(el('section[aria-label="Aulas em vídeo"]'), 'Aulas em vídeo', 'Todas as videoaulas do curso, com a duração. Rola para o lado.', 'top'),
       passo(el('section[aria-label="Todos os cursos"]'), 'Todos os cursos', 'O catálogo completo, com o progresso de cada curso.', 'top'),
-      passo(el('header a[href="Recompensas.dc.html"]'), 'Pontos do aluno', 'O saldo de pontos fica sempre à vista. Cada acerto nas avaliações vira ponto.'),
+      passo(el('header a[href="Recompensas.dc.html"]:not(.hnav)'), 'Pontos do aluno', 'O saldo de pontos fica sempre à vista. Cada acerto nas avaliações vira ponto.'),
       ir(el('.slide[aria-hidden="false"] .hbtn'), 'Continuar a aula', 'Vamos abrir a aula em andamento.', 'Aula', 'Abrir a aula'),
     ],
     Aula: [
