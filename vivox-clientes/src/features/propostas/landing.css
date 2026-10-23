@@ -81,7 +81,12 @@
 }
 /* Hero com prints em parallax: o componente cuida do espaçamento e da altura (300vh). */
 .vxl-hero-parallax { padding: 0 0 56px; }
-.vxl-hero-parallax .vxl-hero-texto { max-width: 760px; padding-top: 24px; }
+.vxl-hero-parallax .vxl-hero-texto { position: relative; isolation: isolate; max-width: 760px; padding-top: 24px; }
+/* Mancha escura atrás do texto: as telas ficam vivas em volta sem atrapalhar a leitura. */
+.vxl-hero-parallax .vxl-hero-texto::before {
+  content: ''; position: absolute; inset: -90px -160px -70px -120px; z-index: -1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(7, 7, 10, .94), rgba(7, 7, 10, .78) 55%, rgba(7, 7, 10, 0));
+}
 .vxl-hero-parallax .vxl-hero-texto h1 { font-size: clamp(40px, 6vw, 76px); }
 .vxl-hero-parallax .vxl-hero-texto :is(p, li) { text-shadow: 0 2px 22px rgba(7, 7, 10, .9), 0 1px 3px rgba(7, 7, 10, .8); }
 /* O título é pintado com degradê (texto transparente): text-shadow escureceria as letras. */
