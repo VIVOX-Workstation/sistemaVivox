@@ -55,10 +55,30 @@ describe('Propostas: documento, validação e compartilhamento', () => {
         data: {
           ...documento,
           clienteId: 'c1',
+          demo: null,
           validade: new Date('2026-11-02T00:00:00Z'),
         },
       }),
     );
+  });
+  it.each(['ensino', null, undefined])('persiste demo %s ao criar e editar', async (demo) => {
+    const dto = { ...documento, demo };
+    await service.criar('c1', dto);
+    await service.editar('c1', 'p1', dto);
+    const esperado = expect.objectContaining({
+      data: expect.objectContaining({ demo: demo ?? null }),
+      select: expect.objectContaining({ demo: true }),
+    });
+    expect(prisma.proposta.create).toHaveBeenCalledWith(esperado);
+    expect(prisma.proposta.update).toHaveBeenCalledWith(esperado);
+  });
+  it.each(['ensino', null, undefined])('DTO aceita demo %s', async (demo) => {
+    const pipe = new ValidationPipe({ whitelist: true, transform: true });
+    const dto = await pipe.transform(
+      { ...documento, ...(demo !== undefined ? { demo } : {}) },
+      { type: 'body', metatype: SalvarPropostaDto },
+    );
+    expect(dto.demo).toBe(demo);
   });
   it('não altera uma proposta de outro cliente', async () => {
     prisma.proposta.findFirst.mockResolvedValue(null);
@@ -137,9 +157,12 @@ describe('Propostas: documento, validação e compartilhamento', () => {
       expect(() => criptografarLink(token)).toThrow(/JWT_SECRET/);
     } finally { process.env.JWT_SECRET = segredo; }
   });
-  it('busca documento público com allowlist sem relação ou segredo do cliente', async () => {
-    prisma.proposta.findUnique.mockResolvedValue(documento);
-    await service.publica('a'.repeat(64));
+  it.each(['ensino', null])('busca documento público com demo %s sem relação ou segredo do cliente', async (demo) => {
+    prisma.proposta.findUnique.mockResolvedValue({ ...documento, demo });
+    const proposta = await service.publica('a'.repeat(64));
+    expect(proposta).toEqual({ ...documento, demo });
+    expect(proposta).not.toHaveProperty('linkHash');
+    expect(proposta).not.toHaveProperty('linkTokenCriptografado');
     const consulta = prisma.proposta.findUnique.mock.calls[0][0];
     expect(consulta.where.linkHash).toBe(
       createHash('sha256').update('a'.repeat(64)).digest('hex'),
@@ -149,6 +172,7 @@ describe('Propostas: documento, validação e compartilhamento', () => {
     expect(consulta.select).not.toHaveProperty('linkTokenCriptografado');
     expect(consulta.select).not.toHaveProperty('clienteId');
     expect(consulta.select.createdAt).toBe(true);
+    expect(consulta.select.demo).toBe(true);
   });
   it('revoga link e rejeita links inexistentes ou inválidos', async () => {
     await service.revogar('c1', 'p1');
@@ -180,6 +204,7 @@ describe('Propostas: documento, validação e compartilhamento', () => {
     expect(dto.secoes[0]).toEqual({ titulo: 'Escopo', texto: '' });
   });
   it.each([
+    { demo: 'outra' },
     { validade: '2026-02-30' },
     { validade: '2026-11-02T00:00:00Z' },
     { corDestaque: 'url(javascript:alert(1))' },

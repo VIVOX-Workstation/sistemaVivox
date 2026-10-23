@@ -7,6 +7,7 @@ export const modeloEnsino: DocumentoProposta = {
   "apresentacao": "Uma plataforma completa de cursos em vídeo, com gestão de alunos, acompanhamento de progresso, avaliações por módulo e gamificação com resgate de recompensas.",
   "validade": null,
   "corDestaque": "#91672b",
+  "demo": "ensino",
   "secoes": [
     {
       "titulo": "Aprender, evoluir e ser recompensado.",

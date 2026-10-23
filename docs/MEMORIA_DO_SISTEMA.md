@@ -174,6 +174,14 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 
 ### Propostas comerciais
 
+- `Proposta.demo` (texto, opcional; hoje só `"ensino"`) liga uma demo interativa ao
+  link público. Com demo, `/proposta/:token` abre em duas abas: **Proposta** (a
+  mesma proposta em layout de landing page, `PropostaLanding.tsx`) e **Demo da
+  plataforma** (`?aba=demo`, `features/propostas/demos/ensino/`, carregada sob
+  demanda). A demo usa só dados fictícios em memória do React: nada vai ao
+  backend nem ao `localStorage`, e tudo reinicia ao recarregar. Sem demo, o link
+  continua exatamente como antes. PDF segue no layout documento.
+
 - A listagem permite excluir propostas diretamente, com confirmação que identifica
   o título e avisa que o link compartilhado deixará de funcionar. A ação também
   permanece no editor e usa o DELETE existente, para ADMIN e colaboradores com CLIENTES.

@@ -297,6 +297,8 @@ model Proposta {
   apresentacao   String   @db.Text
   validade       DateTime? @db.Date
   corDestaque    String   @default("#91672b")
+  // Demo interativa exibida no link público; hoje só "ensino".
+  demo           String?
   secoes         Json
   linkHash       String?  @unique
   linkTokenCriptografado String? @db.Text

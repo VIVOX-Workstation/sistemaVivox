@@ -13,6 +13,7 @@ const documentoSelect = {
   apresentacao: true,
   validade: true,
   corDestaque: true,
+  demo: true,
   secoes: true,
   updatedAt: true,
   createdAt: true,
@@ -52,6 +53,7 @@ export class PropostasService {
       destinatario: dto.destinatario.trim(),
       apresentacao: dto.apresentacao,
       corDestaque: dto.corDestaque,
+      demo: dto.demo ?? null,
       validade: dto.validade ? new Date(`${dto.validade}T00:00:00.000Z`) : null,
       secoes: dto.secoes.map(({ titulo, texto, html }) => ({
         titulo,
