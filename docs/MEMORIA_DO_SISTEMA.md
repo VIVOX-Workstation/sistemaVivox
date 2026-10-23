@@ -187,6 +187,21 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
   `PropostaLanding.tsx`); demo sem prints volta às telas desenhadas em CSS. Sem demo, o link
   continua exatamente como antes. PDF segue no layout documento.
 
+- **Proposta em PDF** (`Proposta.formato = "pdf"`; o padrão é `"documento"`): a equipe envia
+  um PDF pronto (`POST /clientes/:id/propostas/pdf`, multipart com `arquivo`, até 30 MB,
+  cabeçalho `%PDF-` conferido) e edita título, destinatário, mensagem e validade por
+  `PATCH .../:pid/pdf` (arquivo novo troca e apaga o anterior). O arquivo fica no storage em
+  `propostas/<clienteId>/<uuid>.pdf`; `arquivoKey` nunca sai do backend. A equipe lê por
+  `GET .../:pid/arquivo` (JWT + CLIENTES) e o link público por
+  `GET /propostas-publicas/:token/arquivo` (mesmo guard do token). `criadoPorId` registra quem
+  criou (também nas propostas de documento novas); aparece só na listagem da equipe, nunca no
+  link público. Excluir a proposta apaga o arquivo. O PATCH de documento recusa proposta PDF e
+  vice-versa. O link público mostra capa com os dados e o PDF desenhado com pdf.js
+  (`PdfPaginas.tsx`, carregado sob demanda), porque `<iframe>` de PDF não abre no Android.
+  **Armadilha:** o worker do pdf.js é `.mjs` e o `mime.types` do `nginx:alpine` não conhece
+  essa extensão; o `nginx.conf` tem um `location` que serve `.mjs` como JavaScript. Sem ele o
+  leitor fica em "Carregando" em produção.
+
 - A listagem permite excluir propostas diretamente, com confirmação que identifica
   o título e avisa que o link compartilhado deixará de funcionar. A ação também
   permanece no editor e usa o DELETE existente, para ADMIN e colaboradores com CLIENTES.

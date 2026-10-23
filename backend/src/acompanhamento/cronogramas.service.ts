@@ -23,7 +23,7 @@ export function respostaPdf({ stream, contentLength, nomeArquivo }: { stream: Re
 }
 
 // Cabeçalho de todo PDF; evita aceitar outro arquivo renomeado para .pdf
-const ehPdf = (buffer: Buffer) => buffer.subarray(0, 5).toString('latin1') === '%PDF-';
+export const ehPdf = (buffer: Buffer) => buffer.subarray(0, 5).toString('latin1') === '%PDF-';
 
 @Injectable()
 export class CronogramasService {

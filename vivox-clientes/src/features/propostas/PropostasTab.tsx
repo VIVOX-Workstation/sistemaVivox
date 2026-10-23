@@ -5,8 +5,10 @@ import { modeloEnsino } from './modeloEnsino';
 import { PropostaHtmlEditor } from './PropostaHtmlEditor';
 import { normalizarModeloLegado } from './modeloLegado';
 import axios from 'axios';
-import { Share2 } from 'lucide-react';
+import { FileText, Share2 } from 'lucide-react';
 import { VxDialog } from '../../components/clean/VxDialog';
+import { PropostaPdfForm } from './PropostaPdfForm';
+import { formatarTamanhoBytes } from '../../api/cronogramas';
 import type { DocumentoProposta, Proposta } from './types';
 
 function vazia(nome: string): DocumentoProposta {
@@ -34,6 +36,9 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
   const [link, setLink] = useState('');
   const [compartilhadaLista, setCompartilhadaLista] = useState<Proposta | null>(null);
   const [feedbackLink, setFeedbackLink] = useState('');
+  // Proposta em PDF aberta no formulário: { } para enviar uma nova, { proposta } para editar.
+  const [pdf, setPdf] = useState<{ proposta?: Proposta } | null>(null);
+  const [pdfAlterado, setPdfAlterado] = useState(false);
   const base = `/clientes/${clienteId}/propostas`;
   const alterado = documento !== null && JSON.stringify(documento) !== original;
   const atual = lista.find(p => p.id === id);
@@ -45,7 +50,7 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
     finally { setCarregando(false); }
   }, [base]);
   useEffect(() => { void carregar(); }, [carregar]);
-  useEffect(() => { onDirtyChange(alterado); return () => onDirtyChange(false); }, [alterado, onDirtyChange]);
+  useEffect(() => { onDirtyChange(alterado || pdfAlterado); return () => onDirtyChange(false); }, [alterado, pdfAlterado, onDirtyChange]);
   useEffect(() => {
     if (!alterado) return;
     const proteger = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
@@ -59,7 +64,24 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
     return () => { window.removeEventListener('beforeunload', proteger); document.removeEventListener('click', protegerLink, true); };
   }, [alterado]);
 
+  const abrirPdf = (proposta?: Proposta) => {
+    setErro(''); setAviso(''); setLink('');
+    setPdf(proposta ? { proposta } : {});
+  };
+  const fecharPdf = () => {
+    if (pdfAlterado && !confirm('Descartar as alterações não salvas?')) return;
+    setPdf(null); setAviso('');
+  };
+  const pdfSalvo = (data: Proposta) => {
+    const anterior = lista.find(p => p.id === data.id);
+    const salva = { ...data, compartilhada: anterior?.compartilhada || false, criadoPor: anterior?.criadoPor ?? data.criadoPor };
+    setLista(ls => [salva, ...ls.filter(p => p.id !== data.id)]);
+    setPdf({ proposta: salva });
+    setAviso(anterior ? 'Proposta atualizada.' : 'Proposta enviada. Gere o link para compartilhar com o cliente.');
+    if (!anterior) void carregar(); // traz "criada por" do servidor
+  };
   const abrir = (proposta?: Proposta, ensino = false) => {
+    if (proposta?.formato === 'pdf') return abrirPdf(proposta);
     if (alterado && !confirm('Descartar as alterações não salvas?')) return;
     const dados = proposta ? editavel(proposta) : ensino ? { ...editavel(modeloEnsino), destinatario: nomeCliente } : vazia(nomeCliente);
     setDocumento(dados); setId(proposta?.id || null);
@@ -139,6 +161,7 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
     try {
       await api.delete(`${base}/${proposta.id}`); setLista(ls => ls.filter(p => p.id !== proposta.id));
       if (id === proposta.id) { setDocumento(null); setId(null); setLink(''); }
+      if (pdf?.proposta?.id === proposta.id) { setPdf(null); setPdfAlterado(false); }
       setAviso('Proposta excluída.');
     } catch { setErro('Não foi possível excluir a proposta.'); }
     finally { setOcupado(false); }
@@ -153,12 +176,22 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
   return <div className="proposta-editor">
     {erro && <p role="alert" style={{ color: 'var(--bad)' }}>{erro}</p>}
     {aviso && <p role="status">{aviso}</p>}
-    {!documento ? <>
-      <div className="acts"><button className="btn pri" onClick={() => abrir()}>Criar proposta</button><button className="btn sec" onClick={() => abrir(undefined, true)}>Usar modelo de ensino</button></div>
+    {pdf ? <>
+      <PropostaPdfForm key={pdf.proposta?.id ?? 'nova'} base={base} proposta={pdf.proposta} nomeCliente={nomeCliente}
+        onSalvo={pdfSalvo} onVoltar={fecharPdf} onDirtyChange={setPdfAlterado} />
+      {pdf.proposta && (() => {
+        const p = lista.find(item => item.id === pdf.proposta?.id) ?? pdf.proposta;
+        return <div className="acts">
+          <button className="btn sec" disabled={ocupado || pdfAlterado} onClick={() => compartilhar(p)}><Share2 className="i" aria-hidden="true" />{p.compartilhada ? 'Ver link ativo' : 'Gerar link para o cliente'}</button>
+          <button className="btn dg" disabled={ocupado} onClick={() => excluir(p)}>Excluir proposta</button>
+        </div>;
+      })()}
+    </> : !documento ? <>
+      <div className="acts"><button className="btn pri" onClick={() => abrir()}>Criar proposta</button><button className="btn sec" onClick={() => abrir(undefined, true)}>Usar modelo de ensino</button><button className="btn sec" onClick={() => abrirPdf()}><FileText className="i" aria-hidden="true" />Enviar PDF</button></div>
       {carregando ? <div className="card animate-pulse" aria-busy="true" aria-label="Carregando propostas" style={{ height: 160, background: 'var(--sk)' }} />
         : erroCarga ? <div className="card empty"><p>Não foi possível carregar as propostas.</p><button className="btn sec" onClick={carregar}>Tentar de novo</button></div>
-          : lista.length === 0 ? <div className="card empty"><b>Nenhuma proposta criada</b><p>Comece em branco ou use o modelo da plataforma de ensino.</p></div>
-            : <section className="card"><div className="tw"><table className="tbl"><thead><tr><th>Proposta</th><th>Compartilhamento</th><th>Atualizada</th><th>Ações</th></tr></thead><tbody>{lista.map(p => <tr key={p.id}><td>{p.titulo}</td><td>{p.compartilhada ? 'Link ativo' : 'Não compartilhada'}</td><td>{new Date(p.updatedAt).toLocaleDateString('pt-BR')}</td><td><div className="acts"><button className="btn sec sm" disabled={ocupado} onClick={() => abrir(p)}>Editar proposta</button><button className="btn sec sm" type="button" disabled={ocupado} aria-label={`${p.compartilhada ? 'Ver link ativo de' : 'Compartilhar'} ${p.titulo}`} onClick={() => compartilhar(p)}><Share2 className="i" aria-hidden="true" />{p.compartilhada ? 'Ver link ativo' : 'Compartilhar'}</button><button className="btn dg sm" type="button" disabled={ocupado} aria-label={`Excluir proposta ${p.titulo}`} onClick={() => excluir(p)}>Excluir proposta</button></div></td></tr>)}</tbody></table></div></section>}
+          : lista.length === 0 ? <div className="card empty"><b>Nenhuma proposta criada</b><p>Comece em branco, use o modelo da plataforma de ensino ou envie uma proposta pronta em PDF.</p></div>
+            : <section className="card"><div className="tw"><table className="tbl"><thead><tr><th>Proposta</th><th>Criação</th><th>Compartilhamento</th><th>Atualizada</th><th>Ações</th></tr></thead><tbody>{lista.map(p => <tr key={p.id}><td>{p.titulo}{p.formato === 'pdf' && <span className="ppdf-tipo">PDF</span>}<span className="ppdf-sub">{p.destinatario}{p.formato === 'pdf' && p.tamanho ? ` · ${formatarTamanhoBytes(p.tamanho)}` : ''}</span></td><td>{p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '—'}<span className="ppdf-sub">{p.criadoPor?.nome ? `por ${p.criadoPor.nome}` : ''}</span></td><td>{p.compartilhada ? 'Link ativo' : 'Não compartilhada'}</td><td>{new Date(p.updatedAt).toLocaleDateString('pt-BR')}</td><td><div className="acts"><button className="btn sec sm" disabled={ocupado} onClick={() => abrir(p)}>Editar proposta</button><button className="btn sec sm" type="button" disabled={ocupado} aria-label={`${p.compartilhada ? 'Ver link ativo de' : 'Compartilhar'} ${p.titulo}`} onClick={() => compartilhar(p)}><Share2 className="i" aria-hidden="true" />{p.compartilhada ? 'Ver link ativo' : 'Compartilhar'}</button><button className="btn dg sm" type="button" disabled={ocupado} aria-label={`Excluir proposta ${p.titulo}`} onClick={() => excluir(p)}>Excluir proposta</button></div></td></tr>)}</tbody></table></div></section>}
     </> : <>
       <div className="acts">
         <button className="btn sec" disabled={ocupado} onClick={fechar}>Voltar às propostas</button>

@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -66,4 +66,38 @@ export class SalvarPropostaDto {
   @ValidateNested({ each: true })
   @Type(() => SecaoPropostaDto)
   secoes: SecaoPropostaDto[];
+}
+
+const aparar = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
+// Proposta em PDF: campos de texto do multipart; o arquivo vem em "arquivo".
+export class SalvarPropostaPdfDto {
+  @Transform(aparar)
+  @IsString()
+  @IsNotEmpty({ message: 'Informe o título da proposta.' })
+  @MaxLength(200)
+  titulo: string;
+
+  @Transform(aparar)
+  @IsString()
+  @IsNotEmpty({ message: 'Informe o destinatário.' })
+  @MaxLength(200)
+  destinatario: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  apresentacao?: string;
+
+  // O formulário manda "" quando a validade fica em branco.
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsOptional()
+  @IsDateString({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  validade?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/)
+  corDestaque?: string;
 }

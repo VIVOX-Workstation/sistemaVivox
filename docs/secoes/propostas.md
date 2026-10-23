@@ -16,9 +16,11 @@ para o destinatário ler sem login.
 
 ## Dados
 
-`Proposta` (título, destinatário, apresentação, validade, cor, `demo` opcional, `secoes` em JSON
+`Proposta` (título, destinatário, apresentação, validade, cor, `demo` opcional, `formato` documento|pdf, arquivo do PDF, `criadoPorId`, `secoes` em JSON
 com Markdown ou HTML sanitizado, `linkHash`, `linkTokenCriptografado`).
-Endpoints `/clientes/:id/propostas[/:pid[/compartilhar]]`, `GET /propostas-publicas/:token`.
+Endpoints `/clientes/:id/propostas[/:pid[/compartilhar]]`, `POST .../propostas/pdf`, `PATCH .../:pid/pdf`, `GET .../:pid/arquivo`, `GET /propostas-publicas/:token[/arquivo]`.
+
+Três jeitos de criar: em branco, pelo modelo de ensino ou **enviando um PDF pronto**. A proposta em PDF guarda o arquivo no storage e o link público abre uma capa com título, destinatário, mensagem, data de envio, validade, páginas e tamanho, seguida do PDF página a página e do botão de baixar.
 
 Com `demo` preenchido (hoje só `ensino`), o link público abre em duas abas: a proposta em formato de landing page e uma demo navegável da plataforma com dados fictícios (telas exportadas em `vivox-clientes/public/demos/<demo>/<Tela>.dc.html`, ligadas pelos próprios links, com troca Portal do aluno | Painel administrativo).
 
@@ -43,6 +45,7 @@ revogação) estão em [`MEMORIA_DO_SISTEMA.md › 5`](../MEMORIA_DO_SISTEMA.md#
 
 ## Registro de mudanças
 
+- 2026-10-24 · `feat/proposta-pdf` · Proposta em PDF: botão "Enviar PDF" na aba Propostas, formulário com arrastar e soltar, prévia da 1ª página e ficha de criação (quando, quem, arquivo, tamanho, páginas); lista com selo PDF, destinatário e "criada por"; link público com capa escura e leitor pdf.js · migration `20261024120000_proposta_pdf`, `SalvarPropostaPdfDto`, `PropostasService` (criarPdf/editarPdf/arquivo/arquivoPublico), `PropostaPdfForm`, `PropostaPdfPublica`, `PdfPaginas`, `proposta-pdf.css`, `nginx.conf` (.mjs) · aplicar a migration no deploy; `npm install` (pdfjs-dist); conferir no deploy que o worker `.mjs` sai como JavaScript.
 - 2026-10-23 · `style/proposta-mobile` · Proposta e demo no celular: abaixo de 768px o hero troca o parallax 3D por duas faixas de prints que deslizam (`hero-parallax.tsx`); números, etapas e valores da landing compactos; login do aluno só com o formulário (a faixa da marca some no celular); topo das telas do aluno em duas linhas e botões do destaque do Início na mesma linha; painel com a leftbar em gaveta e botão de menu (`menu-admin.js`/`.css`, o tour abre a gaveta no passo do menu); meta viewport em todas as telas da demo; rótulos do saldo em Recompensas legíveis no tema escuro; passo "Pontos do aluno" do tour aponta para o selo de pontos · `landing.css`, `public/demos/ensino/*.dc.html`, `tour.js` · —
 
 - 2026-10-23 · `feat/demo-tour-guiado` · Tour guiado na demo de ensino com Driver.js 1.3.6 (`public/demos/lib/`): `public/demos/ensino/tour.js` tem os passos de cada tela e leva da entrada do aluno ao painel da equipe; começa sozinho na primeira visita e o botão "Tour guiado" na barra da demo recomeça · `tour.js`, `tour.css`, `PropostaPublica` · andamento do tour em `sessionStorage` (só estado da visita); trocar um rótulo ou `aria-label` das telas pode tirar o destaque de um passo.
