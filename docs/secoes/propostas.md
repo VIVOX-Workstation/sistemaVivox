@@ -20,7 +20,7 @@ para o destinatário ler sem login.
 com Markdown ou HTML sanitizado, `linkHash`, `linkTokenCriptografado`).
 Endpoints `/clientes/:id/propostas[/:pid[/compartilhar]]`, `GET /propostas-publicas/:token`.
 
-Com `demo` preenchido (hoje só `ensino`), o link público abre em duas abas: a proposta em formato de landing page e uma demo navegável da plataforma com dados fictícios (iframe de `vivox-clientes/public/demos/<demo>.html`, página única exportada).
+Com `demo` preenchido (hoje só `ensino`), o link público abre em duas abas: a proposta em formato de landing page e uma demo navegável da plataforma com dados fictícios (telas exportadas em `vivox-clientes/public/demos/<demo>/<Tela>.dc.html`, ligadas pelos próprios links, com troca Portal do aluno | Painel administrativo).
 
 ## Quem acessa
 
@@ -43,6 +43,6 @@ revogação) estão em [`MEMORIA_DO_SISTEMA.md › 5`](../MEMORIA_DO_SISTEMA.md#
 
 ## Registro de mudanças
 
-- 2026-10-23 · `feat/proposta-demo-ensino` · Link público em 2 abas quando a proposta tem `demo`: aba Proposta como landing escura (ref. memberclass/pandavideo), com o HTML das seções lido em blocos (`landingBlocos.ts`) e telas da plataforma em CSS; aba Demo com a demo completa "Academia Visão" (página única exportada, em iframe) · migration `20261022120000_proposta_demo`, `SalvarPropostaDto.demo`, `PropostaLanding`, `landing.css`, `public/demos/ensino.html`, select "Demo interativa" no editor · aplicar a migration no deploy; HTML fora do modelo aparece como texto corrido.
+- 2026-10-23 · `feat/proposta-demo-ensino` · Link público em 2 abas quando a proposta tem `demo`: aba Proposta como landing escura (ref. memberclass/pandavideo), com o HTML das seções lido em blocos (`landingBlocos.ts`) e telas da plataforma em CSS; aba Demo com as 12 telas da "Academia Visão" navegáveis (leftbar, cards e botões) e troca aluno/painel · migration `20261022120000_proposta_demo`, `SalvarPropostaDto.demo`, `PropostaLanding`, `landing.css`, `public/demos/ensino/`, select "Demo interativa" no editor · aplicar a migration no deploy; HTML fora do modelo aparece como texto corrido.
 - 2026-10-20 · `fix/excluir-proposta-listagem` · Excluir pela listagem; consultar o link ativo sem renovar; token criptografado; prévia Open Graph · `PropostasService`, migration `20261020120000_proposta_link_recuperavel`, `PropostasTab`, `vivox-clientes/nginx.conf` · conferir prévia no WhatsApp após deploy.
 - 2026-10-19 · `feat/propostas-clientes` · Criação: modelo de ensino, edição por seções, capa/subcapa/encerramento, rolagem contínua, PDF, link público revogável, paleta dourada · `features/propostas`, `backend/src/propostas` · —

@@ -177,9 +177,11 @@ Migrações: `backend/prisma/migrations/` (33 até hoje). Sempre gere migration
 - `Proposta.demo` (texto, opcional; hoje só `"ensino"`) liga uma demo interativa ao
   link público. Com demo, `/proposta/:token` abre em duas abas: **Proposta** (a
   mesma proposta em layout de landing page, `PropostaLanding.tsx`) e **Demo da
-  plataforma** (`?aba=demo`): um iframe de `vivox-clientes/public/demos/<demo>.html`,
-  página única exportada (fontes e scripts embutidos, ~3,5 MB, só baixada ao abrir
-  a aba). A demo usa só dados fictícios e não fala com o backend. Sem demo, o link
+  plataforma** (`?aba=demo`): iframe com as telas exportadas em
+  `vivox-clientes/public/demos/<demo>/<Tela>.dc.html` (cada uma autocontida, ~320 KB),
+  que se ligam pelos próprios links (`AdminDashboard.dc.html`, `Catalogo.dc.html`…);
+  uma barra acima troca entre Portal do aluno e Painel administrativo. Renomear uma
+  tela quebra esses links. A demo usa só dados fictícios e não fala com o backend. Sem demo, o link
   continua exatamente como antes. PDF segue no layout documento.
 
 - A listagem permite excluir propostas diretamente, com confirmação que identifica
