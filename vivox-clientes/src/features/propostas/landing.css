@@ -336,6 +336,8 @@
 .vxl-nao { color: var(--vxl-apagado); background: rgba(255, 255, 255, .04); }
 
 .vxl-precos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+/* Proposta com uma modalidade só: o card fica centralizado, sem esticar na largura toda. */
+.vxl-precos-unico { max-width: 560px; margin-inline: auto; }
 .vxl-preco { position: relative; display: grid; gap: 8px; padding: 34px; border-radius: 24px; background: var(--vxl-superficie); border: 1px solid var(--vxl-linha); }
 .vxl-preco small { color: var(--vxl-ouro); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .vxl-preco h3 { font-size: 22px; letter-spacing: -.02em; font-weight: 650; }

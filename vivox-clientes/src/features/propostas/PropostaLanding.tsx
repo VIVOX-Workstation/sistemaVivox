@@ -257,7 +257,7 @@ function BlocoLanding({ bloco }: { bloco: Bloco }) {
       );
     case 'precos':
       return (
-        <div className="vxl-precos">
+        <div className={`vxl-precos ${bloco.precos.length === 1 ? 'vxl-precos-unico' : ''}`}>
           {bloco.precos.map(p => (
             <article key={p.titulo} className={`vxl-preco vxl-revelar ${p.destaque ? 'vxl-preco-destaque' : ''}`}>
               {p.destaque && <span className="vxl-preco-selo">Experiência completa</span>}
