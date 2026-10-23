@@ -35,23 +35,24 @@ const iconeDe = (titulo: string) => ICONES.find(([re]) => re.test(titulo))?.[1] 
 const formatarData = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : null);
 
 // Prints da demo (public/demos/<demo>/prints) para o hero em parallax: 3 fileiras de 5.
+// As duas primeiras, mais à vista no topo, mostram o Portal do aluno; o painel fica na última.
 const PRINTS_DEMO: Record<string, ItemParallax[]> = {
   ensino: [
     ['01-aluno-inicio', 'Portal do aluno · Início'],
     ['02-aluno-curso', 'Portal do aluno · Curso'],
+    ['11-aluno-inicio-claro', 'Portal do aluno · Tema claro'],
     ['03-aluno-recompensas', 'Portal do aluno · Recompensas'],
     ['04-aluno-avaliacao', 'Portal do aluno · Avaliação'],
+    ['12-aluno-curso-claro', 'Portal do aluno · Curso, tema claro'],
+    ['13-aluno-recompensas-claro', 'Portal do aluno · Recompensas, tema claro'],
+    ['01-aluno-inicio', 'Portal do aluno · Início em destaque'],
+    ['14-aluno-avaliacao-claro', 'Portal do aluno · Avaliação, tema claro'],
     ['05-aluno-login', 'Portal do aluno · Login'],
     ['06-painel-dashboard', 'Painel · Dashboard'],
     ['07-painel-cursos', 'Painel · Cursos e aulas'],
     ['08-painel-videos', 'Painel · Vídeos'],
     ['09-painel-alunos', 'Painel · Alunos'],
     ['10-painel-premios', 'Painel · Prêmios e resgates'],
-    ['11-aluno-inicio-claro', 'Portal do aluno · Tema claro'],
-    ['12-aluno-curso-claro', 'Portal do aluno · Curso, tema claro'],
-    ['13-aluno-recompensas-claro', 'Portal do aluno · Recompensas, tema claro'],
-    ['14-aluno-avaliacao-claro', 'Portal do aluno · Avaliação, tema claro'],
-    ['15-painel-avaliacoes', 'Painel · Avaliações'],
   ].map(([arquivo, title]) => ({ title, thumbnail: `/demos/ensino/prints/${arquivo}.jpg` })),
 };
 
