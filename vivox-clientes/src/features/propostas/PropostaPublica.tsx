@@ -2,6 +2,7 @@ import { useEffect, useState, type SyntheticEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { getApiBaseUrl } from '../../api/client';
+import { VivoxLogo } from '../../components/brand/VivoxLogo';
 import { PropostaDocumento } from './PropostaDocumento';
 import { PropostaLanding } from './PropostaLanding';
 import type { DocumentoProposta } from './types';
@@ -128,7 +129,7 @@ export function PropostaPublica() {
             <header className="vxp-demo-topbar">
               <div className="vxp-demo-topbar-inner">
                 <div className="vxp-demo-topbar-left">
-                  <span className="vxp-demo-pill">VIVOX</span>
+                  <VivoxLogo className="vxp-demo-logo" />
                   <span className="vxp-demo-title">{documento.titulo}</span>
                 </div>
                 <div className="vxp-demo-tabs" role="tablist" aria-label="Navegação da proposta interativa">

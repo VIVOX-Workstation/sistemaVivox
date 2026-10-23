@@ -4,6 +4,7 @@ import {
   ArrowRight, BarChart3, BookOpen, Check, CheckCircle2, ClipboardCheck, Download, Gift, GraduationCap, Handshake,
   LayoutDashboard, LayoutGrid, Minus, Play, PlayCircle, Server, Sparkles, Trophy, Users,
 } from 'lucide-react';
+import { VivoxLogo } from '../../components/brand/VivoxLogo';
 import { HeroParallax } from '../../components/ui/hero-parallax';
 import type { ItemParallax } from '../../components/ui/hero-parallax';
 import type { DocumentoProposta } from './types';
@@ -443,7 +444,7 @@ export function PropostaLanding({ documento, onVerDemo }: PropostaLandingProps) 
 
       <footer className="vxl-rodape">
         <div className="vxl-container vxl-rodape-linha">
-          <strong>VIVOX</strong>
+          <VivoxLogo className="vxl-rodape-logo" />
           <span>Proposta preparada para {documento.destinatario || 'o cliente'}{validade ? ` · válida até ${validade}` : ''}</span>
           <span><Users size={12} /> Dados da demo são fictícios</span>
         </div>

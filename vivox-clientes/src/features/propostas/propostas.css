@@ -39,7 +39,7 @@
 }
 .vxp-demo-topbar-inner { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .vxp-demo-topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.vxp-demo-pill { flex-shrink: 0; font-size: 12px; font-weight: 800; letter-spacing: .16em; color: #f4f2ee; }
+.vxp-demo-logo { flex-shrink: 0; display: block; height: 17px; width: auto; color: #f4f2ee; }
 .vxp-demo-title { color: #a7a39b; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 12px; border-left: 1px solid rgba(255, 255, 255, .12); }
 .vxp-demo-tabs { display: flex; flex-shrink: 0; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); }
 .vxp-demo-tab-btn { border: 0; background: transparent; color: #a7a39b; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 999px; cursor: pointer; transition: color .2s, background .2s; }
