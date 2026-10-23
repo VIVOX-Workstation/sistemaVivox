@@ -7,6 +7,7 @@ export interface DocumentoProposta {
   corDestaque: string;
   secoes: SecaoProposta[];
   createdAt?: string;
+  demo?: 'ensino' | null;
 }
 export interface Proposta extends DocumentoProposta {
   id: string;

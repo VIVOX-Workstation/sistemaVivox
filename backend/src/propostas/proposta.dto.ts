@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsDateString,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -11,6 +12,8 @@ import {
   ValidateNested,
   ValidateIf,
 } from 'class-validator';
+
+export const DEMOS_PROPOSTA = ['ensino'] as const;
 
 export class SecaoPropostaDto {
   @ValidateIf((_object, value) => value !== undefined)
@@ -52,6 +55,11 @@ export class SalvarPropostaDto {
   @IsString()
   @Matches(/^#[0-9a-fA-F]{6}$/)
   corDestaque: string;
+
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @IsIn(DEMOS_PROPOSTA)
+  demo?: string | null;
 
   @IsArray()
   @ArrayMaxSize(50)

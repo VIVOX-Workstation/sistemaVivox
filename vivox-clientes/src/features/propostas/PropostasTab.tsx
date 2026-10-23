@@ -10,12 +10,12 @@ import { VxDialog } from '../../components/clean/VxDialog';
 import type { DocumentoProposta, Proposta } from './types';
 
 function vazia(nome: string): DocumentoProposta {
-  return { titulo: 'Nova proposta', destinatario: nome, apresentacao: '', validade: null, corDestaque: '#91672b', secoes: [] };
+  return { titulo: 'Nova proposta', destinatario: nome, apresentacao: '', validade: null, corDestaque: '#91672b', demo: null, secoes: [] };
 }
 function editavel(proposta: DocumentoProposta): DocumentoProposta {
   proposta = normalizarModeloLegado(proposta);
   return { titulo: proposta.titulo, destinatario: proposta.destinatario, apresentacao: proposta.apresentacao,
-    validade: proposta.validade?.slice(0, 10) || null, corDestaque: proposta.corDestaque,
+    validade: proposta.validade?.slice(0, 10) || null, corDestaque: proposta.corDestaque, demo: proposta.demo ?? null,
     ...(proposta.createdAt ? { createdAt: proposta.createdAt } : {}),
     secoes: proposta.secoes.map(s => ({ ...s })) };
 }
@@ -175,6 +175,7 @@ export function PropostasTab({ clienteId, nomeCliente, onDirtyChange }: { client
             <div className="proposta-editor-campos">
               <div className="fld"><label htmlFor="proposta-validade">Validade (opcional)</label><input id="proposta-validade" className="inp" type="date" value={documento.validade || ''} onChange={e => campo('validade', e.target.value || null)} /></div>
               <div className="fld"><label htmlFor="proposta-cor">Cor de destaque</label><input id="proposta-cor" className="inp" type="color" value={documento.corDestaque} onChange={e => campo('corDestaque', e.target.value)} /></div>
+              <div className="fld"><label htmlFor="proposta-demo">Demo interativa</label><select id="proposta-demo" className="inp" value={documento.demo || ''} onChange={e => campo('demo', (e.target.value as 'ensino') || null)}><option value="">Nenhuma</option><option value="ensino">Plataforma de ensino</option></select></div>
             </div>
           </section>
           <p className="mut">No modelo, clique nos textos dos cartões e tabelas para editar diretamente, mantendo o visual. Nas seções de texto, use Markdown. Confira o resultado em “Prévia do cliente”.</p>
