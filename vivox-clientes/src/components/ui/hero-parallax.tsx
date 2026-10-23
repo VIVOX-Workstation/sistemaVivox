@@ -57,9 +57,10 @@ export const HeroParallax = ({
   return (
     <div
       ref={ref}
-      className="relative flex h-[300vh] flex-col self-auto overflow-hidden py-40 antialiased [perspective:1000px] [transform-style:preserve-3d]"
+      className="relative flex h-[300vh] flex-col self-auto overflow-hidden py-40 antialiased [perspective:1000px]"
     >
-      {header}
+      {/* Sem preserve-3d no contêiner, o z-index basta para o texto ficar acima das telas. */}
+      <div className="relative z-10">{header}</div>
       <motion.div style={{ rotateX, rotateZ, translateY, opacity }}>
         <motion.div className="mb-20 flex flex-row-reverse gap-20">
           {firstRow.map(product => (
