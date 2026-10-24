@@ -124,6 +124,8 @@ Combinado com o usuário em 2026-10-19/20. Um PR por etapa.
 
 ## Mudanças que cruzam seções
 
+- 2026-10-24 · `feat/paginas-publicas-oauth` · Acesso e equipe, Demandas gerais · Apresentação, privacidade e termos públicos, acessíveis pelo login, descrevem a integração opcional de arquivos. Publicação autorizada após revisão; deploy e Production do OAuth ainda precisam ser confirmados · [Registro](PAGINAS_PUBLICAS_OAUTH.md).
+
 Uma linha por PR que afeta mais de uma seção, mais recente no topo.
 `AAAA-MM-DD · branch · seções · o que mudou na conversa entre elas`.
 
