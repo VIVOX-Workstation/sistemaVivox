@@ -113,6 +113,7 @@ const CSS = `
 .vlg-done{display:grid;gap:14px;justify-items:start}
 .vlg-tick{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(var(--vlg-glow),.12);border:1px solid var(--vlg-line-strong);color:var(--vlg-gold)}
 .vlg-tick svg{width:20px;height:20px}
+.vlg-policy{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 20px}
 .vlg-foot{color:#6f685d;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
 .vlg-sup{height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--vlg-line);background:rgba(19,17,14,.6);color:var(--vlg-text);font:inherit;font-size:13px;cursor:pointer;transition:border-color .2s}
 .vlg-sup:hover{border-color:var(--vlg-line-strong)}
@@ -412,6 +413,11 @@ export default function LoginVivox({
           </div>
 
           <p className="vlg-foot">VIVOX · Agência &amp; Produtora</p>
+          <nav className="vlg-policy" aria-label="Informações do sistema">
+            <a className="vlg-link" href="/sobre/">Sobre o VIVOX</a>
+            <a className="vlg-link" href="/privacidade/">Privacidade</a>
+            <a className="vlg-link" href="/termos/">Termos de uso</a>
+          </nav>
         </div>
       </main>
     </section>

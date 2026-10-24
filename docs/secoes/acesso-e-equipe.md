@@ -30,6 +30,10 @@ As regras completas (guards, `@RequerModulo`, tabela por controller) estão em
 [`MEMORIA_DO_SISTEMA.md › 2`](../MEMORIA_DO_SISTEMA.md#2-papéis-e-permissões-como-funciona-de-verdade).
 Usuário novo nasce com os 7 módulos; o admin tira.
 
+O rodapé do login oferece apresentação, privacidade e termos em páginas estáticas
+públicas: `/sobre/`, `/privacidade/` e `/termos/`. Esses documentos não consultam
+a API nem exigem conta no sistema.
+
 ## Conversa com
 
 - **Todas as seções:** módulos decidem o que aparece no menu e o que a API aceita.
@@ -43,6 +47,8 @@ Usuário novo nasce com os 7 módulos; o admin tira.
 - Configurações não oferece excluir usuário (a rota existe).
 
 ## Registro de mudanças
+
+- 2026-10-24 · `feat/paginas-publicas-oauth` · Login passa a oferecer links para apresentação, privacidade e termos; três documentos estáticos públicos, sem sessão ou chamadas à API. Conteúdo revisado e publicação autorizada pelo responsável; deploy e Production do OAuth ainda dependem de confirmação · `LoginVivox.tsx`, `public/sobre`, `public/privacidade`, `public/termos` · [Registro](../PAGINAS_PUBLICAS_OAUTH.md).
 
 - 2026-10-19 · `feat/kanban-equipe-backend` · `User` ganha cargo, função no Kanban e foto; `GET /users` devolve esses campos · `users.service.ts`, migration `20261019120000_kanban_equipe` · —
 - 2026-10-16 · `style/telas-clean` · Visual clean de Configurações e Sem acesso · `Configuracoes.tsx`, `App.tsx` · —

@@ -58,6 +58,8 @@ Módulo **GP**. Dentro dele, duas camadas que o servidor aplica:
 
 ## Registro de mudanças
 
+- 2026-10-24 · `feat/paginas-publicas-oauth` · Páginas públicas descrevem a integração opcional do Drive, seu escopo e a conservação dos arquivos; esta publicação contém somente os documentos e os links do login. A configuração OAuth em Production é uma etapa posterior · [Registro](../PAGINAS_PUBLICAS_OAUTH.md).
+
 - 2026-10-19 · `feat/demandas-gerais` · Nome VVOX Sync → Demandas gerais; endereço `/demandasgerais/:quadro`; redirecionamentos de `/vvoxsync` e `/gp` · `App.tsx`, `Layout.tsx`, `features/kanban/*` · nomes internos do código mantidos.
 - 2026-10-19 · `feat/kanban-equipe-backend` · Cargo, função, foto, matriz de permissões, logo de cliente e dias de postagem salvos na API; servidor aplica a matriz · migration `20261019120000_kanban_equipe`, `kanban-equipe.*`, `app.js`, `backend.js` · —
 - 2026-10-14 · — · Endereço por nome do quadro (`/vvoxsync/nome`); pessoas ligadas às contas do sistema; logo volta ao menu principal · `features/kanban/*` · —

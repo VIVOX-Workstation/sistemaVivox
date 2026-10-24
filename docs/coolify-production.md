@@ -1,5 +1,7 @@
 # Produção no Coolify
 
+Painel atual confirmado pelo responsável em 2026-10-24: **https://coolify.vivoxmarketing.com.br**. Referências antigas a `kpcoolify.vivoxmarketing.com.br` em scripts históricos não identificam o painel atual. Não execute esses scripts para implantar as páginas públicas.
+
 O ambiente `Sistema VIVOX / production` possui duas aplicações ligadas ao GitHub App
 VIVOX Workstation e à branch `main` de `VIVOX-Workstation/sistemaVivox`.
 Cada push na `main` reconstrói e publica o backend e o frontend automaticamente.

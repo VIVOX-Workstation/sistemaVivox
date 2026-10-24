@@ -28,6 +28,7 @@ do cliente e Portal. Há **2 defeitos** que valem corrigir antes do redesign
 | Elemento | Situação | Real |
 |---|---|---|
 | E-mail e senha, mostrar senha | Existe | `POST /auth/login` |
+| Links Sobre, Privacidade e Termos | Existe | `LoginVivox.tsx` aponta para HTML estático em `public/sobre/`, `public/privacidade/` e `public/termos/`; não usa API nem dados de usuário |
 | Manter conectado | Ajustar | A caixa aparece, mas `Login.tsx` ignora o valor. A sessão sempre fica no `localStorage` e o JWT dura 1 dia |
 | Esqueci minha senha → enviar ao suporte | **Defeito D1** | O front chama `POST /auth/esqueci-senha`, que não existe |
 | Link "Entre pelo portal" | Só no protótipo | Fácil de adicionar (rota `/portal/entrar` existe) |

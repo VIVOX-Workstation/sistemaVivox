@@ -117,6 +117,7 @@ Rotas reais do front e o que cada uma consome. O detalhe campo a campo está em
 | Rota | Página | Endpoints principais |
 |---|---|---|
 | `/login` | `pages/Login.tsx` + `components/LoginVivox.tsx` | `POST /auth/login`, `POST /auth/esqueci-senha` (**não existe no backend**) |
+| `/sobre/`, `/privacidade/`, `/termos/` | HTML estático em `vivox-clientes/public/`, sem login | Nenhum; servidos diretamente pelo frontend |
 | `/portal/entrar` | `PortalLogin.tsx` | `POST /auth/login` |
 | `/` | `MainDashboard.tsx` + `components/dashboard/*` | `GET /analytics/dashboard-executivo` |
 | `/clientes` | `ClientList.tsx` | `GET /clientes` |
